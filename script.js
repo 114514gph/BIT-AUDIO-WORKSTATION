@@ -410,6 +410,9 @@ let recMode = false;
 let mediaRecorder = null;
 let recordedChunks = [];
 let loopMode = false;
+let abLoopMode = false;
+let waveZoom = 1;
+let waveOffset = 0;
 // 加载取消
 let loadAbortController = null;
 let loadCancelled = false;
@@ -1541,6 +1544,14 @@ function updateExportHint(){
 /* ============ PLAYBACK ============ */
 function onSourceEnded(){
   if(isPlaying){
+    // AB 循环：在选定区域内循环
+    if(abLoopMode && selStart >= 0 && selEnd >= 0){
+      const abStart = Math.min(selStart, selEnd);
+      pausedAt = abStart;
+      isPlaying = false;
+      play();
+      return;
+    }
     if(loopMode){
       // 循环播放：重置位置并重新播放
       pausedAt = 0;
@@ -1885,8 +1896,14 @@ function drawWaveform(){
   ctx2d.clearRect(0,0,w,h);
 
   const data = buf.getChannelData(0);
-  const step = Math.max(1, Math.ceil(data.length / w));
   const mid = h / 2;
+  
+  // 缩放：只绘制可见范围
+  const visibleStart = Math.floor(waveOffset * data.length);
+  const visibleLen = Math.floor(data.length / waveZoom);
+  const visibleEnd = Math.min(data.length, visibleStart + visibleLen);
+  const visibleData = data.subarray(visibleStart, visibleEnd);
+  const step = Math.max(1, Math.ceil(visibleData.length / w));
 
   // grid
   ctx2d.strokeStyle = 'rgba(0,255,136,0.07)';
@@ -1900,12 +1917,12 @@ function drawWaveform(){
   // bars (pixel style)
   const color = bypassToggle.checked ? '#6a8aff' : '#00ff88';
   ctx2d.fillStyle = color;
-  const barW = Math.max(1, Math.floor(w / Math.min(w, data.length/step)));
+  const barW = Math.max(1, Math.floor(w / Math.min(w, visibleData.length/step)));
   for(let x = 0; x < w; x += barW){
     let min = 1, max = -1;
     const start = x * step;
-    for(let i = 0; i < step && start+i < data.length; i++){
-      const s = data[start+i];
+    for(let i = 0; i < step && start+i < visibleData.length; i++){
+      const s = visibleData[start+i];
       if(s < min) min = s;
       if(s > max) max = s;
     }
@@ -2254,6 +2271,68 @@ loopToggle.addEventListener('change', ()=>{
   loopMode = loopToggle.checked;
   showToast(loopMode ? '循环播放已开启' : '循环播放已关闭');
 });
+const abLoopToggle = $('abLoopToggle');
+abLoopToggle.addEventListener('change', ()=>{
+  abLoopMode = abLoopToggle.checked;
+  if(abLoopMode && (selStart < 0 || selEnd < 0)){
+    showToast('请先在波形上选择 AB 循环区域', true);
+    abLoopToggle.checked = false;
+    abLoopMode = false;
+    return;
+  }
+  showToast(abLoopMode ? 'AB 循环已开启' : 'AB 循环已关闭');
+});
+// 波形缩放
+const zoomInBtn = $('zoomInBtn');
+const zoomOutBtn = $('zoomOutBtn');
+const zoomResetBtn = $('zoomResetBtn');
+const zoomLevelEl = $('zoomLevel');
+function updateZoom(){
+  zoomLevelEl.textContent = waveZoom.toFixed(1) + 'x';
+  if(originalBuffer) drawWaveform();
+}
+zoomInBtn.addEventListener('click', ()=>{
+  waveZoom = Math.min(8, waveZoom + 0.5);
+  waveOffset = Math.min(waveOffset, 1 - 1/waveZoom);
+  updateZoom();
+});
+zoomOutBtn.addEventListener('click', ()=>{
+  waveZoom = Math.max(1, waveZoom - 0.5);
+  waveOffset = Math.min(waveOffset, 1 - 1/waveZoom);
+  if(waveZoom === 1) waveOffset = 0;
+  updateZoom();
+});
+zoomResetBtn.addEventListener('click', ()=>{
+  waveZoom = 1; waveOffset = 0;
+  updateZoom();
+});
+// 滚轮缩放
+waveformWrap.addEventListener('wheel', e=>{
+  if(!originalBuffer) return;
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? -0.5 : 0.5;
+  waveZoom = Math.max(1, Math.min(8, waveZoom + delta));
+  if(waveZoom === 1) waveOffset = 0;
+  waveOffset = Math.min(waveOffset, 1 - 1/waveZoom);
+  updateZoom();
+}, {passive:false});
+// 拖拽滚动（缩放后）
+let isDraggingWave = false, dragStartX = 0, dragStartOffset = 0;
+waveformWrap.addEventListener('mousedown', e=>{
+  if(waveZoom > 1 && e.button === 1 || (waveZoom > 1 && e.shiftKey)){
+    isDraggingWave = true;
+    dragStartX = e.clientX;
+    dragStartOffset = waveOffset;
+    e.preventDefault();
+  }
+});
+window.addEventListener('mousemove', e=>{
+  if(!isDraggingWave) return;
+  const dx = (e.clientX - dragStartX) / waveformWrap.clientWidth;
+  waveOffset = Math.max(0, Math.min(1 - 1/waveZoom, dragStartOffset - dx / waveZoom));
+  updateZoom();
+});
+window.addEventListener('mouseup', ()=>{ isDraggingWave = false; });
 
 /* ============ STABLE 1.0 新功能 ============ */
 

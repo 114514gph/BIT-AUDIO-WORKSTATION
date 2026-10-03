@@ -159,6 +159,21 @@ header .blink{
 .file-info #fileMeta{color:var(--muted);white-space:nowrap}
 
 /* ============ WAVEFORM ============ */
+.waveform-container{position:relative}
+.waveform-zoom-controls{
+  display:flex;align-items:center;gap:6px;
+  position:absolute;top:6px;right:8px;z-index:10;
+  background:rgba(10,10,15,0.85);padding:4px 8px;border:1px solid var(--border);
+}
+.waveform-zoom-controls .zoom-btn{
+  background:var(--bg);border:1px solid var(--border);color:var(--text);
+  font-family:var(--pixel);font-size:12px;width:24px;height:24px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.waveform-zoom-controls .zoom-btn:hover{border-color:var(--green);color:var(--green)}
+.waveform-zoom-controls .zoom-level{
+  font-family:var(--pixel);font-size:9px;color:var(--muted);min-width:28px;text-align:center;
+}
 .waveform-wrap{
   position:relative;
   background:var(--panel);
