@@ -3,8 +3,8 @@
 复古像素风音频处理工作站 · 纯前端 H5 应用
 
 ![Version](https://img.shields.io/badge/version-STABLE%201.3-green)
-![License](https://img.shields.io/badge/license-MIT-blue)
-![Platform](https://img.shields.io/badge/platform-Web%20%7C%20Mobile-orange)
+![License](https://img.shields.io/badge/license-AGPL--3.0-orange)
+![Platform](https://img.shields.io/badge/platform-Web%20%7C%20Mobile-blue)
 
 ## 简介
 
