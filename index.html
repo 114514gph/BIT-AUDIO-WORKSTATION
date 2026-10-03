@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BIT AUDIO WORKSTATION · 音频处理工作站</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%2300ff88'/><text x='8' y='12' font-size='10' text-anchor='middle' fill='%23000' font-family='monospace'>8</text></svg>">
+<link rel="stylesheet" href="style.css">
+<!-- 内置 MP3/FLAC 编码库 -->
+<!-- STABLE 1.3 新增：Dither 抖动（替换快捷键功能）；STABLE 1.2 新增：声像调节（PAN）；STABLE 1.1 修复：内联 libflac .mem -->
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>BIT AUDIO WORKSTATION</h1>
+    <p class="subtitle">RETRO AUDIO PROCESSING SUITE<span class="blink"></span></p>
+  </header>
+
+  <main>
+    <!-- ===== 上传区 ===== -->
+    <section class="dropzone" id="dropzone">
+      <div class="dz-inner">
+        <span class="dz-icon">&#9650;</span>
+        <p>点击或拖拽音频文件到此处</p>
+        <p class="dz-hint">支持 MP3 / WAV / OGG / M4A / FLAC · 纯本地处理</p>
+        <div class="url-bar">
+          <input type="text" id="urlInput" placeholder="或粘贴音频直链 URL (需 CORS)…">
+          <button class="btn" id="urlLoadBtn">&#9654; LOAD</button>
+        </div>
+      </div>
+      <input type="file" id="fileInput" accept="audio/*" hidden>
+    </section>
+
+    <!-- ===== 示例按钮（在 dropzone 外） ===== -->
+    <div class="demo-bar" id="demoBar">
+      <button class="btn demo-btn" id="demoBtn">&#9835; GEN. DEMO</button>
+      <span class="hint">生成随机示例</span>
+    </div>
+
+    <!-- ===== 工作区 ===== -->
+    <section class="workspace hidden" id="workspace">
+      <div class="file-info">
+        <span id="fileName">--</span>
+        <span id="fileMeta">--</span>
+      </div>
+
+      <div class="waveform-wrap" id="waveformWrap">
+        <canvas id="waveform"></canvas>
+        <div class="selection" id="selection"></div>
+        <div class="playhead" id="playhead"></div>
+      </div>
+
+      <!-- 裁剪控制栏（有选区时显示） -->
+      <div class="crop-bar hidden" id="cropBar">
+        <span class="crop-info" id="cropInfo">拖拽波形选择裁剪区域</span>
+        <div class="crop-btns">
+          <button class="btn crop-btn" id="cropKeepBtn" disabled>&#10003; KEEP 保留</button>
+          <button class="btn crop-btn" id="cropDeleteBtn" disabled>&#10005; DELETE 删除</button>
+          <button class="btn crop-btn" id="cropClearBtn" disabled>&#8634; CLEAR</button>
+        </div>
+      </div>
+
+      <!-- 播放 + 导出 + 录制 组合框 -->
+      <div class="transport-export">
+        <div class="transport">
+          <button id="playBtn" class="btn primary">&#9654; PLAY</button>
+          <button id="stopBtn" class="btn">&#9632; STOP</button>
+          <button id="reloadBtn" class="btn reload-btn">&#8635; RELOAD</button>
+          <button id="reverseBtn" class="btn">&#8646; REV</button>
+          <div class="clipper"><span class="clip-led" id="clipLed"></span><span class="clip-label">CLIP</span></div>
+        </div>
+        <div class="export-bar">
+          <div class="export-group">
+            <button id="exportBtn" class="btn accent">&#9660; EXPORT</button>
+            <div class="format-dropdown">
+              <button class="btn format-btn" id="formatBtn">WAV &#9662;</button>
+              <div class="dropdown-menu hidden" id="formatMenu">
+                <div class="dropdown-item active" data-format="wav">WAV<span class="df-hint">无损</span></div>
+                <div class="dropdown-item" data-format="mp3">MP3<span class="df-hint" id="mp3BitrateHint">128kbps</span></div>
+                <div class="dropdown-item" data-format="ogg">OGG<span class="df-hint">Opus</span></div>
+                <div class="dropdown-item" data-format="flac">FLAC<span class="df-hint">无损</span></div>
+              </div>
+            </div>
+          </div>
+          <button class="btn rec-btn" id="recBtn">REC: OFF</button>
+        </div>
+        <div class="options-row">
+          <label class="toggle">
+            <input type="checkbox" id="bypassToggle">
+            <span>BYPASS 旁通</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="loopToggle">
+            <span>LOOP 循环</span>
+          </label>
+          <div class="mp3-bitrate-select hidden" id="mp3BitrateSelect">
+            <span class="br-label">KBPS</span>
+            <div class="br-buttons" id="mp3BitrateBtns">
+              <button class="br-btn" data-br="64">64</button>
+              <button class="br-btn" data-br="96">96</button>
+              <button class="br-btn active" data-br="128">128</button>
+              <button class="br-btn" data-br="192">192</button>
+              <button class="br-btn" data-br="256">256</button>
+              <button class="br-btn" data-br="320">320</button>
+            </div>
+          </div>
+        </div>
+        <span id="exportHint" class="hint export-hint-bottom"></span>
+      </div>
+
+      <div class="controls">
+        <div class="ctrl">
+          <label>BIT DEPTH <span id="bitVal">8</span> BIT</label>
+          <input type="range" id="bitSlider" min="1" max="8" step="0.1" value="8">
+          <div class="ticks"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span></div>
+        </div>
+        <div class="ctrl">
+          <label>DOWNSAMPLE <span id="downVal">1</span>&times;</label>
+          <input type="range" id="downSlider" min="1" max="64" step="1" value="1">
+          <div class="ticks"><span>1</span><span>16</span><span>32</span><span>48</span><span>64</span></div>
+        </div>
+        <div class="ctrl ng">
+          <label>NOISE GATE <span id="noiseVal">0</span>%</label>
+          <input type="range" id="noiseSlider" min="0" max="100" step="1" value="0">
+          <div class="ticks"><span>OFF</span><span>25</span><span>50</span><span>75</span><span>MAX</span></div>
+        </div>
+        <div class="ctrl speed">
+          <label>SPEED <span id="speedVal">1.0</span>&times;</label>
+          <input type="range" id="speedSlider" min="0" max="5" step="0.25" value="1">
+          <div class="ticks"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+        </div>
+        <!-- STABLE 1.2 新增：声像调节 -->
+        <div class="ctrl pan">
+          <label>PAN <span id="panVal">C</span></label>
+          <input type="range" id="panSlider" min="-100" max="100" step="1" value="0">
+          <div class="ticks"><span>L</span><span>C</span><span>R</span></div>
+        </div>
+        <!-- STABLE 1.3 新增：Dither 抖动开关（替换快捷键功能） -->
+        <div class="ctrl dither">
+          <label>DITHER <span id="ditherVal">OFF</span></label>
+          <button class="btn dither-btn" id="ditherToggleBtn">抖动 关</button>
+        </div>
+      </div>
+
+      <!-- 垂直均衡器 -->
+      <div class="eq-panel">
+        <div class="eq-title">EQUALIZER</div>
+        <div class="eq-cols">
+          <div class="eq-col">
+            <span class="eq-val" id="eqLowVal">0dB</span>
+            <input type="range" id="eqLowSlider" min="-15" max="15" step="0.5" value="0" orient="vertical">
+            <span class="eq-label">LOW</span>
+          </div>
+          <div class="eq-col">
+            <span class="eq-val" id="eqMidVal">0dB</span>
+            <input type="range" id="eqMidSlider" min="-15" max="15" step="0.5" value="0" orient="vertical">
+            <span class="eq-label">MID</span>
+          </div>
+          <div class="eq-col">
+            <span class="eq-val" id="eqHighVal">0dB</span>
+            <input type="range" id="eqHighSlider" min="-15" max="15" step="0.5" value="0" orient="vertical">
+            <span class="eq-label">HIGH</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 实时频谱仪 -->
+      <div class="spectrum-panel">
+        <div class="panel-title">SPECTRUM</div>
+        <canvas id="spectrum"></canvas>
+      </div>
+
+      <!-- 效果面板 -->
+      <div class="fx-panel">
+        <div class="panel-title">EFFECTS</div>
+        <div class="fx-grid">
+          <div class="fx-item">
+            <label>COMPRESSOR <span id="compVal">0</span>%</label>
+            <input type="range" id="compSlider" min="0" max="100" step="1" value="0">
+          </div>
+          <div class="fx-item">
+            <label>REVERB <span id="revVal">0</span>%</label>
+            <input type="range" id="revSlider" min="0" max="100" step="1" value="0">
+          </div>
+          <div class="fx-item">
+            <label>DELAY <span id="delayVal">0</span>%</label>
+            <input type="range" id="delaySlider" min="0" max="100" step="1" value="0">
+          </div>
+          <div class="fx-item">
+            <label>DELAY TIME <span id="delayTimeVal">300</span>ms</label>
+            <input type="range" id="delayTimeSlider" min="50" max="1000" step="10" value="300">
+          </div>
+        </div>
+      </div>
+
+      <!-- 淡入淡出 -->
+      <div class="fade-panel">
+        <div class="panel-title">FADE IN / OUT</div>
+        <div class="fade-grid">
+          <div class="fx-item">
+            <label>FADE IN <span id="fadeInVal">0</span>s</label>
+            <input type="range" id="fadeInSlider" min="0" max="10" step="0.1" value="0">
+          </div>
+          <div class="fx-item">
+            <label>FADE OUT <span id="fadeOutVal">0</span>s</label>
+            <input type="range" id="fadeOutSlider" min="0" max="10" step="0.1" value="0">
+          </div>
+        </div>
+      </div>
+
+      <!-- 预设系统 -->
+      <div class="preset-panel">
+        <div class="panel-title">PRESETS</div>
+        <div class="preset-row">
+          <input type="text" id="presetName" class="preset-input" placeholder="预设名称...">
+          <button class="btn preset-btn" id="presetSaveBtn">&#128190; SAVE</button>
+          <select id="presetSelect" class="preset-select"></select>
+          <button class="btn preset-btn" id="presetLoadBtn">&#9654; LOAD</button>
+          <button class="btn preset-btn danger" id="presetDelBtn">&#128465; DEL</button>
+        </div>
+      </div>
+
+      <!-- 导出选项 -->
+      <div class="export-options">
+        <label class="toggle">
+          <input type="checkbox" id="normalizeToggle" checked>
+          <span>音量归一化（防止削波）</span>
+        </label>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
+    <p class="footer-info">STABLE 1.3 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- 中央进度条窗口 -->
+<div class="modal-overlay hidden" id="progressModal">
+  <div class="progress-window">
+    <div class="progress-title" id="progressTitle">处理中…</div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div class="progress-pct" id="progressPct">0%</div>
+    <button class="cancel-btn hidden" id="cancelLoadBtn">取消加载</button>
+  </div>
+</div>
+
+<!-- 导出选择弹窗 -->
+<div class="modal-overlay hidden" id="exportModal">
+  <div class="progress-window">
+    <div class="progress-title">选择导出内容</div>
+    <div class="export-options">
+      <button class="btn export-opt" id="exportOriginalBtn">&#9660; 导出原曲</button>
+      <button class="btn export-opt" id="exportRecordingBtn">&#9679; 导出录制版</button>
+      <button class="btn export-opt cancel" id="exportCancelBtn">取消</button>
+    </div>
+    <div class="export-hint" id="exportModalHint"></div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
