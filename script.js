@@ -413,6 +413,7 @@ let loopMode = false;
 let abLoopMode = false;
 let waveZoom = 1;
 let waveOffset = 0;
+let markers = [];
 // 加载取消
 let loadAbortController = null;
 let loadCancelled = false;
@@ -809,6 +810,7 @@ async function loadFile(file){
     if(loadCancelled) return;
     updateProgress(95);
     originalBuffer = await ctx.decodeAudioData(ab.slice(0));
+    clearMarkers();
     if(loadCancelled) return;
     currentFileName = file.name.replace(/\.[^.]+$/, '');
     fileNameEl.textContent = file.name;
@@ -866,6 +868,7 @@ async function loadFromUrl(url){
       startFakeProgress('解码中…', true);
       const ctx = ensureCtx();
       originalBuffer = await ctx.decodeAudioData(ab.buffer);
+      clearMarkers();
       if(loadCancelled) return;
       const name = url.split('/').pop().split('?')[0] || 'stream';
       currentFileName = name.replace(/\.[^.]+$/, '') || 'audio';
@@ -1281,6 +1284,7 @@ demoBtn.addEventListener('click', ()=>{
   setTimeout(async ()=>{
     try{
       originalBuffer = await generateDemoAudio();
+      clearMarkers();
       if(loadCancelled) return;
       updateProgress(90);
       currentFileName = 'demo';
@@ -1692,6 +1696,10 @@ function tickPlayhead(){
 }
 
 /* ============ SELECTION & CROP ============ */
+function clearMarkers(){
+  markers = [];
+  if(typeof markerContainer !== 'undefined') markerContainer.innerHTML = '';
+}
 function clearSelection(){
   selStart = -1; selEnd = -1;
   selectionEl.style.display = 'none';
@@ -1932,6 +1940,72 @@ function drawWaveform(){
   }
 }
 window.addEventListener('resize', ()=>{ if(originalBuffer) drawWaveform(); });
+
+/* ============ MARKERS 标记点 ============ */
+const markerContainer = $('markerContainer');
+function renderMarkers(){
+  markerContainer.innerHTML = '';
+  if(!originalBuffer) return;
+  const dur = originalBuffer.duration;
+  markers.forEach((m, idx)=>{
+    const pct = (m.time / dur) * 100;
+    // 缩放时只显示可见范围内的标记
+    if(waveZoom > 1){
+      const visibleStart = waveOffset * 100;
+      const visibleEnd = visibleStart + (100 / waveZoom);
+      if(pct < visibleStart || pct > visibleEnd) return;
+      pct = ((pct - visibleStart) * waveZoom);
+    }
+    const el = document.createElement('div');
+    el.className = 'marker';
+    el.style.left = pct + '%';
+    el.title = m.name + ' (' + fmtTime(m.time) + ') - 点击跳转，右键删除';
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      if(isPlaying){ stop(true); }
+      pausedAt = m.time;
+      playhead.style.display = 'block';
+      playhead.style.left = (m.time / dur * 100) + '%';
+      showToast('跳转到标记: ' + m.name);
+    });
+    el.addEventListener('contextmenu', e=>{
+      e.preventDefault();
+      e.stopPropagation();
+      if(confirm('删除标记 "' + m.name + '" ?')){
+        markers.splice(idx, 1);
+        renderMarkers();
+        showToast('标记已删除');
+      }
+    });
+    const label = document.createElement('div');
+    label.className = 'marker-label';
+    label.textContent = m.name;
+    el.appendChild(label);
+    markerContainer.appendChild(el);
+  });
+}
+function addMarker(time, name){
+  const m = {time: time, name: name || ('M' + (markers.length + 1))};
+  markers.push(m);
+  markers.sort((a,b)=>a.time - b.time);
+  renderMarkers();
+  return m;
+}
+// 双击波形添加标记
+waveformWrap.addEventListener('dblclick', e=>{
+  if(!originalBuffer) return;
+  const t = posToTime(e.clientX);
+  const name = prompt('标记点名称（留空自动命名）:', 'M' + (markers.length + 1));
+  if(name === null) return;
+  addMarker(t, name || ('M' + (markers.length + 1)));
+  showToast('已添加标记: ' + (name || ('M' + markers.length)));
+});
+// 缩放后重新渲染标记
+const _origUpdateZoom = updateZoom;
+updateZoom = function(){
+  _origUpdateZoom();
+  renderMarkers();
+};
 
 /* ============ EXPORT WAV ============ */
 function writeStr(view, offset, str){
