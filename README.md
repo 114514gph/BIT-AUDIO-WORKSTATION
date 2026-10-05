@@ -87,6 +87,12 @@ open http://localhost:8080
 
 ## 版本历史
 
+### STABLE 1.5.2
+- 修复导出时实时效果未应用到离线渲染（压缩器/混响/延迟/淡入淡出/声像/播放速度）
+- 修复 encodeOgg 异常路径未关闭 AudioContext 导致的资源泄漏
+- 修复 localStorage 预设数据校验缺失（防止篡改导致 NaN 传播）
+- 导出时使用完整 OfflineAudioContext 管线渲染所有效果
+
 ### STABLE 1.5.1 (Bugfix)
 - 修复标记点缩放时 const 重新赋值导致崩溃
 - 修复 AB 循环不工作（整首播完才跳转）

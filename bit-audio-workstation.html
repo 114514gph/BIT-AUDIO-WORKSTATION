@@ -1242,7 +1242,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.5 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.5.2 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -2257,21 +2257,108 @@ urlInput.addEventListener('click', e=> e.stopPropagation());
 /* ============ PROCESSING PIPELINE: NOISE GATE -> BITCRUSH (EQ is real-time) ============ */
 
 /* 导出时用：把 buffer 通过当前 EQ 设置离线渲染 */
-async function renderWithEQ(buffer){
+/* 生成合成混响脉冲响应 */
+function createReverbIR(ctx, duration, decay){
+  const rate = ctx.sampleRate;
+  const len = rate * duration;
+  const ir = ctx.createBuffer(2, len, rate);
+  for(let c = 0; c < 2; c++){
+    const ch = ir.getChannelData(c);
+    for(let i = 0; i < len; i++){
+      ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+    }
+  }
+  return ir;
+}
+
+/* 完整离线渲染：EQ + 压缩器 + 混响 + 延迟 + 淡入淡出 + 声像 + 速度 */
+async function renderFullFX(buffer){
   const low = parseFloat(eqLowSlider.value);
   const mid = parseFloat(eqMidSlider.value);
   const high = parseFloat(eqHighSlider.value);
-  if(low === 0 && mid === 0 && high === 0) return buffer;
-  const ctx = new OfflineAudioContext(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
+  const fadeIn = parseFloat(fadeInSlider.value);
+  const fadeOut = parseFloat(fadeOutSlider.value);
+  const panVal = parseFloat(panSlider.value) / 100;
+  const speed = Math.max(0.25, parseFloat(speedSlider.value));
+  const reverbAmt = parseFloat(revSlider.value) / 100;
+  const delayAmt = parseFloat(delaySlider.value) / 100;
+  const delayTime = parseFloat(delayTimeSlider ? delayTimeSlider.value : 300) / 1000;
+  const delayFb = parseFloat(delayFeedbackSlider ? delayFeedbackSlider.value : 0.3);
+  const useComp = !bypassToggle.checked;
+
+  // 计算输出长度（考虑速度变化）
+  const outDur = buffer.duration / speed;
+  const outLen = Math.ceil(outDur * buffer.sampleRate);
+  const ch = Math.max(2, buffer.numberOfChannels);
+  const ctx = new OfflineAudioContext(ch, outLen, buffer.sampleRate);
+
   const src = ctx.createBufferSource();
   src.buffer = buffer;
+  src.playbackRate.value = speed;
+
+  // EQ
   const lf = ctx.createBiquadFilter();
   lf.type = 'lowshelf'; lf.frequency.value = 200; lf.gain.value = low;
   const mf = ctx.createBiquadFilter();
   mf.type = 'peaking'; mf.frequency.value = 1000; mf.Q.value = 1.0; mf.gain.value = mid;
   const hf = ctx.createBiquadFilter();
   hf.type = 'highshelf'; hf.frequency.value = 4000; hf.gain.value = high;
-  src.connect(lf); lf.connect(mf); mf.connect(hf); hf.connect(ctx.destination);
+
+  // 压缩器
+  const comp = ctx.createDynamicsCompressor();
+  comp.threshold.value = -24; comp.knee.value = 30;
+  comp.ratio.value = 12; comp.attack.value = 0.003; comp.release.value = 0.25;
+
+  // 干/湿 混合
+  const dryGain = ctx.createGain();
+  dryGain.gain.value = 1;
+
+  // 混响
+  const convolver = ctx.createConvolver();
+  convolver.buffer = createReverbIR(ctx, 2.5, 2.5);
+  const reverbGain = ctx.createGain();
+  reverbGain.gain.value = reverbAmt * 0.6;
+
+  // 延迟
+  const delayNode = ctx.createDelay(5.0);
+  delayNode.delayTime.value = delayTime;
+  const delayFeedback = ctx.createGain();
+  delayFeedback.gain.value = delayFb * 0.5;
+  const delayWetGain = ctx.createGain();
+  delayWetGain.gain.value = delayAmt * 0.5;
+  delayNode.connect(delayFeedback);
+  delayFeedback.connect(delayNode);
+
+  // 淡入淡出
+  const fadeGain = ctx.createGain();
+  fadeGain.gain.value = 1;
+  const now = 0;
+  if(fadeIn > 0){
+    fadeGain.gain.setValueAtTime(0, now);
+    fadeGain.gain.linearRampToValueAtTime(1, now + fadeIn);
+  }
+  if(fadeOut > 0){
+    const fadeStart = Math.max(fadeIn, outDur - fadeOut);
+    fadeGain.gain.setValueAtTime(1, fadeStart);
+    fadeGain.gain.linearRampToValueAtTime(0, outDur);
+  }
+
+  // 声像
+  const panner = ctx.createStereoPanner();
+  panner.pan.value = panVal;
+
+  // 连接：src → EQ → 压缩器 → (dry + reverb + delay) → fade → panner → dest
+  src.connect(lf); lf.connect(mf); mf.connect(hf);
+  if(useComp){ hf.connect(comp); comp.connect(dryGain); comp.connect(convolver); comp.connect(delayNode); }
+  else{ hf.connect(dryGain); hf.connect(convolver); hf.connect(delayNode); }
+  convolver.connect(reverbGain);
+  delayNode.connect(delayWetGain);
+  dryGain.connect(fadeGain);
+  reverbGain.connect(fadeGain);
+  delayWetGain.connect(fadeGain);
+  fadeGain.connect(panner);
+  panner.connect(ctx.destination);
+
   src.start();
   return await ctx.startRendering();
 }
@@ -3089,7 +3176,7 @@ async function encodeOgg(buffer){
       resolve({blob: new Blob(chunks, {type: mime}), ext: ext});
     };
     src.onended = ()=> rec.stop();
-    rec.onerror = e => reject(e);
+    rec.onerror = e => { try{tmpCtx.close()}catch(e){} reject(e); };
     rec.start();
     src.start();
   });
@@ -3232,7 +3319,7 @@ async function doExportOriginal(){
     const srcBuf = bypassToggle.checked ? originalBuffer : processedBuffer;
     if(!srcBuf) throw new Error('无处理后音频');
     updateProgress(20);
-    let finalBuf = await renderWithEQ(srcBuf);
+    let finalBuf = await renderFullFX(srcBuf);
     updateProgress(50);
     // 音量归一化
     if(normalizeToggle.checked){
@@ -3536,20 +3623,27 @@ function getCurrentParams(){
   };
 }
 function applyParams(p){
-  bitSlider.value = p.bit; bitVal.textContent = p.bit;
-  downSlider.value = p.down; downVal.textContent = p.down;
-  noiseSlider.value = p.noise; noiseVal.textContent = p.noise;
-  speedSlider.value = p.speed; speedVal.textContent = parseFloat(p.speed).toFixed(2);
-  eqLowSlider.value = p.eqLow; eqLowVal.textContent = p.eqLow + 'dB';
-  eqMidSlider.value = p.eqMid; eqMidVal.textContent = p.eqMid + 'dB';
-  eqHighSlider.value = p.eqHigh; eqHighVal.textContent = p.eqHigh + 'dB';
-  compSlider.value = p.comp; compVal.textContent = p.comp; compSlider.dispatchEvent(new Event('input'));
-  revSlider.value = p.rev; revVal.textContent = p.rev; revSlider.dispatchEvent(new Event('input'));
-  delaySlider.value = p.delay; delayVal.textContent = p.delay; delaySlider.dispatchEvent(new Event('input'));
-  delayTimeSlider.value = p.delayTime; delayTimeVal.textContent = p.delayTime; delayTimeSlider.dispatchEvent(new Event('input'));
-  fadeInSlider.value = p.fadeIn; fadeInVal.textContent = p.fadeIn;
-  fadeOutSlider.value = p.fadeOut; fadeOutVal.textContent = p.fadeOut;
-  bypassToggle.checked = p.bypass;
+  if(!p || typeof p !== 'object'){ showToast('预设数据无效', true); return; }
+  const safe = (v, min, max, def) => {
+    const n = parseFloat(v);
+    if(isNaN(n) || !isFinite(n)) return def;
+    return Math.max(min, Math.min(max, n));
+  };
+  const setVal = (el, val, min, max, def) => { const v = safe(val, min, max, def); el.value = v; return v; };
+  bitVal.textContent = setVal(bitSlider, p.bit, 1, 8, 8);
+  downVal.textContent = setVal(downSlider, p.down, 1, 64, 1);
+  noiseVal.textContent = setVal(noiseSlider, p.noise, 0, 100, 0);
+  const sp = setVal(speedSlider, p.speed, 0.25, 5, 1); speedVal.textContent = sp.toFixed(2);
+  eqLowVal.textContent = setVal(eqLowSlider, p.eqLow, -15, 15, 0) + 'dB';
+  eqMidVal.textContent = setVal(eqMidSlider, p.eqMid, -15, 15, 0) + 'dB';
+  eqHighVal.textContent = setVal(eqHighSlider, p.eqHigh, -15, 15, 0) + 'dB';
+  compVal.textContent = setVal(compSlider, p.comp, 0, 100, 0); compSlider.dispatchEvent(new Event('input'));
+  revVal.textContent = setVal(revSlider, p.rev, 0, 100, 0); revSlider.dispatchEvent(new Event('input'));
+  delayVal.textContent = setVal(delaySlider, p.delay, 0, 100, 0); delaySlider.dispatchEvent(new Event('input'));
+  delayTimeVal.textContent = setVal(delayTimeSlider, p.delayTime, 50, 1000, 300); delayTimeSlider.dispatchEvent(new Event('input'));
+  fadeInVal.textContent = setVal(fadeInSlider, p.fadeIn, 0, 10, 0);
+  fadeOutVal.textContent = setVal(fadeOutSlider, p.fadeOut, 0, 10, 0);
+  bypassToggle.checked = !!p.bypass;
   scheduleProcess();
   showToast('预设已加载: ' + (presetSelect.value||''));
 }
