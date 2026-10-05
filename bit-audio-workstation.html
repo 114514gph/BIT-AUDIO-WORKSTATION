@@ -158,6 +158,16 @@ header .blink{
 .workspace{display:flex;flex-direction:column;gap:12px}
 .hidden{display:none!important}
 
+.info-expand-icon{color:var(--muted);font-size:12px;margin-left:8px;transition:transform 0.2s}
+.file-info.expanded .info-expand-icon{transform:rotate(90deg)}
+.audio-details{background:var(--panel);border:1px solid var(--border);border-radius:0;padding:12px 16px;margin-bottom:8px;animation:slideDown 0.2s ease}
+.audio-details.hidden{display:none}
+.details-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px 16px}
+.detail-item{display:flex;flex-direction:column;gap:2px}
+.detail-label{font-size:10px;color:var(--muted);font-family:'VT323',monospace;letter-spacing:1px}
+.detail-value{font-size:14px;color:var(--green);font-family:'VT323',monospace}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:600px){.details-grid{grid-template-columns:repeat(2,1fr)}}
 .file-info{
   display:flex;justify-content:space-between;align-items:center;
   flex-wrap:wrap;gap:8px;
@@ -1036,9 +1046,22 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
     <!-- ===== 工作区 ===== -->
     <section class="workspace hidden" id="workspace">
-      <div class="file-info">
+      <div class="file-info" id="fileInfoBar" title="点击查看音频详情">
         <span id="fileName">--</span>
         <span id="fileMeta">--</span>
+        <span class="info-expand-icon" id="infoExpandIcon">▸</span>
+      </div>
+      <div class="audio-details hidden" id="audioDetails">
+        <div class="details-grid">
+          <div class="detail-item"><span class="detail-label">时长</span><span class="detail-value" id="detailDuration">--</span></div>
+          <div class="detail-item"><span class="detail-label">采样率</span><span class="detail-value" id="detailSampleRate">--</span></div>
+          <div class="detail-item"><span class="detail-label">声道</span><span class="detail-value" id="detailChannels">--</span></div>
+          <div class="detail-item"><span class="detail-label">采样数</span><span class="detail-value" id="detailSamples">--</span></div>
+          <div class="detail-item"><span class="detail-label">峰值电平</span><span class="detail-value" id="detailPeak">--</span></div>
+          <div class="detail-item"><span class="detail-label">RMS 电平</span><span class="detail-value" id="detailRMS">--</span></div>
+          <div class="detail-item"><span class="detail-label">直流偏移</span><span class="detail-value" id="detailDC">--</span></div>
+          <div class="detail-item"><span class="detail-label">动态范围</span><span class="detail-value" id="detailDR">--</span></div>
+        </div>
       </div>
 
       <div class="waveform-container">
@@ -1242,7 +1265,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.5.3 (Bugfix) <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.6 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -1694,6 +1717,41 @@ function fmtTime(s){
   return m + ':' + (sec<10?'0':'') + sec;
 }
 
+/* 计算音频统计信息用于详情面板 */
+function computeAudioStats(buffer){
+  if(!buffer) return;
+  const ch = buffer.numberOfChannels;
+  let peak = 0, sumSq = 0, sum = 0, totalSamples = 0;
+  for(let c = 0; c < ch; c++){
+    const data = buffer.getChannelData(c);
+    const len = data.length;
+    for(let i = 0; i < len; i++){
+      const s = data[i];
+      const abs = s < 0 ? -s : s;
+      if(abs > peak) peak = abs;
+      sumSq += s * s;
+      sum += s;
+      totalSamples++;
+    }
+  }
+  const rms = Math.sqrt(sumSq / totalSamples);
+  const dc = sum / totalSamples;
+  const dr = peak > 0 ? 20 * Math.log10(peak / (rms || 0.0001)) : 0;
+  const peakDb = peak > 0 ? 20 * Math.log10(peak) : -Infinity;
+  const rmsDb = rms > 0 ? 20 * Math.log10(rms) : -Infinity;
+  const dcDb = dc !== 0 ? 20 * Math.log10(dc < 0 ? -dc : dc) : -Infinity;
+
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('detailDuration', fmtTime(buffer.duration));
+  set('detailSampleRate', buffer.sampleRate + ' Hz');
+  set('detailChannels', ch === 1 ? '单声道' : ch === 2 ? '立体声' : ch + '声道');
+  set('detailSamples', buffer.length.toLocaleString());
+  set('detailPeak', isFinite(peakDb) ? peakDb.toFixed(1) + ' dB' : '-inf');
+  set('detailRMS', isFinite(rmsDb) ? rmsDb.toFixed(1) + ' dB' : '-inf');
+  set('detailDC', isFinite(dcDb) ? dcDb.toFixed(1) + ' dB' : '0 dB');
+  set('detailDR', isFinite(dr) ? dr.toFixed(1) + ' dB' : '--');
+}
+
 /* ============ FILE LOAD ============ */
 dropzone.addEventListener('click', ()=> fileInput.click());
 fileInput.addEventListener('change', e => { if(e.target.files[0]) loadFile(e.target.files[0]); });
@@ -1745,6 +1803,7 @@ async function loadFile(file){
       originalBuffer.sampleRate + 'Hz · ' +
       fmtTime(originalBuffer.duration) + ' · ' +
       (file.size/1024/1024).toFixed(2) + 'MB';
+    computeAudioStats(originalBuffer);
     clearSelection();
     showWorkspace();
     await processAudio();
@@ -1806,6 +1865,7 @@ async function loadFromUrl(url){
         originalBuffer.numberOfChannels + 'ch · ' +
         originalBuffer.sampleRate + 'Hz · ' +
         fmtTime(originalBuffer.duration) + ' · URL';
+      computeAudioStats(originalBuffer);
       clearSelection();
       showWorkspace();
       await processAudio();
@@ -2222,6 +2282,7 @@ demoBtn.addEventListener('click', ()=>{
         originalBuffer.numberOfChannels + 'ch · ' +
         originalBuffer.sampleRate + 'Hz · ' +
         fmtTime(originalBuffer.duration) + ' · 随机示例';
+      computeAudioStats(originalBuffer);
       clearSelection();
       showWorkspace();
       await processAudio();
@@ -2905,6 +2966,7 @@ async function afterCrop(){
     originalBuffer.numberOfChannels + 'ch · ' +
     originalBuffer.sampleRate + 'Hz · ' +
     fmtTime(originalBuffer.duration) + ' · 已裁剪';
+  computeAudioStats(originalBuffer);
   await processAudio();
   drawWaveform();
   showToast('裁剪完成');
@@ -3425,6 +3487,14 @@ zoomOutBtn.addEventListener('click', ()=>{
   if(waveZoom === 1) waveOffset = 0;
   updateZoom();
 });
+// 音频详情面板切换
+$('fileInfoBar').addEventListener('click', ()=>{
+  const bar = $('fileInfoBar');
+  const panel = $('audioDetails');
+  bar.classList.toggle('expanded');
+  panel.classList.toggle('hidden');
+});
+
 zoomResetBtn.addEventListener('click', ()=>{
   waveZoom = 1; waveOffset = 0;
   updateZoom();

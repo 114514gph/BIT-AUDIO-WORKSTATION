@@ -150,6 +150,16 @@ header .blink{
 .workspace{display:flex;flex-direction:column;gap:12px}
 .hidden{display:none!important}
 
+.info-expand-icon{color:var(--muted);font-size:12px;margin-left:8px;transition:transform 0.2s}
+.file-info.expanded .info-expand-icon{transform:rotate(90deg)}
+.audio-details{background:var(--panel);border:1px solid var(--border);border-radius:0;padding:12px 16px;margin-bottom:8px;animation:slideDown 0.2s ease}
+.audio-details.hidden{display:none}
+.details-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px 16px}
+.detail-item{display:flex;flex-direction:column;gap:2px}
+.detail-label{font-size:10px;color:var(--muted);font-family:'VT323',monospace;letter-spacing:1px}
+.detail-value{font-size:14px;color:var(--green);font-family:'VT323',monospace}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:600px){.details-grid{grid-template-columns:repeat(2,1fr)}}
 .file-info{
   display:flex;justify-content:space-between;align-items:center;
   flex-wrap:wrap;gap:8px;

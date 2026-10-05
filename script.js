@@ -780,6 +780,41 @@ function fmtTime(s){
   return m + ':' + (sec<10?'0':'') + sec;
 }
 
+/* 计算音频统计信息用于详情面板 */
+function computeAudioStats(buffer){
+  if(!buffer) return;
+  const ch = buffer.numberOfChannels;
+  let peak = 0, sumSq = 0, sum = 0, totalSamples = 0;
+  for(let c = 0; c < ch; c++){
+    const data = buffer.getChannelData(c);
+    const len = data.length;
+    for(let i = 0; i < len; i++){
+      const s = data[i];
+      const abs = s < 0 ? -s : s;
+      if(abs > peak) peak = abs;
+      sumSq += s * s;
+      sum += s;
+      totalSamples++;
+    }
+  }
+  const rms = Math.sqrt(sumSq / totalSamples);
+  const dc = sum / totalSamples;
+  const dr = peak > 0 ? 20 * Math.log10(peak / (rms || 0.0001)) : 0;
+  const peakDb = peak > 0 ? 20 * Math.log10(peak) : -Infinity;
+  const rmsDb = rms > 0 ? 20 * Math.log10(rms) : -Infinity;
+  const dcDb = dc !== 0 ? 20 * Math.log10(dc < 0 ? -dc : dc) : -Infinity;
+
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('detailDuration', fmtTime(buffer.duration));
+  set('detailSampleRate', buffer.sampleRate + ' Hz');
+  set('detailChannels', ch === 1 ? '单声道' : ch === 2 ? '立体声' : ch + '声道');
+  set('detailSamples', buffer.length.toLocaleString());
+  set('detailPeak', isFinite(peakDb) ? peakDb.toFixed(1) + ' dB' : '-inf');
+  set('detailRMS', isFinite(rmsDb) ? rmsDb.toFixed(1) + ' dB' : '-inf');
+  set('detailDC', isFinite(dcDb) ? dcDb.toFixed(1) + ' dB' : '0 dB');
+  set('detailDR', isFinite(dr) ? dr.toFixed(1) + ' dB' : '--');
+}
+
 /* ============ FILE LOAD ============ */
 dropzone.addEventListener('click', ()=> fileInput.click());
 fileInput.addEventListener('change', e => { if(e.target.files[0]) loadFile(e.target.files[0]); });
@@ -831,6 +866,7 @@ async function loadFile(file){
       originalBuffer.sampleRate + 'Hz · ' +
       fmtTime(originalBuffer.duration) + ' · ' +
       (file.size/1024/1024).toFixed(2) + 'MB';
+    computeAudioStats(originalBuffer);
     clearSelection();
     showWorkspace();
     await processAudio();
@@ -892,6 +928,7 @@ async function loadFromUrl(url){
         originalBuffer.numberOfChannels + 'ch · ' +
         originalBuffer.sampleRate + 'Hz · ' +
         fmtTime(originalBuffer.duration) + ' · URL';
+      computeAudioStats(originalBuffer);
       clearSelection();
       showWorkspace();
       await processAudio();
@@ -1308,6 +1345,7 @@ demoBtn.addEventListener('click', ()=>{
         originalBuffer.numberOfChannels + 'ch · ' +
         originalBuffer.sampleRate + 'Hz · ' +
         fmtTime(originalBuffer.duration) + ' · 随机示例';
+      computeAudioStats(originalBuffer);
       clearSelection();
       showWorkspace();
       await processAudio();
@@ -1991,6 +2029,7 @@ async function afterCrop(){
     originalBuffer.numberOfChannels + 'ch · ' +
     originalBuffer.sampleRate + 'Hz · ' +
     fmtTime(originalBuffer.duration) + ' · 已裁剪';
+  computeAudioStats(originalBuffer);
   await processAudio();
   drawWaveform();
   showToast('裁剪完成');
@@ -2511,6 +2550,14 @@ zoomOutBtn.addEventListener('click', ()=>{
   if(waveZoom === 1) waveOffset = 0;
   updateZoom();
 });
+// 音频详情面板切换
+$('fileInfoBar').addEventListener('click', ()=>{
+  const bar = $('fileInfoBar');
+  const panel = $('audioDetails');
+  bar.classList.toggle('expanded');
+  panel.classList.toggle('hidden');
+});
+
 zoomResetBtn.addEventListener('click', ()=>{
   waveZoom = 1; waveOffset = 0;
   updateZoom();

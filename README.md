@@ -2,7 +2,7 @@
 
 复古像素风音频处理工作站 · 纯前端 H5 应用
 
-![Version](https://img.shields.io/badge/version-STABLE%201.5.3-green)
+![Version](https://img.shields.io/badge/version-STABLE%201.6-green)
 ![License](https://img.shields.io/badge/license-AGPL--3.0-orange)
 ![Platform](https://img.shields.io/badge/platform-Web%20%7C%20Mobile-blue)
 
@@ -99,6 +99,10 @@ open http://localhost:8080
 
 ## 版本历史
 
+
+### STABLE 1.6
+- 新增音频信息详情面板：点击文件信息区域展开，显示时长、采样率、声道、采样数、峰值电平、RMS电平、直流偏移、动态范围等技术参数
+- 详情面板支持桌面端4列/移动端2列自适应布局
 
 ### STABLE 1.5.3 (Bugfix)
 - 修复 createReverbIR 重复定义导致 ensureCtx() 崩溃的致命回归 Bug
