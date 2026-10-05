@@ -410,6 +410,7 @@ let recMode = false;
 let mediaRecorder = null;
 let recordedChunks = [];
 let loopMode = false;
+let currentBitrate = 128;
 let abLoopMode = false;
 let waveZoom = 1;
 let waveOffset = 0;
@@ -419,7 +420,7 @@ let loadAbortController = null;
 let loadCancelled = false;
 let cancelShowTimer = null;
 
-/* 内置示例音频（base64） */
+/* 示例音频由 Web Audio API 动态生成 */
 
 /* AudioWorklet 处理器代码：实时 bitcrush + noise gate */
 const WORKLET_CODE = `
@@ -517,7 +518,7 @@ const speedSlider = $('speedSlider');
 const panSlider = $('panSlider');  // STABLE 1.2 新增
 const speedVal = $('speedVal');
 const panVal = $('panVal');  // STABLE 1.2 新增
-const ditherToggle = $('ditherToggle');  // STABLE 1.3 新增
+const ditherToggleBtn = $('ditherToggleBtn');  // STABLE 1.3 新增
 const ditherVal = $('ditherVal');
 const eqLowSlider = $('eqLowSlider');
 const eqMidSlider = $('eqMidSlider');
@@ -622,16 +623,19 @@ async function initWorklet(){
     try{
       const blob = new Blob([WORKLET_CODE], {type:'application/javascript'});
       const url = URL.createObjectURL(blob);
-      // 内部超时：addModule 超过1.5秒未完成则降级
-      const addPromise = ctx.audioWorklet.addModule(url);
-      const timeoutPromise = new Promise((_,rej)=>setTimeout(()=>rej(new Error('addModule timeout')), 1500));
-      await Promise.race([addPromise, timeoutPromise]);
-      URL.revokeObjectURL(url);
-      workletNode = new AudioWorkletNode(ctx, 'bitcrush');
-      workletNode.connect(lowFilter);
-      workletReady = true;
-      sendParams();
-      return workletNode;
+      try{
+        // 内部超时：addModule 超过1.5秒未完成则降级
+        const addPromise = ctx.audioWorklet.addModule(url);
+        const timeoutPromise = new Promise((_,rej)=>setTimeout(()=>rej(new Error('addModule timeout')), 1500));
+        await Promise.race([addPromise, timeoutPromise]);
+        workletNode = new AudioWorkletNode(ctx, 'bitcrush');
+        workletNode.connect(lowFilter);
+        workletReady = true;
+        sendParams();
+        return workletNode;
+      }finally{
+        URL.revokeObjectURL(url);
+      }
     }catch(e){
       console.warn('AudioWorklet init failed, fallback:', e);
     }
@@ -763,6 +767,23 @@ function startFakeProgress(title, showCancel){
   }, 300);
 }
 
+function isSafeUrl(url){
+  try{
+    const u = new URL(url, window.location.href);
+    // 只允许 http/https，禁止内网和本地
+    if(u.protocol !== 'http:' && u.protocol !== 'https:') return false;
+    const host = u.hostname.toLowerCase();
+    // 禁止 localhost 和内网 IP
+    if(host === 'localhost' || host.endsWith('.local')) return false;
+    if(/^127\./.test(host) || /^192\.168\./.test(host) || /^10\./.test(host)) return false;
+    if(/^172\.(1[6-9]|2[0-9]|3[01])\./.test(host)) return false;
+    if(/^169\.254\./.test(host)) return false;
+    return true;
+  }catch(e){ return false; }
+}
+function sanitizeFilename(name){
+  return name.replace(/[\\/:*?"<>|]/g, '_').replace(/\.\.+/g, '.').substring(0, 200) || 'audio';
+}
 function fmtTime(s){
   const m = Math.floor(s/60), sec = (s%60).toFixed(1);
   return m + ':' + (sec<10?'0':'') + sec;
@@ -1605,9 +1626,10 @@ async function play(){
       fadeGainNode.gain.setValueAtTime(1, now);
     }
     if(fadeOut > 0){
-      const fadeStart = now + (buf.duration - offset) / parseFloat(speedSlider.value) - fadeOut;
+      const safeRate = Math.max(0.25, parseFloat(speedSlider.value));
+    const fadeStart = now + (buf.duration - offset) / safeRate - fadeOut;
       if(fadeStart > now) fadeGainNode.gain.setValueAtTime(1, fadeStart);
-      fadeGainNode.gain.linearRampToValueAtTime(0, now + (buf.duration - offset) / parseFloat(speedSlider.value));
+      fadeGainNode.gain.linearRampToValueAtTime(0, now + (buf.duration - offset) / safeRate);
     }
     sourceNode.start(0, Math.max(0, offset));
     startTime = ctx.currentTime - offset;
@@ -1687,18 +1709,35 @@ stopBtn.addEventListener('click', ()=>{
 
 function tickPlayhead(){
   if(!isPlaying) return;
-  const rate = parseFloat(speedSlider.value);
+  const rate = Math.max(0.25, parseFloat(speedSlider.value));
   const t = (ensureCtx().currentTime - startTime) * rate;
-  const pct = (t / originalBuffer.duration) * 100;
+  const dur = originalBuffer.duration;
+  // AB 循环：到达选区结束时跳回选区开始
+  if(abLoopMode && selStart >= 0 && selEnd >= 0){
+    const abEnd = Math.max(selStart, selEnd);
+    const abStart = Math.min(selStart, selEnd);
+    if(t >= abEnd){
+      pausedAt = abStart;
+      isPlaying = false;
+      play();
+      return;
+    }
+  }
+  let pct = (t / dur) * 100;
+  // 缩放状态下播放头用可见区域相对百分比
+  if(waveZoom > 1){
+    const vs = waveOffset * 100;
+    pct = (pct - vs) * waveZoom;
+  }
   playhead.style.left = pct + '%';
-  if(pct >= 100){ return; }
+  if(t >= dur){ return; }
   rafId = requestAnimationFrame(tickPlayhead);
 }
 
 /* ============ SELECTION & CROP ============ */
 function clearMarkers(){
   markers = [];
-  if(typeof markerContainer !== 'undefined') markerContainer.innerHTML = '';
+  if(markerContainer !== null && typeof markerContainer !== 'undefined') markerContainer.innerHTML = '';
 }
 function clearSelection(){
   selStart = -1; selEnd = -1;
@@ -1854,6 +1893,12 @@ async function afterCrop(){
   playhead.style.left = '0%';
   playhead.style.display = 'none';
   clearSelection();
+  // 裁剪后重新构建反向 buffer，保持状态一致
+  if(isReversed){
+    buildReversedBuffer();
+  }else{
+    reversedBuffer = null;
+  }
   fileMetaEl.textContent =
     originalBuffer.numberOfChannels + 'ch · ' +
     originalBuffer.sampleRate + 'Hz · ' +
@@ -1903,7 +1948,16 @@ function drawWaveform(){
   ctx2d.setTransform(dpr,0,0,dpr,0,0);
   ctx2d.clearRect(0,0,w,h);
 
-  const data = buf.getChannelData(0);
+  // 混合左右声道，避免立体声只显示左声道
+  const ch0 = buf.getChannelData(0);
+  let data;
+  if(buf.numberOfChannels > 1){
+    const ch1 = buf.getChannelData(1);
+    data = new Float32Array(ch0.length);
+    for(let i = 0; i < ch0.length; i++) data[i] = (ch0[i] + ch1[i]) * 0.5;
+  }else{
+    data = ch0;
+  }
   const mid = h / 2;
   
   // 缩放：只绘制可见范围
@@ -1948,7 +2002,7 @@ function renderMarkers(){
   if(!originalBuffer) return;
   const dur = originalBuffer.duration;
   markers.forEach((m, idx)=>{
-    const pct = (m.time / dur) * 100;
+    let pct = (m.time / dur) * 100;
     // 缩放时只显示可见范围内的标记
     if(waveZoom > 1){
       const visibleStart = waveOffset * 100;
@@ -1965,7 +2019,13 @@ function renderMarkers(){
       if(isPlaying){ stop(true); }
       pausedAt = m.time;
       playhead.style.display = 'block';
-      playhead.style.left = (m.time / dur * 100) + '%';
+      // 缩放状态下播放头也要用可见区域相对百分比
+      let playPct = (m.time / dur) * 100;
+      if(waveZoom > 1){
+        const vs = waveOffset * 100;
+        playPct = (playPct - vs) * waveZoom;
+      }
+      playhead.style.left = playPct + '%';
       showToast('跳转到标记: ' + m.name);
     });
     el.addEventListener('contextmenu', e=>{
@@ -1997,8 +2057,8 @@ waveformWrap.addEventListener('dblclick', e=>{
   const t = posToTime(e.clientX);
   const name = prompt('标记点名称（留空自动命名）:', 'M' + (markers.length + 1));
   if(name === null) return;
-  addMarker(t, name || ('M' + (markers.length + 1)));
-  showToast('已添加标记: ' + (name || ('M' + markers.length)));
+  const newMarker = addMarker(t, name || ('M' + (markers.length + 1)));
+  showToast('已添加标记: ' + newMarker.name);
 });
 // 缩放后重新渲染标记
 const _origUpdateZoom = updateZoom;
@@ -2036,17 +2096,18 @@ function encodeWav(buffer){
   writeStr(view, 36, 'data');
   view.setUint32(40, dataSize, true);
 
+  // 批量转换为 Int16，性能更好且取整正确
+  const i16 = new Int16Array(len * numCh);
   const channels = [];
   for(let c = 0; c < numCh; c++) channels.push(buffer.getChannelData(c));
-  let off = 44;
   for(let i = 0; i < len; i++){
     for(let c = 0; c < numCh; c++){
       let s = channels[c][i];
       s = s > 1 ? 1 : s < -1 ? -1 : s;
-      view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-      off += 2;
+      i16[i * numCh + c] = Math.round(s * 32767);
     }
   }
+  new Int16Array(ab, 44).set(i16);
   return new Blob([ab], {type: 'audio/wav'});
 }
 
@@ -2185,7 +2246,7 @@ function startRecording(){
       a.href = url;
       const ts = new Date();
       const stamp = String(ts.getHours()).padStart(2,'0')+String(ts.getMinutes()).padStart(2,'0')+String(ts.getSeconds()).padStart(2,'0');
-      a.download = currentFileName + '_djrec_' + stamp + '.' + ext;
+      a.download = sanitizeFilename(currentFileName) + '_djrec_' + stamp + '.' + ext;
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       setTimeout(()=> URL.revokeObjectURL(url), 1000);
       showToast('录制完成，已下载 ' + (lastRecordingBlob.size/1024/1024).toFixed(2) + 'MB');
@@ -2271,7 +2332,7 @@ async function doExportOriginal(){
     const url = URL.createObjectURL(result.blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = currentFileName + suffix + '.' + result.ext;
+    a.download = sanitizeFilename(currentFileName) + suffix + '.' + result.ext;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(()=> URL.revokeObjectURL(url), 1000);
     showToast('已导出 ' + (result.blob.size/1024/1024).toFixed(2) + 'MB (' + result.ext.toUpperCase() + ')');
@@ -2290,7 +2351,7 @@ function doExportRecording(){
   a.href = url;
   const ts = new Date();
   const stamp = String(ts.getHours()).padStart(2,'0')+String(ts.getMinutes()).padStart(2,'0')+String(ts.getSeconds()).padStart(2,'0');
-  a.download = currentFileName + '_recording_' + stamp + '.' + lastRecordingExt;
+  a.download = sanitizeFilename(currentFileName) + '_recording_' + stamp + '.' + lastRecordingExt;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(()=> URL.revokeObjectURL(url), 1000);
   showToast('已导出录制版 ' + (lastRecordingBlob.size/1024/1024).toFixed(2) + 'MB');
@@ -2337,7 +2398,7 @@ function unlockCtx(){
 document.addEventListener('touchstart', unlockCtx, {once:true, passive:true});
 document.addEventListener('click', unlockCtx, {once:true});
 
-/* ============ STABLE 1.1 新功能：循环播放 + 快捷键系统 + 帮助面板 ============ */
+/* ============ STABLE 1.1 新功能：循环播放 + 标记点 + AB循环 + 波形缩放 ============ */
 
 /* --- 循环播放 --- */
 const loopToggle = $('loopToggle');
@@ -2393,11 +2454,12 @@ waveformWrap.addEventListener('wheel', e=>{
 // 拖拽滚动（缩放后）
 let isDraggingWave = false, dragStartX = 0, dragStartOffset = 0;
 waveformWrap.addEventListener('mousedown', e=>{
-  if(waveZoom > 1 && e.button === 1 || (waveZoom > 1 && e.shiftKey)){
+  if(waveZoom > 1 && (e.button === 1 || e.shiftKey)){
     isDraggingWave = true;
     dragStartX = e.clientX;
     dragStartOffset = waveOffset;
     e.preventDefault();
+    e.stopPropagation();
   }
 });
 window.addEventListener('mousemove', e=>{

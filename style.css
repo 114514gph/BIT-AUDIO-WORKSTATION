@@ -37,6 +37,7 @@
 /* ============ RESET & BASE ============ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
+  --bg2:#0a0a12;
   --bg:#0a0a0f;
   --panel:#12121c;
   --panel2:#1a1a28;
@@ -591,6 +592,7 @@ footer .footer-info{margin-top:6px;font-size:12px;opacity:0.7}
 .export-hint{text-align:center;margin-top:14px;font-family:var(--mono);font-size:14px;color:var(--muted)}
 .help-btn{width:32px;height:32px;padding:0;font-size:12px;border-color:var(--cyan);color:var(--cyan);background:rgba(0,200,255,0.08);min-height:32px;font-family:var(--pixel);line-height:1;flex-shrink:0}
 .dither-btn{font-size:10px;padding:6px 12px;margin-top:4px;width:100%;border-color:var(--green);color:var(--green);background:rgba(0,255,100,0.05)}
+.btn.on{border-color:var(--pink)!important;color:var(--pink)!important;background:rgba(255,0,128,0.1)!important}
 .dither-btn.active{background:rgba(0,255,100,0.15);box-shadow:0 0 8px rgba(0,255,100,0.3)}
 .help-btn:hover{background:rgba(0,200,255,0.2)}
 .help-window{min-width:340px}

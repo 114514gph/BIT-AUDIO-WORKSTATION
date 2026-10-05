@@ -108,7 +108,7 @@
           </label>
           <div class="mp3-bitrate-select hidden" id="mp3BitrateSelect">
             <span class="br-label">KBPS</span>
-            <div class="br-buttons" id="mp3BitrateBtns">
+            <div class="br-buttons" id="$('mp3BitrateBtns')">
               <button class="br-btn" data-br="64">64</button>
               <button class="br-btn" data-br="96">96</button>
               <button class="br-btn active" data-br="128">128</button>
@@ -139,7 +139,7 @@
         </div>
         <div class="ctrl speed">
           <label>SPEED <span id="speedVal">1.0</span>&times;</label>
-          <input type="range" id="speedSlider" min="0" max="5" step="0.25" value="1">
+          <input type="range" id="speedSlider" min="0.25" max="5" step="0.25" value="1">
           <div class="ticks"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
         </div>
         <!-- STABLE 1.2 新增：声像调节 -->
@@ -245,7 +245,7 @@
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.3 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.5 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
