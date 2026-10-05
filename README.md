@@ -2,7 +2,7 @@
 
 复古像素风音频处理工作站 · 纯前端 H5 应用
 
-![Version](https://img.shields.io/badge/version-STABLE%201.5.2-green)
+![Version](https://img.shields.io/badge/version-STABLE%201.5.3-green)
 ![License](https://img.shields.io/badge/license-AGPL--3.0-orange)
 ![Platform](https://img.shields.io/badge/platform-Web%20%7C%20Mobile-blue)
 
@@ -99,6 +99,18 @@ open http://localhost:8080
 
 ## 版本历史
 
+
+### STABLE 1.5.3 (Bugfix)
+- 修复 createReverbIR 重复定义导致 ensureCtx() 崩溃的致命回归 Bug
+- 修复导出时压缩器参数硬编码（改为从 compSlider 读取）
+- 修复导出时延迟反馈量、混响/延迟干湿比与实时播放不一致
+- 修复 bypass 时压缩器行为与实时播放不一致
+- 修复 MP3 编码采样值无 Math.round、clamp 范围不对称
+- 修复 URL 加载未应用协议白名单（禁止内网/本地）
+- 修复 scheduleProcess pending 丢失更新（参数变化被遗忘）
+- 修复 normalizeToggle/mp3BitrateBtns 依赖浏览器全局 id 映射
+- 修复 mp3BitrateBtns HTML id 错误（id="$('mp3BitrateBtns')"）
+- 删除 loadScript 死代码和 mp3Bitrate 无效引用
 
 ### STABLE 1.5.2
 - 修复导出时实时效果未应用到离线渲染（压缩器/混响/延迟/淡入淡出/声像/播放速度）

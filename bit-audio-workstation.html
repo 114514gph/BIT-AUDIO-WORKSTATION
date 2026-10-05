@@ -1105,7 +1105,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
           </label>
           <div class="mp3-bitrate-select hidden" id="mp3BitrateSelect">
             <span class="br-label">KBPS</span>
-            <div class="br-buttons" id="$('mp3BitrateBtns')">
+            <div class="br-buttons" id="mp3BitrateBtns">
               <button class="br-btn" data-br="64">64</button>
               <button class="br-btn" data-br="96">96</button>
               <button class="br-btn active" data-br="128">128</button>
@@ -1242,7 +1242,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.5.2 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.5.3 (Bugfix) <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -1489,7 +1489,7 @@ function ensureCtx(){
     compressorNode.ratio.value = 12; compressorNode.attack.value = 0.003; compressorNode.release.value = 0.25;
     // 混响
     convolverNode = audioCtx.createConvolver();
-    convolverNode.buffer = createReverbIR(2.5, 2.5);
+    convolverNode.buffer = createReverbIR(audioCtx, 2.5, 2.5);
     reverbGain = audioCtx.createGain(); reverbGain.gain.value = 0;
     dryGain = audioCtx.createGain(); dryGain.gain.value = 1;
     // 延迟
@@ -1516,16 +1516,7 @@ function ensureCtx(){
   }
   return audioCtx;
 }
-function createReverbIR(duration, decay){
-  const rate = audioCtx.sampleRate;
-  const len = rate * duration;
-  const ir = audioCtx.createBuffer(2, len, rate);
-  for(let c=0;c<2;c++){
-    const d = ir.getChannelData(c);
-    for(let i=0;i<len;i++){ d[i] = (Math.random()*2-1) * Math.pow(1-i/len, decay); }
-  }
-  return ir;
-}
+
 
 async function initWorklet(){
   if(workletNode) return workletNode;
@@ -1781,6 +1772,9 @@ async function loadFromUrl(url){
   for(let attempt = 0; attempt <= maxRetries; attempt++){
     showProgress(attempt > 0 ? '重试下载 (' + attempt + '/' + maxRetries + ')…' : '下载中…', 0, true);
     try{
+      if(typeof isSafeUrl === 'function' && !isSafeUrl(url)){
+        throw new Error('不支持的 URL 协议或地址（禁止内网/本地）');
+      }
       const resp = await fetch(url, {mode:'cors', signal: loadAbortController.signal});
       if(!resp.ok) throw new Error('HTTP ' + resp.status);
       const total = parseInt(resp.headers.get('content-length')) || 0;
@@ -2283,8 +2277,8 @@ async function renderFullFX(buffer){
   const reverbAmt = parseFloat(revSlider.value) / 100;
   const delayAmt = parseFloat(delaySlider.value) / 100;
   const delayTime = parseFloat(delayTimeSlider ? delayTimeSlider.value : 300) / 1000;
-  const delayFb = parseFloat(delayFeedbackSlider ? delayFeedbackSlider.value : 0.3);
-  const useComp = !bypassToggle.checked;
+  const delayFb = 0.35;  // 与实时链一致
+  // bypass 只跳过 bitcrush，压缩器/混响/延迟仍生效（与实时链一致）
 
   // 计算输出长度（考虑速度变化）
   const outDur = buffer.duration / speed;
@@ -2304,10 +2298,13 @@ async function renderFullFX(buffer){
   const hf = ctx.createBiquadFilter();
   hf.type = 'highshelf'; hf.frequency.value = 4000; hf.gain.value = high;
 
-  // 压缩器
+  // 压缩器（参数与实时链一致：threshold=-24-v*30, ratio=4+v*16）
+  const compAmt = compSlider ? parseFloat(compSlider.value) / 100 : 0;
   const comp = ctx.createDynamicsCompressor();
-  comp.threshold.value = -24; comp.knee.value = 30;
-  comp.ratio.value = 12; comp.attack.value = 0.003; comp.release.value = 0.25;
+  comp.threshold.value = -24 - compAmt * 30;
+  comp.knee.value = 30;
+  comp.ratio.value = 4 + compAmt * 16;
+  comp.attack.value = 0.003; comp.release.value = 0.25;
 
   // 干/湿 混合
   const dryGain = ctx.createGain();
@@ -2317,7 +2314,7 @@ async function renderFullFX(buffer){
   const convolver = ctx.createConvolver();
   convolver.buffer = createReverbIR(ctx, 2.5, 2.5);
   const reverbGain = ctx.createGain();
-  reverbGain.gain.value = reverbAmt * 0.6;
+  reverbGain.gain.value = reverbAmt * 0.8;  // 与实时链一致
 
   // 延迟
   const delayNode = ctx.createDelay(5.0);
@@ -2325,7 +2322,7 @@ async function renderFullFX(buffer){
   const delayFeedback = ctx.createGain();
   delayFeedback.gain.value = delayFb * 0.5;
   const delayWetGain = ctx.createGain();
-  delayWetGain.gain.value = delayAmt * 0.5;
+  delayWetGain.gain.value = delayAmt * 0.6;  // 与实时链一致
   delayNode.connect(delayFeedback);
   delayFeedback.connect(delayNode);
 
@@ -2349,8 +2346,7 @@ async function renderFullFX(buffer){
 
   // 连接：src → EQ → 压缩器 → (dry + reverb + delay) → fade → panner → dest
   src.connect(lf); lf.connect(mf); mf.connect(hf);
-  if(useComp){ hf.connect(comp); comp.connect(dryGain); comp.connect(convolver); comp.connect(delayNode); }
-  else{ hf.connect(dryGain); hf.connect(convolver); hf.connect(delayNode); }
+  hf.connect(comp); comp.connect(dryGain); comp.connect(convolver); comp.connect(delayNode);
   convolver.connect(reverbGain);
   delayNode.connect(delayWetGain);
   dryGain.connect(fadeGain);
@@ -2453,6 +2449,11 @@ async function processAudio(){
       eqLowSlider.value + ',' + eqMidSlider.value + ',' + eqHighSlider.value + ')dB';
   }finally{
     isProcessing = false;
+    // 处理期间有新参数变化，再跑一次
+    if(pendingProcess){
+      pendingProcess = false;
+      processAudio().then(()=>{ drawWaveform(); }).catch(()=>{});
+    }
   }
 }
 
@@ -2547,10 +2548,10 @@ bypassToggle.addEventListener('change', ()=>{
 });
 
 // MP3 比特率按钮选择
-if(mp3BitrateBtns){
-  mp3BitrateBtns.querySelectorAll('.br-btn').forEach(btn=>{
+const _mp3BrBtns = $('mp3BitrateBtns'); if(_mp3BrBtns){
+  _mp3BrBtns.querySelectorAll('.br-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
-      mp3BitrateBtns.querySelectorAll('.br-btn').forEach(b=>b.classList.remove('active'));
+      _mp3BrBtns.querySelectorAll('.br-btn').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
       currentBitrate = parseInt(btn.dataset.br, 10);
       const hint = $('mp3BitrateHint');
@@ -3112,20 +3113,6 @@ function encodeWav(buffer){
   return new Blob([ab], {type: 'audio/wav'});
 }
 
-/* ============ 动态加载脚本 ============ */
-function loadScript(src){
-  return new Promise((resolve, reject) => {
-    const existing = document.querySelector('script[data-enc="'+src+'"]');
-    if(existing){ resolve(); return; }
-    const s = document.createElement('script');
-    s.src = src;
-    s.dataset.enc = src;
-    s.onload = ()=> resolve();
-    s.onerror = ()=> reject(new Error('脚本加载失败: '+src));
-    document.head.appendChild(s);
-  });
-}
-
 /* ============ MP3 编码 (lamejs) ============ */
 async function encodeMp3(buffer){
   const ch = buffer.numberOfChannels;
@@ -3133,12 +3120,12 @@ async function encodeMp3(buffer){
   const len = buffer.length;
   const left = new Int16Array(len);
   const lData = buffer.getChannelData(0);
-  for(let i=0;i<len;i++) left[i] = Math.max(-32767, Math.min(32767, lData[i]*32767));
+  for(let i=0;i<len;i++) left[i] = Math.max(-32768, Math.min(32767, Math.round(lData[i]*32767)));
   let right = null, rData = null;
   if(ch > 1){
     right = new Int16Array(len);
     rData = buffer.getChannelData(1);
-    for(let i=0;i<len;i++) right[i] = Math.max(-32767, Math.min(32767, rData[i]*32767));
+    for(let i=0;i<len;i++) right[i] = Math.max(-32768, Math.min(32767, Math.round(rData[i]*32767)));
   }
   const mp3Br = currentBitrate || 128; const encoder = new lamejs.Mp3Encoder(ch, sr, mp3Br);
   const mp3Data = [];
@@ -3270,7 +3257,7 @@ formatBtn.addEventListener('click', e=>{
   formatMenu.classList.toggle('hidden');
 });
 // MP3 比特率变化时更新提示
-const mp3BrEl = $('mp3Bitrate');
+// const mp3BrEl = $('mp3Bitrate'); // 元素不存在，已废弃
 if(mp3BrEl) mp3BrEl.addEventListener('change', ()=>{
   const hint = $('mp3BitrateHint');
   if(hint) hint.textContent = mp3BrEl.value + 'kbps';
@@ -3322,7 +3309,7 @@ async function doExportOriginal(){
     let finalBuf = await renderFullFX(srcBuf);
     updateProgress(50);
     // 音量归一化
-    if(normalizeToggle.checked){
+    if($('normalizeToggle').checked){
       updateProgress(60);
       finalBuf = normalizeBuffer(finalBuf);
     }
