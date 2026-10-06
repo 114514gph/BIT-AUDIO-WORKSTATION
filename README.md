@@ -1,71 +1,91 @@
-# BIT AUDIO WORKSTATION
-
-复古像素风音频处理工作站 · 纯前端 H5 应用
-
-![Version](https://img.shields.io/badge/version-STABLE%201.6.4-green)
-![License](https://img.shields.io/badge/license-AGPL--3.0-orange)
-![Platform](https://img.shields.io/badge/platform-Web%20%7C%20Mobile-blue)
-
-## 简介
-
-BIT AUDIO WORKSTATION 是一个功能完整的纯前端音频处理工作站，无需上传服务器，所有处理均在浏览器本地完成。复古像素风 UI，支持电脑端和手机端自适应。
-
-## 功能特性
-
-### 音质处理
-- **8-bit 降采样**：1~8 bit 量化 + 1~64x 降采样
-- **Dither 抖动**：低比特量化时添加 TPDF 噪声，减少量化失真
-- **降噪**：自适应噪声门 + 高频嘶声压制
-- **三段均衡器**：LOW / MID / HIGH ±15dB，垂直滑块
-- **压缩器**：动态范围压缩
-- **混响**：卷积混响
-- **延迟**：带反馈的延迟效果
-- **声像调节**：PAN 左右声道平衡
-- **淡入淡出**：可调节时长
-
-### 编辑功能
-- **音频裁剪**：波形拖拽选区，支持多段反复裁剪
-- **反向播放**：一键反转音频
-- **倍速播放**：0~5x 实时变速
-- **音量归一化**：自动最大化音量
-- **削波指示**：实时削波检测
-
-### 录制与导出
-- **DJ 实时录制**：播放时的调音一并录制，暂停可继续
-- **多格式导出**：WAV / MP3（64~320kbps 可调）/ OGG / FLAC
-- **导出选择**：原曲或录制版
-
-### 其他
-- **随机示例音乐**：10 调式 × 40 和弦进行 × 25 鼓点 × 6 编曲风格
-- **实时频谱仪**：48 频段对数频率映射
-- **预设系统**：保存和加载处理参数
-- **循环播放、AB 循环、标记点（Marker）**：单曲循环
-- **加载取消**：加载过程中可取消（防误触）
-
-## 技术栈
-
-- 纯 HTML / CSS / JavaScript，无框架依赖
-- Web Audio API + AudioWorklet 实时处理
-- lamejs（MP3 编码）+ libflacjs（FLAC 编码）内联
-- 字体 base64 内嵌（Press Start 2P / VT323 / Cubic 11）
-- 单文件自包含，也可拆分部署
-
-## 项目结构
+<div align="center">
 
 ```
-├── index.html          # 主页面（拆分版）
-├── style.css           # 样式（含内嵌字体）
-├── script.js           # 逻辑（含编码库）
-├── bit-audio-workstation.html  # 单文件完整版（用于 Release）
-└── README.md
+██████╗ ██╗████████╗    █████╗ ██╗   ██╗██████╗ ██╗ ██████╗ 
+██╔══██╗██║╚══██╔══╝   ██╔══██╗██║   ██║██╔══██╗██║██╔═══██╗
+██████╔╝██║   ██║█████╗███████║██║   ██║██║  ██║██║██║   ██║
+██╔══██╗██║   ██║╚════╝██╔══██║██║   ██║██║  ██║██║██║   ██║
+██████╔╝██║   ██║      ██║  ██║╚██████╔╝██████╔╝██║╚██████╔╝
+╚═════╝ ╚═╝   ╚═╝      ╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚═╝ ╚═════╝ 
 ```
 
-## 使用方法
+### 🎵 AUDIO WORKSTATION
+
+**复古像素风 · 纯前端 H5 · 音频处理工作站**
+
+[![Version](https://img.shields.io/badge/STABLE-1.6.4-00ff88?style=for-the-badge)](https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases)
+[![License](https://img.shields.io/badge/AGPL--3.0-ff0066?style=for-the-badge)](LICENSE)
+[![Platform](https://img.shields.io/badge/Web%20%7C%20Mobile-00aaff?style=for-the-badge)](#)
+[![Made with](https://img.shields.io/badge/Web%20Audio%20API-ffaa00?style=for-the-badge)](#)
+
+---
+
+</div>
+
+## 📖 简介
+
+BIT AUDIO WORKSTATION 是一个功能完整的**纯前端音频处理工作站**。所有处理均在浏览器本地完成，无需上传服务器，隐私安全。复古像素风 UI，支持电脑端和手机端自适应。
+
+> 🎮 **像玩游戏一样处理音频** — 8-bit 降采样、实时频谱仪、DJ 录制、随机芯片音乐生成……
+
+---
+
+## ✨ 功能特性
+
+### 🎛️ 音质处理
+
+| 功能 | 说明 |
+|------|------|
+| 🎚️ **8-bit 降采样** | 1~8 bit 量化 + 1~64x 降采样，复古芯片音质 |
+| 🌊 **Dither 抖动** | TPDF 噪声，低比特量化时减少失真 |
+| 🔇 **降噪** | 自适应噪声门 + 高频嘶声压制 |
+| 🎚️ **三段均衡器** | LOW / MID / HIGH ±15dB，垂直滑块 |
+| 📊 **压缩器** | 动态范围压缩，防止削波 |
+| 🏛️ **混响** | 卷积混响，空间感 |
+| ⏱️ **延迟** | 带反馈的延迟效果 |
+| ↔️ **声像调节** | PAN 左右声道平衡 |
+| 🎚️ **淡入淡出** | 可调节时长，平滑过渡 |
+
+### ✂️ 编辑功能
+
+| 功能 | 说明 |
+|------|------|
+| ✂️ **音频裁剪** | 波形拖拽选区，支持多段反复裁剪 |
+| 🔄 **反向播放** | 一键反转音频 |
+| ⏩ **倍速播放** | 0.25~5x 实时变速 |
+| 🔊 **音量归一化** | 自动最大化音量 |
+| ⚡ **削波指示** | 实时削波检测 |
+| 📍 **标记点** | 双击添加、点击跳转、右键删除 |
+| 🔁 **AB 循环** | 选定区域内循环播放 |
+| 🔍 **波形缩放** | 1x~8x，滚轮缩放 + Shift 拖拽平移 |
+
+### 🎙️ 录制与导出
+
+| 功能 | 说明 |
+|------|------|
+| 🎤 **DJ 实时录制** | 播放时的调音一并录制，暂停可继续 |
+| 💾 **多格式导出** | WAV / MP3（64~320kbps）/ OGG / FLAC |
+| 📋 **导出选择** | 原曲或录制版 |
+| 🎵 **随机示例音乐** | 10 调式 × 40 和弦 × 25 鼓点 × 6 编曲风格 |
+
+### 🛠️ 其他
+
+- 📈 **实时频谱仪**：48 频段对数频率映射
+- 💾 **预设系统**：保存和加载处理参数
+- 🔄 **循环播放**：单曲循环
+- ⏹️ **加载取消**：加载过程中可取消（防误触）
+- 📋 **音频信息详情**：峰值/RMS/直流偏移/动态范围
+
+---
+
+## 🚀 快速开始
 
 ### 直接使用
-下载 Release 中的 `bit-audio-workstation.html`，用浏览器打开即可。
+
+下载 [最新 Release](https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases) 中的 `bit-audio-workstation.html`，用浏览器打开即可。
 
 ### 源码部署
+
 ```bash
 # 克隆仓库
 git clone https://github.com/114514gph/BIT-AUDIO-WORKSTATION.git
@@ -78,121 +98,154 @@ python3 -m http.server 8080
 open http://localhost:8080
 ```
 
-## 浏览器兼容
+---
 
-- Chrome / Edge 90+
-- Firefox 88+
-- Safari 14+
-- 移动端浏览器（Chrome / Safari）
+## 🛠️ 技术栈
 
-## 版本号规则
+```
+┌─────────────────────────────────────────────────┐
+│  纯 HTML / CSS / JavaScript · 无框架依赖          │
+├─────────────────────────────────────────────────┤
+│  Web Audio API + AudioWorklet 实时处理           │
+│  lamejs (MP3) + libflacjs (FLAC) 内联编码库      │
+│  字体 base64 内嵌 (Press Start 2P / VT323 /      │
+│  Cubic 11 像素中文字体)                           │
+│  单文件自包含 · 也可拆分部署                      │
+└─────────────────────────────────────────────────┘
+```
+
+---
+
+## 📁 项目结构
+
+```
+BIT-AUDIO-WORKSTATION/
+├── index.html                    # 主页面（拆分版）
+├── style.css                     # 样式（含内嵌字体）
+├── script.js                     # 逻辑（含编码库）
+├── bit-audio-workstation.html    # 单文件完整版（用于 Release）
+├── README.md
+├── SECURITY.md
+├── LICENSE                       # AGPL-3.0
+├── .gitignore
+└── archive/                      # 历史版本归档
+```
+
+---
+
+## 🌐 浏览器兼容
+
+| 浏览器 | 版本 | 说明 |
+|--------|------|------|
+| Chrome / Edge | 90+ | ✅ 完整支持 |
+| Firefox | 88+ | ✅ 完整支持 |
+| Safari | 14+ | ✅ 完整支持 |
+| 移动端 Chrome / Safari | - | ✅ 自适应布局 |
+
+---
+
+## 📌 版本号规则
 
 | 类型 | 格式 | 说明 | 示例 |
 |------|------|------|------|
 | 正常功能更新 | `STABLE x.y` | 新增功能，小版本 y+1 | `1.5` → `1.6` |
-| Bug 修复 | `STABLE x.y.nnn (Bugfix)` | 主要修 bug，不增加 y，nnn 从 1 递增 | `1.5` → `1.5.1 (Bugfix)` → `1.5.2 (Bugfix)` |
-| 实验性功能 | `BETA x.yXn` | 未经验证的新功能，X 是分隔符，n 是测试次数 | `1.6` → `BETA 1.6X1` → 测试通过 → `STABLE 1.6` |
+| Bug 修复 | `STABLE x.y.nnn (Bugfix)` | 主要修 bug，nnn 从 1 递增 | `1.5` → `1.5.1` → `1.5.2` |
+| 实验性功能 | `BETA x.yXn` | 未经验证的新功能，n 是测试次数 | `1.6` → `BETA 1.6X1` → `STABLE 1.6` |
 
 - Bugfix 版本不增加 y，只增加 nnn
 - 下一次正常功能更新时，从最新 Bugfix 版本继续 +0.1
 - BETA 版标记为 Pre-release，测试通过后转为 STABLE
 
-## 版本历史
+---
 
+## 📜 版本历史
+
+<details>
+<summary><b>STABLE 1.6.x</b> （点击展开）</summary>
 
 ### STABLE 1.6.4 (Bugfix)
-- 修复倍速播放暂停后再播放，进度条消失/位置错误的 bug（startTime 计算未除以 playbackRate，导致 tickPlayhead 重复乘倍速）
+- 修复倍速播放暂停后再播放，进度条消失/位置错误的 bug
 
 ### STABLE 1.6.3 (Bugfix)
-- 修复 mp3BrEl is not defined 致命错误（废弃代码块未完全注释导致 ReferenceError）
-- 波形峰值缓存优化：预计算 2048 bars 峰值数据，缩放/resize 时不再重复遍历全量样本
-- processAudio 完成和裁剪后自动失效波形缓存
+- 修复 mp3BrEl is not defined 致命错误
+- 波形峰值缓存优化（2048 bars 预计算）
 
 ### STABLE 1.6.2 (Bugfix)
-- 修复 ScriptProcessor 降级方案不支持 Dither 的问题（添加 TPDF 噪声抖动）
-- 优化大音频处理性能：processAudio 改为分块异步处理（每块256k采样点），避免 UI 卡死
-- bitSlider 浮点值确认全部使用 Math.round，实时与导出一致
+- ScriptProcessor 降级方案支持 Dither
+- 大音频分块异步处理，避免 UI 卡死
 
 ### STABLE 1.6.1 (Bugfix)
-- 修复 ditherToggleBtn 重复声明导致的致命语法错误（整个脚本无法解析）
+- 修复 ditherToggleBtn 重复声明致命语法错误
 - 修复 FLAC 编码采样值无 Math.round
-- scheduleProcess pending 机制确认正常工作
 
 ### STABLE 1.6
-- 新增音频信息详情面板：点击文件信息区域展开，显示时长、采样率、声道、采样数、峰值电平、RMS电平、直流偏移、动态范围等技术参数
-- 详情面板支持桌面端4列/移动端2列自适应布局
+- 新增音频信息详情面板（峰值/RMS/直流偏移/动态范围）
+
+</details>
+
+<details>
+<summary><b>STABLE 1.5.x</b> （点击展开）</summary>
 
 ### STABLE 1.5.3 (Bugfix)
-- 修复 createReverbIR 重复定义导致 ensureCtx() 崩溃的致命回归 Bug
-- 修复导出时压缩器参数硬编码（改为从 compSlider 读取）
-- 修复导出时延迟反馈量、混响/延迟干湿比与实时播放不一致
-- 修复 bypass 时压缩器行为与实时播放不一致
-- 修复 MP3 编码采样值无 Math.round、clamp 范围不对称
-- 修复 URL 加载未应用协议白名单（禁止内网/本地）
-- 修复 scheduleProcess pending 丢失更新（参数变化被遗忘）
-- 修复 normalizeToggle/mp3BitrateBtns 依赖浏览器全局 id 映射
-- 修复 mp3BitrateBtns HTML id 错误（id="$('mp3BitrateBtns')"）
-- 删除 loadScript 死代码和 mp3Bitrate 无效引用
+- 修复 createReverbIR 重复定义致命回归
+- 修复导出效果与实时播放不一致
 
 ### STABLE 1.5.2
-- 修复导出时实时效果未应用到离线渲染（压缩器/混响/延迟/淡入淡出/声像/播放速度）
-- 修复 encodeOgg 异常路径未关闭 AudioContext 导致的资源泄漏
-- 修复 localStorage 预设数据校验缺失（防止篡改导致 NaN 传播）
-- 导出时使用完整 OfflineAudioContext 管线渲染所有效果
+- 导出时完整应用所有实时效果（压缩器/混响/延迟/淡入/声像/速度）
 
 ### STABLE 1.5.1 (Bugfix)
-- 修复标记点缩放时 const 重新赋值导致崩溃
-- 修复 AB 循环不工作（整首播完才跳转）
-- 修复反向播放后裁剪 reversedBuffer 不同步
-- 修复 AudioWorklet 超时 Blob URL 泄漏
-- 修复 speedSlider=0 除零错误
-- 修复波形只显示左声道（改为混合双声道）
-- 修复 WAV 16位采样转换无取整、正负不对称
-- 修复下载文件名未净化（路径遍历风险）
-- 修复缩放拖拽与选区拖拽冲突
-- 添加 URL 加载协议白名单（禁止内网/本地）
-- 添加 .btn.on 激活态样式
-- 页脚版本号修正
+- 批量修复 19 个 bug（标记点崩溃/AB循环/反向裁剪/Blob泄漏等）
 
 ### STABLE 1.5
-- 新增标记点（Marker）功能：双击添加、点击跳转、右键删除、缩放自适应
-- 新增 AB 循环（1.4 引入，1.5 修复）
-- 新增波形缩放（1.4 引入，1.5 修复）
+- 新增标记点（Marker）功能
+
+</details>
+
+<details>
+<summary><b>STABLE 1.0 ~ 1.4</b> （点击展开）</summary>
 
 ### STABLE 1.4
-- 新增 AB 循环：选定区域内循环播放
-- 新增波形缩放：1x~8x，滚轮缩放 + Shift 拖拽平移
+- 新增 AB 循环、波形缩放
 
 ### STABLE 1.3
-- 新增 Dither 抖动：TPDF 噪声，低比特量化时减少失真
-- 移除快捷键系统（存在兼容性问题，后续考虑回归）
-- MP3 比特率选择器改为自制按钮组
-- UI 布局优化
+- 新增 Dither 抖动、MP3 比特率自制选择器
 
 ### STABLE 1.2
-- 新增声像调节（PAN）：左右声道平衡
-- 更名为 BIT AUDIO WORKSTATION
+- 新增声像调节（PAN）、更名为 BIT AUDIO WORKSTATION
 
 ### STABLE 1.1
 - 新增循环播放
-- 新增快捷键系统（1.3 已移除）
 
 ### STABLE 1.0
-- 淡入淡出
-- 音量归一化
-- 削波指示
-- 预设系统
-- 反向播放
-- 混响 / 延迟 / 压缩器
-- 实时频谱仪
-- MP3 / FLAC 编码库内置
+- 淡入淡出、音量归一化、削波指示、预设系统
+- 反向播放、混响/延迟/压缩器、实时频谱仪
+- MP3/FLAC 编码库内置
 
-## 作者
+</details>
 
-MengYou® Studio™
+---
 
-## 版权
+## 🔒 安全
 
-© 2023~2026 MengYou® Studio™ 保留所有权利
+本项目为纯前端应用，所有音频处理均在本地完成，不上传服务器。
 
-离线应用无需备案
+- [安全策略](SECURITY.md)
+- 发现安全漏洞请通过 [Security Advisories](https://github.com/114514gph/BIT-AUDIO-WORKSTATION/security/advisories) 私下报告
+
+---
+
+## 📄 许可证
+
+[AGPL-3.0](LICENSE) © 2023~2026 MengYou® Studio™
+
+> 离线应用无需备案
+
+---
+
+<div align="center">
+
+**Made with 💚 by MengYou® Studio™**
+
+*复古像素风 · 纯前端 · 无上传 · 隐私安全*
+
+</div>
