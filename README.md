@@ -7,14 +7,19 @@
 ██╔══██╗██║   ██║╚════╝██╔══██║██║   ██║██║  ██║██║██║   ██║
 ██████╔╝██║   ██║      ██║  ██║╚██████╔╝██████╔╝██║╚██████╔╝
 ╚═════╝ ╚═╝   ╚═╝      ╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚═╝ ╚═════╝ 
-```
 
-### 🎵 AUDIO WORKSTATION
+██╗    ██╗ ██████╗ ██████╗ ██╗  ██╗███████╗████████╗ █████╗ ████████╗██╗ ██████╗ ███╗   ██╗
+██║    ██║██╔═══██╗██╔══██╗██║ ██╔╝██╔════╝╚══██╔══╝██╔══██╗╚══██╔══╝██║██╔═══██╗████╗  ██║
+██║ █╗ ██║██║   ██║██████╔╝█████╔╝ ███████╗   ██║   ███████║   ██║   ██║██║   ██║██╔██╗ ██║
+██║███╗██║██║   ██║██╔══██╗██╔═██╗ ╚════██║   ██║   ██╔══██║   ██║   ██║██║   ██║██║╚██╗██║
+╚███╔███╔╝╚██████╔╝██║  ██║██║  ██╗███████║   ██║   ██║  ██║   ██║   ██║╚██████╔╝██║ ╚████║
+ ╚══╝╚══╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝   ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝
+```
 
 **复古像素风 · 纯前端 H5 · 音频处理工作站**
 
 [![Version](https://img.shields.io/badge/STABLE-1.6.4-00ff88?style=for-the-badge)](https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases)
-[![License](https://img.shields.io/badge/AGPL--3.0-ff0066?style=for-the-badge)](LICENSE)
+[![License](https://img.shields.io/badge/CC%20BY--NC--SA%204.0-ff0066?style=for-the-badge)](LICENSE)
 [![Platform](https://img.shields.io/badge/Web%20%7C%20Mobile-00aaff?style=for-the-badge)](#)
 [![Made with](https://img.shields.io/badge/Web%20Audio%20API-ffaa00?style=for-the-badge)](#)
 
@@ -236,8 +241,12 @@ BIT-AUDIO-WORKSTATION/
 
 ## 📄 许可证
 
-[AGPL-3.0](LICENSE) © 2023~2026 MengYou® Studio™
+[CC BY-NC-SA 4.0](LICENSE) © 2023~2026 MengYou® Studio™
 
+> **非商业性使用** — 本作品仅供学习、参考和个人非商业用途。未经授权，不得用于商业目的。
+> 
+> **相同方式共享** — 若修改或基于本作品创作，须以相同协议分发。
+> 
 > 离线应用无需备案
 
 ---
