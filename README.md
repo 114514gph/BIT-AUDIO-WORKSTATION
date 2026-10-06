@@ -2,7 +2,7 @@
 
 复古像素风音频处理工作站 · 纯前端 H5 应用
 
-![Version](https://img.shields.io/badge/version-STABLE%201.6.1-green)
+![Version](https://img.shields.io/badge/version-STABLE%201.6.2-green)
 ![License](https://img.shields.io/badge/license-AGPL--3.0-orange)
 ![Platform](https://img.shields.io/badge/platform-Web%20%7C%20Mobile-blue)
 
@@ -99,6 +99,11 @@ open http://localhost:8080
 
 ## 版本历史
 
+
+### STABLE 1.6.2 (Bugfix)
+- 修复 ScriptProcessor 降级方案不支持 Dither 的问题（添加 TPDF 噪声抖动）
+- 优化大音频处理性能：processAudio 改为分块异步处理（每块256k采样点），避免 UI 卡死
+- bitSlider 浮点值确认全部使用 Math.round，实时与导出一致
 
 ### STABLE 1.6.1 (Bugfix)
 - 修复 ditherToggleBtn 重复声明导致的致命语法错误（整个脚本无法解析）

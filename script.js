@@ -651,18 +651,21 @@ async function initWorklet(){
 function createScriptProcessorFallback(ctx){
   const bufferSize = 4096;
   const processor = ctx.createScriptProcessor(bufferSize, 2, 2);
-  let curParams = {bits:8, downsample:1, noisePct:0};
+  let curParams = {bits:8, downsample:1, noisePct:0, dither:0};
   processor.onaudioprocess = (e)=>{
     const bits = curParams.bits;
     const down = curParams.downsample;
     const threshold = curParams.noisePct / 100 * 0.05;
+    const useDither = curParams.dither && bits < 8;
     const step = bits > 1 ? 1 / Math.pow(2, bits - 1) : 0;
+    const ditherAmp = useDither ? step * 0.5 : 0;
     for(let c = 0; c < e.outputBuffer.numberOfChannels; c++){
       const input = e.inputBuffer.getChannelData(c);
       const output = e.outputBuffer.getChannelData(c);
       let hold = 0, counter = 0;
       for(let i = 0; i < input.length; i++){
         let s = Math.abs(input[i]) < threshold ? 0 : input[i];
+        if(useDither) s += (Math.random() + Math.random() - 1) * ditherAmp;
         if(counter % down === 0){
           if(bits === 1) hold = s >= 0 ? 0.8 : -0.8;
           else{ hold = Math.round(s / step) * step; hold = Math.max(-1, Math.min(1, hold)); }
@@ -672,7 +675,7 @@ function createScriptProcessorFallback(ctx){
       }
     }
   };
-  processor.port = { postMessage: (p)=>{ curParams = p; } };
+  processor.port = { postMessage: (p)=>{ curParams = Object.assign(curParams, p); } };
   return processor;
 }
 
@@ -1524,7 +1527,7 @@ function applyNoiseGate(input, output, len, threshold){
   }
 }
 
-/* 主处理：降噪 + bitcrush（EQ 实时，不在此处理） */
+/* 主处理：降噪 + bitcrush（EQ 实时，不在此处理），大音频分块异步避免UI卡死 */
 async function processAudio(){
   if(!originalBuffer || isProcessing) return;
   isProcessing = true;
@@ -1538,14 +1541,21 @@ async function processAudio(){
     const ch = originalBuffer.numberOfChannels;
     const len = originalBuffer.length;
     const sr = originalBuffer.sampleRate;
+    const CHUNK = 262144; // 每块256k采样点，约6秒@44.1k
 
-    // 降噪
+    // 降噪（分块）
     const gatedBuffer = ctx.createBuffer(ch, len, sr);
     for(let c = 0; c < ch; c++){
-      applyNoiseGate(originalBuffer.getChannelData(c), gatedBuffer.getChannelData(c), len, threshold);
+      const src = originalBuffer.getChannelData(c);
+      const dst = gatedBuffer.getChannelData(c);
+      for(let start = 0; start < len; start += CHUNK){
+        const end = Math.min(start + CHUNK, len);
+        applyNoiseGate(src.subarray(start, end), dst.subarray(start, end), end - start, threshold);
+        if(len > CHUNK * 2) await new Promise(r => setTimeout(r, 0));
+      }
     }
 
-    // bitcrush（量化 + 降采样保持）
+    // bitcrush（量化 + 降采样保持，分块）
     processedBuffer = ctx.createBuffer(ch, len, sr);
     const step = bits > 1 ? 1 / Math.pow(2, bits - 1) : 0;
     for(let c = 0; c < ch; c++){
@@ -1553,19 +1563,23 @@ async function processAudio(){
       const output = processedBuffer.getChannelData(c);
       let hold = 0;
       let counter = 0;
-      for(let i = 0; i < len; i++){
-        if(counter % down === 0){
-          const s = input[i];
-          if(bits === 1){
-            hold = s >= 0 ? 0.8 : -0.8;
-          }else{
-            hold = Math.round(s / step) * step;
-            if(hold > 1) hold = 1;
-            else if(hold < -1) hold = -1;
+      for(let start = 0; start < len; start += CHUNK){
+        const end = Math.min(start + CHUNK, len);
+        for(let i = start; i < end; i++){
+          if(counter % down === 0){
+            const s = input[i];
+            if(bits === 1){
+              hold = s >= 0 ? 0.8 : -0.8;
+            }else{
+              hold = Math.round(s / step) * step;
+              if(hold > 1) hold = 1;
+              else if(hold < -1) hold = -1;
+            }
           }
+          output[i] = hold;
+          counter++;
         }
-        output[i] = hold;
-        counter++;
+        if(len > CHUNK * 2) await new Promise(r => setTimeout(r, 0));
       }
     }
     exportHint.textContent =
