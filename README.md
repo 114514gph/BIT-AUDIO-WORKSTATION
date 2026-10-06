@@ -2,7 +2,7 @@
 
 复古像素风音频处理工作站 · 纯前端 H5 应用
 
-![Version](https://img.shields.io/badge/version-STABLE%201.6-green)
+![Version](https://img.shields.io/badge/version-STABLE%201.6.1-green)
 ![License](https://img.shields.io/badge/license-AGPL--3.0-orange)
 ![Platform](https://img.shields.io/badge/platform-Web%20%7C%20Mobile-blue)
 
@@ -99,6 +99,11 @@ open http://localhost:8080
 
 ## 版本历史
 
+
+### STABLE 1.6.1 (Bugfix)
+- 修复 ditherToggleBtn 重复声明导致的致命语法错误（整个脚本无法解析）
+- 修复 FLAC 编码采样值无 Math.round
+- scheduleProcess pending 机制确认正常工作
 
 ### STABLE 1.6
 - 新增音频信息详情面板：点击文件信息区域展开，显示时长、采样率、声道、采样数、峰值电平、RMS电平、直流偏移、动态范围等技术参数

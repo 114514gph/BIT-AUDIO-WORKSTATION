@@ -1265,7 +1265,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.6 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.6.1 (Bugfix) <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -2575,7 +2575,6 @@ panSlider.addEventListener('input', ()=>{
 });
 // STABLE 1.3 新增：Dither 抖动开关（按钮式）
 let ditherOn = false;
-const ditherToggleBtn = $('ditherToggleBtn');
 ditherToggleBtn.addEventListener('click', ()=>{
   ditherOn = !ditherOn;
   ditherVal.textContent = ditherOn ? 'ON' : 'OFF';
@@ -3242,7 +3241,7 @@ async function encodeFlac(buffer){
   for(let c=0;c<ch;c++){
     const d = buffer.getChannelData(c);
     for(let i=0;i<len;i++){
-      interleaved[i*ch+c] = Math.max(-32768, Math.min(32767, d[i]*32767));
+      interleaved[i*ch+c] = Math.max(-32768, Math.min(32767, Math.round(d[i]*32767)));
     }
   }
   const encoder = FlacObj.createEncoder();

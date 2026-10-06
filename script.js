@@ -1638,7 +1638,6 @@ panSlider.addEventListener('input', ()=>{
 });
 // STABLE 1.3 新增：Dither 抖动开关（按钮式）
 let ditherOn = false;
-const ditherToggleBtn = $('ditherToggleBtn');
 ditherToggleBtn.addEventListener('click', ()=>{
   ditherOn = !ditherOn;
   ditherVal.textContent = ditherOn ? 'ON' : 'OFF';
@@ -2305,7 +2304,7 @@ async function encodeFlac(buffer){
   for(let c=0;c<ch;c++){
     const d = buffer.getChannelData(c);
     for(let i=0;i<len;i++){
-      interleaved[i*ch+c] = Math.max(-32768, Math.min(32767, d[i]*32767));
+      interleaved[i*ch+c] = Math.max(-32768, Math.min(32767, Math.round(d[i]*32767)));
     }
   }
   const encoder = FlacObj.createEncoder();
