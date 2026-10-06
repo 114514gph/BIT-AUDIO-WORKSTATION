@@ -2,7 +2,7 @@
 
 复古像素风音频处理工作站 · 纯前端 H5 应用
 
-![Version](https://img.shields.io/badge/version-STABLE%201.6.2-green)
+![Version](https://img.shields.io/badge/version-STABLE%201.6.3-green)
 ![License](https://img.shields.io/badge/license-AGPL--3.0-orange)
 ![Platform](https://img.shields.io/badge/platform-Web%20%7C%20Mobile-blue)
 
@@ -99,6 +99,11 @@ open http://localhost:8080
 
 ## 版本历史
 
+
+### STABLE 1.6.3 (Bugfix)
+- 修复 mp3BrEl is not defined 致命错误（废弃代码块未完全注释导致 ReferenceError）
+- 波形峰值缓存优化：预计算 2048 bars 峰值数据，缩放/resize 时不再重复遍历全量样本
+- processAudio 完成和裁剪后自动失效波形缓存
 
 ### STABLE 1.6.2 (Bugfix)
 - 修复 ScriptProcessor 降级方案不支持 Dither 的问题（添加 TPDF 噪声抖动）

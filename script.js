@@ -1585,6 +1585,7 @@ async function processAudio(){
     exportHint.textContent =
       bits + 'bit / ' + down + 'x / 降噪' + noisePct + '% / EQ(' +
       eqLowSlider.value + ',' + eqMidSlider.value + ',' + eqHighSlider.value + ')dB';
+    invalidateWaveformCache();
   }finally{
     isProcessing = false;
     // 处理期间有新参数变化，再跑一次
@@ -2043,6 +2044,7 @@ async function afterCrop(){
     originalBuffer.sampleRate + 'Hz · ' +
     fmtTime(originalBuffer.duration) + ' · 已裁剪';
   computeAudioStats(originalBuffer);
+  invalidateWaveformCache();
   await processAudio();
   drawWaveform();
   showToast('裁剪完成');
@@ -2075,6 +2077,47 @@ cropDeleteBtn.addEventListener('click', async ()=>{
 cropClearBtn.addEventListener('click', clearSelection);
 
 /* ============ WAVEFORM ============ */
+/* 波形峰值缓存：避免缩放/resize 时重复计算全量样本 */
+let _wfCacheBuf = null, _wfCacheMixed = null, _wfCachePeaks = null;
+const WF_PEAK_BARS = 2048;
+function invalidateWaveformCache(){ _wfCacheBuf = null; _wfCacheMixed = null; _wfCachePeaks = null; }
+function getWaveformMixed(buf){
+  if(_wfCacheBuf === buf && _wfCacheMixed) return _wfCacheMixed;
+  const ch0 = buf.getChannelData(0);
+  let data;
+  if(buf.numberOfChannels > 1){
+    const ch1 = buf.getChannelData(1);
+    data = new Float32Array(ch0.length);
+    for(let i = 0; i < ch0.length; i++) data[i] = (ch0[i] + ch1[i]) * 0.5;
+  }else{
+    data = ch0;
+  }
+  _wfCacheBuf = buf;
+  _wfCacheMixed = data;
+  _wfCachePeaks = null;
+  return data;
+}
+function getWaveformPeaks(buf){
+  if(_wfCacheBuf === buf && _wfCachePeaks) return _wfCachePeaks;
+  const data = getWaveformMixed(buf);
+  const peaks = new Float32Array(WF_PEAK_BARS * 2); // min,max 交替
+  const block = Math.max(1, Math.floor(data.length / WF_PEAK_BARS));
+  for(let b = 0; b < WF_PEAK_BARS; b++){
+    let min = 1, max = -1;
+    const start = b * block;
+    const end = Math.min(data.length, start + block);
+    for(let i = start; i < end; i++){
+      const s = data[i];
+      if(s < min) min = s;
+      if(s > max) max = s;
+    }
+    peaks[b*2] = min;
+    peaks[b*2+1] = max;
+  }
+  _wfCachePeaks = peaks;
+  return peaks;
+}
+
 function drawWaveform(){
   if(!originalBuffer) return;
   const buf = bypassToggle.checked ? originalBuffer : processedBuffer;
@@ -2088,24 +2131,18 @@ function drawWaveform(){
   ctx2d.setTransform(dpr,0,0,dpr,0,0);
   ctx2d.clearRect(0,0,w,h);
 
-  // 混合左右声道，避免立体声只显示左声道
-  const ch0 = buf.getChannelData(0);
-  let data;
-  if(buf.numberOfChannels > 1){
-    const ch1 = buf.getChannelData(1);
-    data = new Float32Array(ch0.length);
-    for(let i = 0; i < ch0.length; i++) data[i] = (ch0[i] + ch1[i]) * 0.5;
-  }else{
-    data = ch0;
-  }
+  const peaks = getWaveformPeaks(buf);
+  const totalLen = buf.length;
   const mid = h / 2;
   
   // 缩放：只绘制可见范围
-  const visibleStart = Math.floor(waveOffset * data.length);
-  const visibleLen = Math.floor(data.length / waveZoom);
-  const visibleEnd = Math.min(data.length, visibleStart + visibleLen);
-  const visibleData = data.subarray(visibleStart, visibleEnd);
-  const step = Math.max(1, Math.ceil(visibleData.length / w));
+  const visibleStart = Math.floor(waveOffset * totalLen);
+  const visibleLen = Math.floor(totalLen / waveZoom);
+  const visibleEnd = Math.min(totalLen, visibleStart + visibleLen);
+  const peakBlock = Math.max(1, Math.floor(totalLen / WF_PEAK_BARS));
+  const peakStart = Math.floor(visibleStart / peakBlock);
+  const peakEnd = Math.min(WF_PEAK_BARS, Math.ceil(visibleEnd / peakBlock));
+  const peakCount = Math.max(1, peakEnd - peakStart);
 
   // grid
   ctx2d.strokeStyle = 'rgba(0,255,136,0.07)';
@@ -2116,18 +2153,15 @@ function drawWaveform(){
   ctx2d.strokeStyle = 'rgba(0,255,136,0.18)';
   ctx2d.beginPath(); ctx2d.moveTo(0,mid+0.5); ctx2d.lineTo(w,mid+0.5); ctx2d.stroke();
 
-  // bars (pixel style)
+  // bars (pixel style) - 从峰值缓存取数据
   const color = bypassToggle.checked ? '#6a8aff' : '#00ff88';
   ctx2d.fillStyle = color;
-  const barW = Math.max(1, Math.floor(w / Math.min(w, visibleData.length/step)));
+  const barW = Math.max(1, Math.floor(w / Math.min(w, peakCount)));
   for(let x = 0; x < w; x += barW){
-    let min = 1, max = -1;
-    const start = x * step;
-    for(let i = 0; i < step && start+i < visibleData.length; i++){
-      const s = visibleData[start+i];
-      if(s < min) min = s;
-      if(s > max) max = s;
-    }
+    const peakIdx = peakStart + Math.floor((x / w) * peakCount);
+    if(peakIdx >= WF_PEAK_BARS) break;
+    const min = peaks[peakIdx*2];
+    const max = peaks[peakIdx*2+1];
     const y1 = mid + min * mid * 0.88;
     const y2 = mid + max * mid * 0.88;
     ctx2d.fillRect(x, y1, barW, Math.max(1, y2 - y1));
@@ -2394,13 +2428,13 @@ formatBtn.addEventListener('click', e=>{
   e.stopPropagation();
   formatMenu.classList.toggle('hidden');
 });
-// MP3 比特率变化时更新提示
-// const mp3BrEl = $('mp3Bitrate'); // 元素不存在，已废弃
-if(mp3BrEl) mp3BrEl.addEventListener('change', ()=>{
-  const hint = $('mp3BitrateHint');
-  if(hint) hint.textContent = mp3BrEl.value + 'kbps';
-  updateExportHint();
-});
+// MP3 比特率变化时更新提示（已废弃，mp3Bitrate 元素不存在）
+// const mp3BrEl = $('mp3Bitrate');
+// if(mp3BrEl) mp3BrEl.addEventListener('change', ()=>{
+//   const hint = $('mp3BitrateHint');
+//   if(hint) hint.textContent = mp3BrEl.value + 'kbps';
+//   updateExportHint();
+// });
 // 显示/隐藏 MP3 比特率选择器
 function updateMp3BitrateVisibility(){
   const sel = $('mp3BitrateSelect');
