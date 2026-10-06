@@ -4,7 +4,7 @@
 
 ### 复古像素风 · 纯前端 H5 · 音频处理工作站
 
-[![Version](https://img.shields.io/badge/STABLE-1.6.4-00ff88?style=for-the-badge&logo=github)](https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases)
+[![Version](https://img.shields.io/badge/STABLE-1.7-00ff88?style=for-the-badge&logo=github)](https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases)
 [![License](https://img.shields.io/badge/CC%20BY--NC--SA%204.0-ff0066?style=for-the-badge&logo=creativecommons)](LICENSE)
 [![Platform](https://img.shields.io/badge/Web%20%7C%20Mobile-00aaff?style=for-the-badge&logo=googlechrome)](#)
 [![Audio](https://img.shields.io/badge/Web%20Audio%20API-ffaa00?style=for-the-badge&logo=webaudio)](#)
@@ -53,6 +53,7 @@
 | 📍 **标记点** | 双击添加、点击跳转、右键删除 |
 | 🔁 **AB 循环** | 选定区域内循环播放 |
 | 🔍 **波形缩放** | 1x~8x，滚轮缩放 + Shift 拖拽平移 |
+| 📃 **播放列表** | 加载多个音频文件，列表切换播放，一键移除 |
 
 ### 录制与导出
 
@@ -156,7 +157,17 @@ BIT-AUDIO-WORKSTATION/
 ## 📜 版本历史
 
 <details>
-<summary><b>🟢 STABLE 1.6.x</b> — 最新版本（点击展开）</summary>
+<summary><b>🟢 STABLE 1.7.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.7
+- 新增播放列表功能：支持加载多个音频文件，列表切换播放，一键移除
+- 加载文件/URL/示例时自动添加到播放列表
+- 当前播放项高亮显示，显示时长信息
+
+</details>
+
+<details>
+<summary><b>🔵 STABLE 1.6.x</b>（点击展开）</summary>
 
 ### STABLE 1.6.4 (Bugfix)
 - 修复倍速播放暂停后再播放，进度条消失/位置错误的 bug

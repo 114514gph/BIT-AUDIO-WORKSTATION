@@ -168,6 +168,24 @@ header .blink{
 .detail-value{font-size:14px;color:var(--green);font-family:'VT323',monospace}
 @keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:600px){.details-grid{grid-template-columns:repeat(2,1fr)}}
+/* 播放列表 */
+.playlist-panel{background:var(--panel);border:1px solid var(--border);padding:10px 14px;margin-bottom:8px;animation:slideDown 0.2s ease}
+.playlist-panel.hidden{display:none}
+.playlist-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.playlist-title{font-size:12px;color:var(--muted);font-family:'VT323',monospace;letter-spacing:1px}
+.playlist-count{font-size:12px;color:var(--green);font-family:'VT323',monospace;background:var(--bg);padding:2px 8px;border:1px solid var(--border)}
+.playlist-items{display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto}
+.playlist-item{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg);border:1px solid var(--border);cursor:pointer;transition:all 0.15s;font-size:12px;font-family:'VT323',monospace}
+.playlist-item:hover{border-color:var(--green)}
+.playlist-item.active{border-color:var(--green);background:rgba(0,255,136,0.08)}
+.playlist-item .pl-index{color:var(--muted);min-width:20px;text-align:center}
+.playlist-item.active .pl-index{color:var(--green)}
+.playlist-item .pl-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.playlist-item.active .pl-name{color:var(--green)}
+.playlist-item .pl-dur{color:var(--muted);font-size:11px;white-space:nowrap}
+.playlist-item .pl-remove{color:var(--muted);cursor:pointer;padding:0 4px;opacity:0.5;transition:opacity 0.15s}
+.playlist-item .pl-remove:hover{color:var(--red);opacity:1}
+.playlist-empty{text-align:center;color:var(--muted);font-size:11px;padding:8px;font-family:'VT323',monospace}
 .file-info{
   display:flex;justify-content:space-between;align-items:center;
   flex-wrap:wrap;gap:8px;
@@ -1064,6 +1082,15 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
         </div>
       </div>
 
+      <!-- 播放列表 -->
+      <div class="playlist-panel hidden" id="playlistPanel">
+        <div class="playlist-header">
+          <span class="playlist-title">&#127925; PLAYLIST 播放列表</span>
+          <span class="playlist-count" id="playlistCount">0</span>
+        </div>
+        <div class="playlist-items" id="playlistItems"></div>
+      </div>
+
       <div class="waveform-container">
         <div class="waveform-zoom-controls">
           <button class="zoom-btn" id="zoomOutBtn" title="缩小">−</button>
@@ -1265,7 +1292,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.6.4 (Bugfix) <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.7 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -1352,6 +1379,9 @@ let abLoopMode = false;
 let waveZoom = 1;
 let waveOffset = 0;
 let markers = [];
+// 播放列表
+let playlist = [];
+let currentPlaylistIndex = -1;
 // 加载取消
 let loadAbortController = null;
 let loadCancelled = false;
@@ -1448,6 +1478,9 @@ const demoBar = $('demoBar');
 const workspace = $('workspace');
 const fileNameEl = $('fileName');
 const fileMetaEl = $('fileMeta');
+const playlistPanel = $('playlistPanel');
+const playlistItems = $('playlistItems');
+const playlistCount = $('playlistCount');
 const bitSlider = $('bitSlider');
 const downSlider = $('downSlider');
 const noiseSlider = $('noiseSlider');
@@ -1783,6 +1816,98 @@ function hideWorkspace(){
   urlInput.value = '';
 }
 
+/* ============ 播放列表 ============ */
+function addToPlaylist(name, buffer){
+  if(!buffer) return;
+  // 检查是否已存在同名同时长的项
+  const exists = playlist.findIndex(p => p.name === name && Math.abs(p.buffer.duration - buffer.duration) < 0.1);
+  if(exists >= 0){
+    currentPlaylistIndex = exists;
+    renderPlaylist();
+    return;
+  }
+  playlist.push({name, buffer});
+  currentPlaylistIndex = playlist.length - 1;
+  renderPlaylist();
+}
+
+function renderPlaylist(){
+  if(!playlistItems) return;
+  if(playlistCount) playlistCount.textContent = playlist.length;
+  if(playlist.length === 0){
+    playlistPanel.classList.add('hidden');
+    return;
+  }
+  playlistPanel.classList.remove('hidden');
+  playlistItems.innerHTML = '';
+  playlist.forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.className = 'playlist-item' + (idx === currentPlaylistIndex ? ' active' : '');
+    div.innerHTML =
+      '<span class="pl-index">' + (idx + 1) + '</span>' +
+      '<span class="pl-name">' + escapeHtml(item.name) + '</span>' +
+      '<span class="pl-dur">' + fmtTime(item.buffer.duration) + '</span>' +
+      '<span class="pl-remove" data-idx="' + idx + '" title="移除">&#10005;</span>';
+    div.addEventListener('click', e => {
+      if(e.target.classList.contains('pl-remove')) return;
+      switchPlaylistItem(idx);
+    });
+    div.querySelector('.pl-remove').addEventListener('click', e => {
+      e.stopPropagation();
+      removeFromPlaylist(idx);
+    });
+    playlistItems.appendChild(div);
+  });
+}
+
+function switchPlaylistItem(idx){
+  if(idx < 0 || idx >= playlist.length) return;
+  if(idx === currentPlaylistIndex) return;
+  stop();
+  const item = playlist[idx];
+  currentPlaylistIndex = idx;
+  originalBuffer = item.buffer;
+  currentFileName = item.name.replace(/\.[^.]+$/, '');
+  fileNameEl.textContent = item.name;
+  fileMetaEl.textContent =
+    originalBuffer.numberOfChannels + 'ch · ' +
+    originalBuffer.sampleRate + 'Hz · ' +
+    fmtTime(originalBuffer.duration) + ' · 播放列表';
+  clearMarkers();
+  clearSelection();
+  computeAudioStats(originalBuffer);
+  invalidateWaveformCache();
+  processAudio().then(() => {
+    drawWaveform();
+  });
+  renderPlaylist();
+  showToast('已切换: ' + item.name);
+}
+
+function removeFromPlaylist(idx){
+  if(idx < 0 || idx >= playlist.length) return;
+  const wasActive = (idx === currentPlaylistIndex);
+  playlist.splice(idx, 1);
+  if(wasActive){
+    if(playlist.length > 0){
+      const newIdx = Math.min(idx, playlist.length - 1);
+      switchPlaylistItem(newIdx);
+    } else {
+      currentPlaylistIndex = -1;
+      hideWorkspace();
+    }
+  } else {
+    if(idx < currentPlaylistIndex) currentPlaylistIndex--;
+    renderPlaylist();
+  }
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
 async function loadFile(file){
   if(!file) return;
   if(!file.type.startsWith('audio/') && !/\.(mp3|wav|ogg|m4a|flac|aac|webm)$/i.test(file.name)){
@@ -1808,6 +1933,7 @@ async function loadFile(file){
       (file.size/1024/1024).toFixed(2) + 'MB';
     computeAudioStats(originalBuffer);
     clearSelection();
+    addToPlaylist(file.name, originalBuffer);
     showWorkspace();
     await processAudio();
     drawWaveform();
@@ -1870,6 +1996,7 @@ async function loadFromUrl(url){
         fmtTime(originalBuffer.duration) + ' · URL';
       computeAudioStats(originalBuffer);
       clearSelection();
+      addToPlaylist(name, originalBuffer);
       showWorkspace();
       await processAudio();
       drawWaveform();
@@ -2287,6 +2414,7 @@ demoBtn.addEventListener('click', ()=>{
         fmtTime(originalBuffer.duration) + ' · 随机示例';
       computeAudioStats(originalBuffer);
       clearSelection();
+      addToPlaylist('demo.mp3', originalBuffer);
       showWorkspace();
       await processAudio();
       drawWaveform();

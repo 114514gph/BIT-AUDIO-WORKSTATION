@@ -1,3 +1,4 @@
+
 /* ============ EMBEDDED PIXEL FONTS ============ */
 @font-face{
   font-family:'Press Start 2P';
@@ -160,6 +161,24 @@ header .blink{
 .detail-value{font-size:14px;color:var(--green);font-family:'VT323',monospace}
 @keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:600px){.details-grid{grid-template-columns:repeat(2,1fr)}}
+/* 播放列表 */
+.playlist-panel{background:var(--panel);border:1px solid var(--border);padding:10px 14px;margin-bottom:8px;animation:slideDown 0.2s ease}
+.playlist-panel.hidden{display:none}
+.playlist-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.playlist-title{font-size:12px;color:var(--muted);font-family:'VT323',monospace;letter-spacing:1px}
+.playlist-count{font-size:12px;color:var(--green);font-family:'VT323',monospace;background:var(--bg);padding:2px 8px;border:1px solid var(--border)}
+.playlist-items{display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto}
+.playlist-item{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg);border:1px solid var(--border);cursor:pointer;transition:all 0.15s;font-size:12px;font-family:'VT323',monospace}
+.playlist-item:hover{border-color:var(--green)}
+.playlist-item.active{border-color:var(--green);background:rgba(0,255,136,0.08)}
+.playlist-item .pl-index{color:var(--muted);min-width:20px;text-align:center}
+.playlist-item.active .pl-index{color:var(--green)}
+.playlist-item .pl-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.playlist-item.active .pl-name{color:var(--green)}
+.playlist-item .pl-dur{color:var(--muted);font-size:11px;white-space:nowrap}
+.playlist-item .pl-remove{color:var(--muted);cursor:pointer;padding:0 4px;opacity:0.5;transition:opacity 0.15s}
+.playlist-item .pl-remove:hover{color:var(--red);opacity:1}
+.playlist-empty{text-align:center;color:var(--muted);font-size:11px;padding:8px;font-family:'VT323',monospace}
 .file-info{
   display:flex;justify-content:space-between;align-items:center;
   flex-wrap:wrap;gap:8px;
