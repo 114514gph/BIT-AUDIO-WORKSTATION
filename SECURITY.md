@@ -6,10 +6,10 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
-| STABLE 1.3.x | :white_check_mark: |
-| STABLE 1.2.x | :white_check_mark: |
-| STABLE 1.1.x | :x: |
-| STABLE 1.0.x | :x: |
+| STABLE 1.6.x | :white_check_mark: |
+| STABLE 1.5.x | :white_check_mark: |
+| STABLE 1.4.x | :x: |
+| STABLE 1.3.x | :x: |
 | BETA 版本 | :warning: 测试版，仅接收关键安全修复 |
 
 > 注：建议始终使用最新 STABLE 版本以获得完整的安全更新和功能修复。
