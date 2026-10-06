@@ -1265,7 +1265,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.6.3 (Bugfix) <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.6.4 (Bugfix) <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -2709,7 +2709,8 @@ async function play(){
       fadeGainNode.gain.linearRampToValueAtTime(0, now + (buf.duration - offset) / safeRate);
     }
     sourceNode.start(0, Math.max(0, offset));
-    startTime = ctx.currentTime - offset;
+    const playRate = Math.max(0.25, parseFloat(speedSlider.value));
+    startTime = ctx.currentTime - offset / playRate;
     isPlaying = true;
     playBtn.innerHTML = '&#10074;&#10074; PAUSE';
     playhead.style.display = 'block';

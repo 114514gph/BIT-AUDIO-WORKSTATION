@@ -2,7 +2,7 @@
 
 复古像素风音频处理工作站 · 纯前端 H5 应用
 
-![Version](https://img.shields.io/badge/version-STABLE%201.6.3-green)
+![Version](https://img.shields.io/badge/version-STABLE%201.6.4-green)
 ![License](https://img.shields.io/badge/license-AGPL--3.0-orange)
 ![Platform](https://img.shields.io/badge/platform-Web%20%7C%20Mobile-blue)
 
@@ -99,6 +99,9 @@ open http://localhost:8080
 
 ## 版本历史
 
+
+### STABLE 1.6.4 (Bugfix)
+- 修复倍速播放暂停后再播放，进度条消失/位置错误的 bug（startTime 计算未除以 playbackRate，导致 tickPlayhead 重复乘倍速）
 
 ### STABLE 1.6.3 (Bugfix)
 - 修复 mp3BrEl is not defined 致命错误（废弃代码块未完全注释导致 ReferenceError）

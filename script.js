@@ -1772,7 +1772,8 @@ async function play(){
       fadeGainNode.gain.linearRampToValueAtTime(0, now + (buf.duration - offset) / safeRate);
     }
     sourceNode.start(0, Math.max(0, offset));
-    startTime = ctx.currentTime - offset;
+    const playRate = Math.max(0.25, parseFloat(speedSlider.value));
+    startTime = ctx.currentTime - offset / playRate;
     isPlaying = true;
     playBtn.innerHTML = '&#10074;&#10074; PAUSE';
     playhead.style.display = 'block';
