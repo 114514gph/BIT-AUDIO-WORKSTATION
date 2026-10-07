@@ -4,7 +4,7 @@
 
 ### 复古像素风 · 纯前端 H5 · 音频处理工作站
 
-[![Version](https://img.shields.io/badge/STABLE-1.7.1-00ff88?style=for-the-badge&logo=github)](https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases)
+[![Version](https://img.shields.io/badge/STABLE-1.7.2-00ff88?style=for-the-badge&logo=github)](https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases)
 [![License](https://img.shields.io/badge/CC%20BY--NC--SA%204.0-ff0066?style=for-the-badge&logo=creativecommons)](LICENSE)
 [![Platform](https://img.shields.io/badge/Web%20%7C%20Mobile-00aaff?style=for-the-badge&logo=googlechrome)](#)
 [![Audio](https://img.shields.io/badge/Web%20Audio%20API-ffaa00?style=for-the-badge&logo=webaudio)](#)
@@ -158,6 +158,12 @@ BIT-AUDIO-WORKSTATION/
 
 <details>
 <summary><b>🟢 STABLE 1.7.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.7.2 (Bugfix)
+- computeAudioStats 改为分块异步处理，大音频不再卡顿
+- isSafeUrl 新增 IPv6 本地/内网地址拦截（::1、fc00::/7、fe80::/10）
+- normalizeToggle 缓存 DOM 引用，避免每次导出重复查询
+- 播放列表添加上限保护（最多 20 项），防止内存累积
 
 ### STABLE 1.7.1 (Bugfix)
 - 修复播放列表删除当前播放项后界面不切换的 bug（索引早退问题）

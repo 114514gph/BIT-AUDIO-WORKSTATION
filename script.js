@@ -544,6 +544,7 @@ const playBtn = $('playBtn');
 const stopBtn = $('stopBtn');
 const reloadBtn = $('reloadBtn');
 const bypassToggle = $('bypassToggle');
+const normalizeToggleEl = $('normalizeToggle');
 const exportBtn = $('exportBtn');
 const exportHint = $('exportHint');
 const waveform = $('waveform');
@@ -783,6 +784,19 @@ function isSafeUrl(url){
     if(/^127\./.test(host) || /^192\.168\./.test(host) || /^10\./.test(host)) return false;
     if(/^172\.(1[6-9]|2[0-9]|3[01])\./.test(host)) return false;
     if(/^169\.254\./.test(host)) return false;
+    // 禁止 IPv6 本地/内网地址
+    if(host.startsWith('[') && host.endsWith(']')){
+      const ipv6 = host.slice(1, -1).toLowerCase();
+      if(ipv6 === '::1' || ipv6 === 'localhost') return false;
+      if(ipv6.startsWith('fc') || ipv6.startsWith('fd')) return false; // ULA 唯一本地地址
+      if(ipv6.startsWith('fe80')) return false; // 链路本地地址
+      if(ipv6.startsWith('::ffff:')){
+        // IPv4 映射地址，检查内嵌 IPv4
+        const mapped = ipv6.replace('::ffff:', '');
+        if(/^127\./.test(mapped) || /^192\.168\./.test(mapped) || /^10\./.test(mapped)) return false;
+        if(/^172\.(1[6-9]|2[0-9]|3[01])\./.test(mapped)) return false;
+      }
+    }
     return true;
   }catch(e){ return false; }
 }
@@ -794,23 +808,31 @@ function fmtTime(s){
   return m + ':' + (sec<10?'0':'') + sec;
 }
 
-/* 计算音频统计信息用于详情面板 */
-function computeAudioStats(buffer){
+/* 计算音频统计信息用于详情面板（分块异步，避免大音频卡顿） */
+async function computeAudioStats(buffer){
   if(!buffer) return;
   const ch = buffer.numberOfChannels;
+  const STATS_CHUNK = 524288; // 每块 512k 样本
   let peak = 0, sumSq = 0, sum = 0, totalSamples = 0;
+
   for(let c = 0; c < ch; c++){
     const data = buffer.getChannelData(c);
     const len = data.length;
-    for(let i = 0; i < len; i++){
-      const s = data[i];
-      const abs = s < 0 ? -s : s;
-      if(abs > peak) peak = abs;
-      sumSq += s * s;
-      sum += s;
-      totalSamples++;
+    for(let start = 0; start < len; start += STATS_CHUNK){
+      const end = Math.min(start + STATS_CHUNK, len);
+      for(let i = start; i < end; i++){
+        const s = data[i];
+        const abs = s < 0 ? -s : s;
+        if(abs > peak) peak = abs;
+        sumSq += s * s;
+        sum += s;
+        totalSamples++;
+      }
+      // 每块后让出主线程
+      if(end < len) await new Promise(r => setTimeout(r, 0));
     }
   }
+
   const rms = Math.sqrt(sumSq / totalSamples);
   const dc = sum / totalSamples;
   const dr = peak > 0 ? 20 * Math.log10(peak / (rms || 0.0001)) : 0;
@@ -858,6 +880,7 @@ function hideWorkspace(){
 }
 
 /* ============ 播放列表 ============ */
+const PLAYLIST_MAX = 20; // 播放列表最大项数，防止内存累积
 function addToPlaylist(name, buffer){
   if(!buffer) return;
   // 检查是否已存在同名同时长的项
@@ -866,6 +889,15 @@ function addToPlaylist(name, buffer){
     currentPlaylistIndex = exists;
     renderPlaylist();
     return;
+  }
+  // 超过上限时移除最旧的非当前播放项
+  if(playlist.length >= PLAYLIST_MAX){
+    const removeIdx = playlist.findIndex((_, i) => i !== currentPlaylistIndex);
+    if(removeIdx >= 0){
+      playlist.splice(removeIdx, 1);
+      if(removeIdx < currentPlaylistIndex) currentPlaylistIndex--;
+      showToast('播放列表已满，已移除最旧项');
+    }
   }
   playlist.push({name, buffer});
   currentPlaylistIndex = playlist.length - 1;
@@ -2589,7 +2621,7 @@ async function doExportOriginal(){
     let finalBuf = await renderFullFX(srcBuf);
     updateProgress(50);
     // 音量归一化
-    if($('normalizeToggle').checked){
+    if(normalizeToggleEl && normalizeToggleEl.checked){
       updateProgress(60);
       finalBuf = normalizeBuffer(finalBuf);
     }
