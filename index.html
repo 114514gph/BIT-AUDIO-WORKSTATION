@@ -204,7 +204,14 @@
 
       <!-- 实时频谱仪 -->
       <div class="spectrum-panel">
-        <div class="panel-title">SPECTRUM</div>
+        <div class="panel-title">
+          <span>SPECTRUM</span>
+          <div class="spectrum-style-switch">
+            <button class="ss-btn active" data-style="bars" title="柱状图">▌</button>
+            <button class="ss-btn" data-style="line" title="折线图">╱</button>
+            <button class="ss-btn" data-style="mirror" title="镜像柱状图">⇅</button>
+          </div>
+        </div>
         <canvas id="spectrum"></canvas>
       </div>
 
@@ -270,7 +277,7 @@
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.7.2 (Bugfix) <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.8 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 

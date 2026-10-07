@@ -532,6 +532,11 @@ input[type=range]::-moz-range-thumb{
 /* ============ 频谱仪 ============ */
 .spectrum-panel{border:1px solid var(--border);background:var(--bg2);padding:10px}
 .spectrum-panel canvas{width:100%;height:80px;display:block}
+.spectrum-panel .panel-title{display:flex;justify-content:space-between;align-items:center}
+.spectrum-style-switch{display:flex;gap:4px}
+.ss-btn{background:var(--bg);border:1px solid var(--border);color:var(--muted);font-size:12px;padding:2px 8px;cursor:pointer;font-family:'VT323',monospace;transition:all 0.15s}
+.ss-btn:hover{border-color:var(--green);color:var(--green)}
+.ss-btn.active{border-color:var(--green);color:var(--green);background:rgba(0,255,136,0.1)}
 
 /* ============ 效果/淡入淡出面板 ============ */
 .fx-panel,.fade-panel,.preset-panel,.export-options{border:1px solid var(--border);background:var(--bg2);padding:12px}
@@ -1226,7 +1231,14 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
       <!-- 实时频谱仪 -->
       <div class="spectrum-panel">
-        <div class="panel-title">SPECTRUM</div>
+        <div class="panel-title">
+          <span>SPECTRUM</span>
+          <div class="spectrum-style-switch">
+            <button class="ss-btn active" data-style="bars" title="柱状图">▌</button>
+            <button class="ss-btn" data-style="line" title="折线图">╱</button>
+            <button class="ss-btn" data-style="mirror" title="镜像柱状图">⇅</button>
+          </div>
+        </div>
         <canvas id="spectrum"></canvas>
       </div>
 
@@ -1292,7 +1304,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.7.2 (Bugfix) <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.8 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -1354,6 +1366,7 @@ let pannerNode = null;  // STABLE 1.2 新增：声像调节
 let reversedBuffer = null;
 let isReversed = false;
 let spectrumRaf = null;
+let spectrumStyle = localStorage.getItem('spectrumStyle') || 'bars'; // bars / line / mirror
 let clipTimer = null;
 let workletReady = false;
 let isPlaying = false;
@@ -3775,6 +3788,17 @@ function startSpectrum(){
   const ctx2d = spectrumCanvas.getContext('2d');
   const bufLen = analyserNode.frequencyBinCount;
   const data = new Uint8Array(bufLen);
+  const numBars = 48;
+  const minFreq = 60, maxFreq = Math.min(analyserNode.context.sampleRate/2, 16000);
+  const logMin = Math.log10(minFreq), logMax = Math.log10(maxFreq);
+  const nyquist = analyserNode.context.sampleRate / 2;
+  // 预计算每个 bar 的 bin 范围
+  const barBins = [];
+  for(let b=0;b<numBars;b++){
+    const freqLo = Math.pow(10, logMin + (logMax-logMin) * b/numBars);
+    const freqHi = Math.pow(10, logMin + (logMax-logMin) * (b+1)/numBars);
+    barBins.push([Math.max(0, Math.floor(freqLo / nyquist * bufLen)), Math.min(bufLen-1, Math.ceil(freqHi / nyquist * bufLen))]);
+  }
   function draw(){
     spectrumRaf = requestAnimationFrame(draw);
     analyserNode.getByteFrequencyData(data);
@@ -3783,29 +3807,62 @@ function startSpectrum(){
     if(spectrumCanvas.width !== w*dpr){ spectrumCanvas.width = w*dpr; spectrumCanvas.height = h*dpr; }
     ctx2d.setTransform(dpr,0,0,dpr,0,0);
     ctx2d.clearRect(0,0,w,h);
-    // 对数频率映射 + 低频衰减，避免左边永远最高
-    const numBars = 48;
-    const barW = w / numBars;
-    const minFreq = 60, maxFreq = Math.min(analyserNode.context.sampleRate/2, 16000);
-    const logMin = Math.log10(minFreq), logMax = Math.log10(maxFreq);
-    const nyquist = analyserNode.context.sampleRate / 2;
+    // 计算每个 bar 的值（对数频率映射 + 低频衰减）
+    const values = new Float32Array(numBars);
     for(let b=0;b<numBars;b++){
-      const freqLo = Math.pow(10, logMin + (logMax-logMin) * b/numBars);
-      const freqHi = Math.pow(10, logMin + (logMax-logMin) * (b+1)/numBars);
-      const binLo = Math.max(0, Math.floor(freqLo / nyquist * bufLen));
-      const binHi = Math.min(bufLen-1, Math.ceil(freqHi / nyquist * bufLen));
+      const [binLo, binHi] = barBins[b];
       let sum=0, cnt=0;
       for(let i=binLo;i<=binHi;i++){ sum += data[i]; cnt++; }
       let v = cnt>0 ? (sum/cnt)/255 : 0;
-      // 低频衰减：前 1/3 的 bar 逐步衰减
-      if(b < numBars/3){
-        const atten = 0.5 + 0.5 * (b / (numBars/3));
-        v *= atten;
+      if(b < numBars/3){ v *= 0.5 + 0.5 * (b / (numBars/3)); }
+      values[b] = v;
+    }
+    const barW = w / numBars;
+    if(spectrumStyle === 'bars'){
+      // 柱状图
+      for(let b=0;b<numBars;b++){
+        const v = values[b];
+        const bh = v * h;
+        const hue = 120 - v * 120;
+        ctx2d.fillStyle = 'hsl('+hue+',100%,50%)';
+        ctx2d.fillRect(b*barW, h-bh, Math.max(1,barW-1), bh);
       }
-      const bh = v * h;
-      const hue = 120 - v * 120;
-      ctx2d.fillStyle = 'hsl('+hue+',100%,50%)';
-      ctx2d.fillRect(b*barW, h-bh, Math.max(1,barW-1), bh);
+    } else if(spectrumStyle === 'line'){
+      // 折线图
+      ctx2d.beginPath();
+      ctx2d.moveTo(0, h);
+      for(let b=0;b<numBars;b++){
+        const x = b*barW + barW/2;
+        const y = h - values[b] * h;
+        ctx2d.lineTo(x, y);
+      }
+      ctx2d.lineTo(w, h);
+      ctx2d.closePath();
+      const grad = ctx2d.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, 'rgba(0,255,136,0.6)');
+      grad.addColorStop(1, 'rgba(0,255,136,0.05)');
+      ctx2d.fillStyle = grad;
+      ctx2d.fill();
+      ctx2d.strokeStyle = '#00ff88';
+      ctx2d.lineWidth = 1.5;
+      ctx2d.stroke();
+    } else if(spectrumStyle === 'mirror'){
+      // 镜像柱状图（上下对称）
+      const midY = h / 2;
+      for(let b=0;b<numBars;b++){
+        const v = values[b];
+        const bh = v * h / 2;
+        const hue = 120 - v * 120;
+        ctx2d.fillStyle = 'hsl('+hue+',100%,50%)';
+        ctx2d.fillRect(b*barW, midY-bh, Math.max(1,barW-1), bh*2);
+      }
+      // 中线
+      ctx2d.strokeStyle = 'rgba(255,255,255,0.2)';
+      ctx2d.lineWidth = 1;
+      ctx2d.beginPath();
+      ctx2d.moveTo(0, midY);
+      ctx2d.lineTo(w, midY);
+      ctx2d.stroke();
     }
     checkClipping();
   }
@@ -3814,6 +3871,21 @@ function startSpectrum(){
 function stopSpectrum(){
   if(spectrumRaf){ cancelAnimationFrame(spectrumRaf); spectrumRaf = null; }
 }
+
+// 频谱样式切换
+document.querySelectorAll('.ss-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.ss-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    spectrumStyle = btn.dataset.style;
+    localStorage.setItem('spectrumStyle', spectrumStyle);
+  });
+});
+// 初始化样式按钮状态
+document.querySelectorAll('.ss-btn').forEach(btn => {
+  if(btn.dataset.style === spectrumStyle) btn.classList.add('active');
+  else btn.classList.remove('active');
+});
 
 /* --- 削波检测 --- */
 const clipLed = $('clipLed');
