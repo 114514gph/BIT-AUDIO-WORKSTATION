@@ -932,6 +932,7 @@ function removeFromPlaylist(idx){
   if(wasActive){
     if(playlist.length > 0){
       const newIdx = Math.min(idx, playlist.length - 1);
+      currentPlaylistIndex = -1;  // 重置索引，避免 switchPlaylistItem 早退
       switchPlaylistItem(newIdx);
     } else {
       currentPlaylistIndex = -1;
