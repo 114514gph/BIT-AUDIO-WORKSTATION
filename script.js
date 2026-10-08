@@ -543,6 +543,8 @@ const eqMidVal = $('eqMidVal');
 const eqHighVal = $('eqHighVal');
 const playBtn = $('playBtn');
 const stopBtn = $('stopBtn');
+const prevBtn = $('prevBtn');
+const nextBtn = $('nextBtn');
 const reloadBtn = $('reloadBtn');
 const bypassToggle = $('bypassToggle');
 const normalizeToggleEl = $('normalizeToggle');
@@ -982,6 +984,24 @@ function escapeHtml(str){
   div.textContent = str;
   return div.innerHTML;
 }
+
+// 播放列表上一曲/下一曲
+function playPrev(){
+  if(playlist.length < 2) return;
+  let prevIdx = currentPlaylistIndex - 1;
+  if(prevIdx < 0) prevIdx = playlist.length - 1; // 循环到最后
+  switchPlaylistItem(prevIdx);
+  showToast('上一曲: ' + playlist[prevIdx].name);
+}
+function playNext(){
+  if(playlist.length < 2) return;
+  let nextIdx = currentPlaylistIndex + 1;
+  if(nextIdx >= playlist.length) nextIdx = 0; // 循环到第一首
+  switchPlaylistItem(nextIdx);
+  showToast('下一曲: ' + playlist[nextIdx].name);
+}
+if(prevBtn) prevBtn.addEventListener('click', playPrev);
+if(nextBtn) nextBtn.addEventListener('click', playNext);
 
 async function loadFile(file){
   if(!file) return;
@@ -1862,6 +1882,17 @@ function onSourceEnded(){
       pausedAt = 0;
       isPlaying = false;
       play();
+      return;
+    }
+    // 播放列表自动播放下一曲
+    if(playlist.length > 1 && currentPlaylistIndex < playlist.length - 1){
+      isPlaying = false;
+      playBtn.innerHTML = '&#9654; PLAY';
+      cancelAnimationFrame(rafId);
+      playhead.style.display = 'none';
+      pausedAt = 0;
+      if(isRecording) stopRecording();
+      setTimeout(() => { switchPlaylistItem(currentPlaylistIndex + 1); play(); }, 300);
       return;
     }
     isPlaying = false;

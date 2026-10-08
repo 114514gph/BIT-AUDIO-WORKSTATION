@@ -4,7 +4,7 @@
 
 ### 复古像素风 · 纯前端 H5 · 音频处理工作站
 
-[![Version](https://img.shields.io/badge/STABLE-1.8-00ff88?style=for-the-badge&logo=github)](https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases)
+[![Version](https://img.shields.io/badge/STABLE-1.9-00ff88?style=for-the-badge&logo=github)](https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases)
 [![License](https://img.shields.io/badge/CC%20BY--NC--SA%204.0-ff0066?style=for-the-badge&logo=creativecommons)](LICENSE)
 [![Platform](https://img.shields.io/badge/Web%20%7C%20Mobile-00aaff?style=for-the-badge&logo=googlechrome)](#)
 [![Audio](https://img.shields.io/badge/Web%20Audio%20API-ffaa00?style=for-the-badge&logo=webaudio)](#)
@@ -157,7 +157,17 @@ BIT-AUDIO-WORKSTATION/
 ## 📜 版本历史
 
 <details>
-<summary><b>🟢 STABLE 1.8.x</b> — 最新版本（点击展开）</summary>
+<summary><b>🟢 STABLE 1.9.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.9
+- 新增播放列表上一曲/下一曲快捷按钮（PREV / NEXT）
+- 播放结束自动播放下一曲（播放列表模式）
+- 上一曲/下一曲支持循环切换（首尾相连）
+
+</details>
+
+<details>
+<summary><b>🔵 STABLE 1.8.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.8
 - 新增频谱样式切换：柱状图 / 折线图 / 镜像柱状图三种显示模式

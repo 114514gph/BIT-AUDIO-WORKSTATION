@@ -396,6 +396,7 @@ input[type=range]::-moz-range-thumb{
 .transport-export .btn{padding:8px 8px;font-size:9px;border-width:2px;letter-spacing:0.3px;min-width:56px;white-space:normal;line-height:1.3}
 .transport-export #playBtn{font-size:9px;min-width:60px;padding:6px 4px;letter-spacing:0.2px;line-height:1.4}
 .transport-export .reload-btn{font-size:8px;padding:6px 4px;min-width:52px;letter-spacing:0.2px;line-height:1.4}
+.transport-export .nav-btn{font-size:8px;padding:6px 4px;min-width:48px;letter-spacing:0.2px;line-height:1.4;color:var(--cyan,#00ccff);border-color:var(--cyan,#00ccff)}
 .transport-export .format-btn{padding:8px 12px}
 .transport-export .rec-btn{padding:8px 14px}
 .transport-export .export-hint-bottom{
@@ -1124,8 +1125,10 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
       <!-- 播放 + 导出 + 录制 组合框 -->
       <div class="transport-export">
         <div class="transport">
+          <button id="prevBtn" class="btn nav-btn" title="上一曲">&#9194; PREV</button>
           <button id="playBtn" class="btn primary">&#9654; PLAY</button>
           <button id="stopBtn" class="btn">&#9632; STOP</button>
+          <button id="nextBtn" class="btn nav-btn" title="下一曲">&#9193; NEXT</button>
           <button id="reloadBtn" class="btn reload-btn">&#8635; RELOAD</button>
           <button id="reverseBtn" class="btn">&#8646; REV</button>
           <div class="clipper"><span class="clip-led" id="clipLed"></span><span class="clip-label">CLIP</span></div>
@@ -1304,7 +1307,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.8 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.9 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -1514,6 +1517,8 @@ const eqMidVal = $('eqMidVal');
 const eqHighVal = $('eqHighVal');
 const playBtn = $('playBtn');
 const stopBtn = $('stopBtn');
+const prevBtn = $('prevBtn');
+const nextBtn = $('nextBtn');
 const reloadBtn = $('reloadBtn');
 const bypassToggle = $('bypassToggle');
 const normalizeToggleEl = $('normalizeToggle');
@@ -1953,6 +1958,24 @@ function escapeHtml(str){
   div.textContent = str;
   return div.innerHTML;
 }
+
+// 播放列表上一曲/下一曲
+function playPrev(){
+  if(playlist.length < 2) return;
+  let prevIdx = currentPlaylistIndex - 1;
+  if(prevIdx < 0) prevIdx = playlist.length - 1; // 循环到最后
+  switchPlaylistItem(prevIdx);
+  showToast('上一曲: ' + playlist[prevIdx].name);
+}
+function playNext(){
+  if(playlist.length < 2) return;
+  let nextIdx = currentPlaylistIndex + 1;
+  if(nextIdx >= playlist.length) nextIdx = 0; // 循环到第一首
+  switchPlaylistItem(nextIdx);
+  showToast('下一曲: ' + playlist[nextIdx].name);
+}
+if(prevBtn) prevBtn.addEventListener('click', playPrev);
+if(nextBtn) nextBtn.addEventListener('click', playNext);
 
 async function loadFile(file){
   if(!file) return;
@@ -2833,6 +2856,17 @@ function onSourceEnded(){
       pausedAt = 0;
       isPlaying = false;
       play();
+      return;
+    }
+    // 播放列表自动播放下一曲
+    if(playlist.length > 1 && currentPlaylistIndex < playlist.length - 1){
+      isPlaying = false;
+      playBtn.innerHTML = '&#9654; PLAY';
+      cancelAnimationFrame(rafId);
+      playhead.style.display = 'none';
+      pausedAt = 0;
+      if(isRecording) stopRecording();
+      setTimeout(() => { switchPlaylistItem(currentPlaylistIndex + 1); play(); }, 300);
       return;
     }
     isPlaying = false;
