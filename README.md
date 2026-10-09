@@ -14,7 +14,7 @@
 <!-- 徽章区域 -->
 <p align="center">
   <img src="https://img.shields.io/github/v/release/114514gph/BIT-AUDIO-WORKSTATION?style=flat-square&logo=github" alt="Release">
-  <img src="https://img.shields.io/github/license/114514gph/BIT-AUDIO-WORKSTATION?style=flat-square" alt="License">
+  <img src="https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-ff0066?style=flat-square" alt="License">
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome">
   <img src="https://img.shields.io/badge/Web%20Audio%20API-00aaff?style=flat-square&logo=webaudio" alt="Web Audio API">
   <img src="https://img.shields.io/badge/Platform-Web%20%7C%20Mobile-ffaa00?style=flat-square&logo=googlechrome" alt="Platform">
