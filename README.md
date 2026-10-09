@@ -1,7 +1,7 @@
 <!-- 项目横幅 -->
 <p align="center">
   <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION">
-    <img width="200" src="https://img.shields.io/badge/BIT-AUDIO%20WORKSTATION-00ff88?style=for-the-badge&logo=github" alt="GITHUB BIT AUDIO WORKSTATION">
+    <img width="200" src="https://img.shields.io/badge/GITHUB-BIT%20AUDIO%20WORKSTATION-00ff88?style=for-the-badge&logo=github" alt="GITHUB BIT AUDIO WORKSTATION">
   </a>
 </p>
 
