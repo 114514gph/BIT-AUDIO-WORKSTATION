@@ -548,8 +548,12 @@ input[type=range]::-moz-range-thumb{
 .preset-btn.danger{color:#ff6688;border-color:#ff6688}
 
 /* ============ 导出选项 ============ */
-.export-options{display:flex;align-items:center;gap:12px}
+.export-options{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .export-options .toggle{margin:0}
+.sample-rate-select{display:flex;align-items:center;gap:8px;position:relative}
+.sr-label{font-size:10px;color:var(--muted);font-family:var(--pixel);letter-spacing:1px}
+.sr-btn{padding:6px 10px;font-size:10px;min-width:100px}
+.sample-rate-select .dropdown-menu{top:100%;right:0;left:auto;margin-top:4px;min-width:120px}
 
 @media(max-width:600px){
   .fx-grid,.fade-grid{grid-template-columns:1fr}

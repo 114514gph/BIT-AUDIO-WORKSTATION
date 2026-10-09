@@ -190,6 +190,16 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.10.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.10
+- 新增导出采样率选择：8000 / 16000 / 22050 / 32000 / 44100 / 48000 Hz
+- 采样率选择自动保存，下次打开恢复
+- OfflineAudioContext 重采样，导出音质与实时播放一致
+
+</details>
+
+<details>
 <summary><b>STABLE 1.9.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.9

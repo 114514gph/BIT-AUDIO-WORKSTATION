@@ -417,6 +417,7 @@ let mediaRecorder = null;
 let recordedChunks = [];
 let loopMode = false;
 let currentBitrate = 128;
+let exportSampleRate = parseInt(localStorage.getItem('exportSampleRate')) || 44100;
 let abLoopMode = false;
 let waveZoom = 1;
 let waveOffset = 0;
@@ -1553,7 +1554,7 @@ function createReverbIR(ctx, duration, decay){
 }
 
 /* 完整离线渲染：EQ + 压缩器 + 混响 + 延迟 + 淡入淡出 + 声像 + 速度 */
-async function renderFullFX(buffer){
+async function renderFullFX(buffer, targetSampleRate){
   const low = parseFloat(eqLowSlider.value);
   const mid = parseFloat(eqMidSlider.value);
   const high = parseFloat(eqHighSlider.value);
@@ -1567,11 +1568,14 @@ async function renderFullFX(buffer){
   const delayFb = 0.35;  // 与实时链一致
   // bypass 只跳过 bitcrush，压缩器/混响/延迟仍生效（与实时链一致）
 
+  // 目标采样率（默认使用原音频采样率）
+  const outSR = targetSampleRate || buffer.sampleRate;
+
   // 计算输出长度（考虑速度变化）
   const outDur = buffer.duration / speed;
-  const outLen = Math.ceil(outDur * buffer.sampleRate);
+  const outLen = Math.ceil(outDur * outSR);
   const ch = Math.max(2, buffer.numberOfChannels);
-  const ctx = new OfflineAudioContext(ch, outLen, buffer.sampleRate);
+  const ctx = new OfflineAudioContext(ch, outLen, outSR);
 
   const src = ctx.createBufferSource();
   src.buffer = buffer;
@@ -2617,11 +2621,11 @@ function updateMp3BitrateVisibility(){
     sel.classList.add('hidden');
   }
 }
-document.querySelectorAll('.dropdown-item').forEach(item=>{
+document.querySelectorAll('.dropdown-item[data-format]').forEach(item=>{
   item.addEventListener('click', ()=>{
     exportFormat = item.dataset.format;
     formatBtn.textContent = item.textContent.replace(/无损|128kbps|Opus|\d+kbps/g, '').trim() + ' \u25BE';
-    document.querySelectorAll('.dropdown-item').forEach(i=> i.classList.remove('active'));
+    document.querySelectorAll('.dropdown-item[data-format]').forEach(i=> i.classList.remove('active'));
     item.classList.add('active');
     formatMenu.classList.add('hidden');
     updateMp3BitrateVisibility();
@@ -2630,7 +2634,27 @@ document.querySelectorAll('.dropdown-item').forEach(item=>{
 });
 // 初始化时调用一次
 updateMp3BitrateVisibility();
-document.addEventListener('click', ()=> formatMenu.classList.add('hidden'));
+document.addEventListener('click', ()=>{ formatMenu.classList.add('hidden'); sampleRateMenu.classList.add('hidden'); });
+
+/* ============ 采样率选择器 ============ */
+const sampleRateBtn = $('sampleRateBtn');
+const sampleRateMenu = $('sampleRateMenu');
+if(sampleRateBtn){
+  sampleRateBtn.textContent = exportSampleRate + ' Hz \u25BE';
+  sampleRateBtn.addEventListener('click', e=>{
+    e.stopPropagation();
+    sampleRateMenu.classList.toggle('hidden');
+    formatMenu.classList.add('hidden');
+  });
+}
+document.querySelectorAll('.dropdown-item[data-sr]').forEach(item=>{
+  item.addEventListener('click', ()=>{
+    exportSampleRate = parseInt(item.dataset.sr);
+    localStorage.setItem('exportSampleRate', exportSampleRate);
+    sampleRateBtn.textContent = exportSampleRate + ' Hz \u25BE';
+    sampleRateMenu.classList.add('hidden');
+  });
+});
 
 /* ============ REC 模式切换 ============ */
 recBtn.addEventListener('click', ()=>{
@@ -2650,7 +2674,7 @@ async function doExportOriginal(){
     const srcBuf = bypassToggle.checked ? originalBuffer : processedBuffer;
     if(!srcBuf) throw new Error('无处理后音频');
     updateProgress(20);
-    let finalBuf = await renderFullFX(srcBuf);
+    let finalBuf = await renderFullFX(srcBuf, exportSampleRate);
     updateProgress(50);
     // 音量归一化
     if(normalizeToggleEl && normalizeToggleEl.checked){

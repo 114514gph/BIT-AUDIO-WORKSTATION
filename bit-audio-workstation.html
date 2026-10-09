@@ -555,8 +555,12 @@ input[type=range]::-moz-range-thumb{
 .preset-btn.danger{color:#ff6688;border-color:#ff6688}
 
 /* ============ 导出选项 ============ */
-.export-options{display:flex;align-items:center;gap:12px}
+.export-options{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .export-options .toggle{margin:0}
+.sample-rate-select{display:flex;align-items:center;gap:8px;position:relative}
+.sr-label{font-size:10px;color:var(--muted);font-family:var(--pixel);letter-spacing:1px}
+.sr-btn{padding:6px 10px;font-size:10px;min-width:100px}
+.sample-rate-select .dropdown-menu{top:100%;right:0;left:auto;margin-top:4px;min-width:120px}
 
 @media(max-width:600px){
   .fx-grid,.fade-grid{grid-template-columns:1fr}
@@ -1301,13 +1305,25 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
           <input type="checkbox" id="normalizeToggle" checked>
           <span>音量归一化（防止削波）</span>
         </label>
+        <div class="sample-rate-select">
+          <span class="sr-label">采样率</span>
+          <button class="btn sr-btn" id="sampleRateBtn">44100 Hz &#9662;</button>
+          <div class="dropdown-menu hidden" id="sampleRateMenu">
+            <div class="dropdown-item" data-sr="8000">8000 Hz</div>
+            <div class="dropdown-item" data-sr="16000">16000 Hz</div>
+            <div class="dropdown-item" data-sr="22050">22050 Hz</div>
+            <div class="dropdown-item" data-sr="32000">32000 Hz</div>
+            <div class="dropdown-item" data-sr="44100">44100 Hz</div>
+            <div class="dropdown-item" data-sr="48000">48000 Hz</div>
+          </div>
+        </div>
       </div>
     </section>
   </main>
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.9 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.10 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -1391,6 +1407,7 @@ let mediaRecorder = null;
 let recordedChunks = [];
 let loopMode = false;
 let currentBitrate = 128;
+let exportSampleRate = parseInt(localStorage.getItem('exportSampleRate')) || 44100;
 let abLoopMode = false;
 let waveZoom = 1;
 let waveOffset = 0;
@@ -2527,7 +2544,7 @@ function createReverbIR(ctx, duration, decay){
 }
 
 /* 完整离线渲染：EQ + 压缩器 + 混响 + 延迟 + 淡入淡出 + 声像 + 速度 */
-async function renderFullFX(buffer){
+async function renderFullFX(buffer, targetSampleRate){
   const low = parseFloat(eqLowSlider.value);
   const mid = parseFloat(eqMidSlider.value);
   const high = parseFloat(eqHighSlider.value);
@@ -2541,11 +2558,14 @@ async function renderFullFX(buffer){
   const delayFb = 0.35;  // 与实时链一致
   // bypass 只跳过 bitcrush，压缩器/混响/延迟仍生效（与实时链一致）
 
+  // 目标采样率（默认使用原音频采样率）
+  const outSR = targetSampleRate || buffer.sampleRate;
+
   // 计算输出长度（考虑速度变化）
   const outDur = buffer.duration / speed;
-  const outLen = Math.ceil(outDur * buffer.sampleRate);
+  const outLen = Math.ceil(outDur * outSR);
   const ch = Math.max(2, buffer.numberOfChannels);
-  const ctx = new OfflineAudioContext(ch, outLen, buffer.sampleRate);
+  const ctx = new OfflineAudioContext(ch, outLen, outSR);
 
   const src = ctx.createBufferSource();
   src.buffer = buffer;
@@ -3591,11 +3611,11 @@ function updateMp3BitrateVisibility(){
     sel.classList.add('hidden');
   }
 }
-document.querySelectorAll('.dropdown-item').forEach(item=>{
+document.querySelectorAll('.dropdown-item[data-format]').forEach(item=>{
   item.addEventListener('click', ()=>{
     exportFormat = item.dataset.format;
     formatBtn.textContent = item.textContent.replace(/无损|128kbps|Opus|\d+kbps/g, '').trim() + ' \u25BE';
-    document.querySelectorAll('.dropdown-item').forEach(i=> i.classList.remove('active'));
+    document.querySelectorAll('.dropdown-item[data-format]').forEach(i=> i.classList.remove('active'));
     item.classList.add('active');
     formatMenu.classList.add('hidden');
     updateMp3BitrateVisibility();
@@ -3604,7 +3624,27 @@ document.querySelectorAll('.dropdown-item').forEach(item=>{
 });
 // 初始化时调用一次
 updateMp3BitrateVisibility();
-document.addEventListener('click', ()=> formatMenu.classList.add('hidden'));
+document.addEventListener('click', ()=>{ formatMenu.classList.add('hidden'); sampleRateMenu.classList.add('hidden'); });
+
+/* ============ 采样率选择器 ============ */
+const sampleRateBtn = $('sampleRateBtn');
+const sampleRateMenu = $('sampleRateMenu');
+if(sampleRateBtn){
+  sampleRateBtn.textContent = exportSampleRate + ' Hz \u25BE';
+  sampleRateBtn.addEventListener('click', e=>{
+    e.stopPropagation();
+    sampleRateMenu.classList.toggle('hidden');
+    formatMenu.classList.add('hidden');
+  });
+}
+document.querySelectorAll('.dropdown-item[data-sr]').forEach(item=>{
+  item.addEventListener('click', ()=>{
+    exportSampleRate = parseInt(item.dataset.sr);
+    localStorage.setItem('exportSampleRate', exportSampleRate);
+    sampleRateBtn.textContent = exportSampleRate + ' Hz \u25BE';
+    sampleRateMenu.classList.add('hidden');
+  });
+});
 
 /* ============ REC 模式切换 ============ */
 recBtn.addEventListener('click', ()=>{
@@ -3624,7 +3664,7 @@ async function doExportOriginal(){
     const srcBuf = bypassToggle.checked ? originalBuffer : processedBuffer;
     if(!srcBuf) throw new Error('无处理后音频');
     updateProgress(20);
-    let finalBuf = await renderFullFX(srcBuf);
+    let finalBuf = await renderFullFX(srcBuf, exportSampleRate);
     updateProgress(50);
     // 音量归一化
     if(normalizeToggleEl && normalizeToggleEl.checked){
