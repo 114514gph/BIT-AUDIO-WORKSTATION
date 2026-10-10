@@ -190,6 +190,16 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.11.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.11
+- 新增主题切换功能：5 种配色方案（经典绿 / 品红粉 / 电蓝 / 琥珀橙 / 紫电）
+- 主题选择自动保存，下次打开恢复
+- 全局 CSS 变量驱动，所有界面元素同步变色
+
+</details>
+
+<details>
 <summary><b>STABLE 1.10.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.10

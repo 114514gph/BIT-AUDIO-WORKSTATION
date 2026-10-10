@@ -62,6 +62,26 @@
   --pixel:'Press Start 2P','Cubic11','Courier New',monospace;
   --cjk:'Cubic11','VT323','Courier New',monospace;
 }
+/* 主题：品红粉 */
+[data-theme="pink"]{
+  --bg2:#120a12;--bg:#0f0a0f;--panel:#1c121c;--panel2:#281a28;--border:#3e2a3e;
+  --green:#ff2d95;--green-dim:#cc2277;--pink:#00ff88;--yellow:#ff66cc;--cyan:#ff00ff;
+}
+/* 主题：电蓝 */
+[data-theme="blue"]{
+  --bg2:#0a0f18;--bg:#0a0d14;--panel:#121828;--panel2:#1a2238;--border:#2a3a5e;
+  --green:#00aaff;--green-dim:#0088cc;--pink:#00e5ff;--yellow:#66ccff;--cyan:#0088ff;
+}
+/* 主题：琥珀橙 */
+[data-theme="amber"]{
+  --bg2:#140e08;--bg:#120c08;--panel:#1e1610;--panel2:#2a2018;--border:#4a3a28;
+  --green:#ffaa00;--green-dim:#cc8800;--pink:#ff6600;--yellow:#ffcc44;--cyan:#ff8800;
+}
+/* 主题：紫电 */
+[data-theme="purple"]{
+  --bg2:#0e0a18;--bg:#0c0a14;--panel:#181228;--panel2:#221a38;--border:#3a2a5e;
+  --green:#aa44ff;--green-dim:#8833cc;--pink:#ff44ff;--yellow:#cc88ff;--cyan:#6644ff;
+}
 html,body{height:100%}
 body{
   background:var(--bg);
@@ -540,7 +560,7 @@ input[type=range]::-moz-range-thumb{
 .ss-btn.active{border-color:var(--green);color:var(--green);background:rgba(0,255,136,0.1)}
 
 /* ============ 效果/淡入淡出面板 ============ */
-.fx-panel,.fade-panel,.preset-panel,.export-options{border:1px solid var(--border);background:var(--bg2);padding:12px}
+.fx-panel,.fade-panel,.preset-panel,.theme-panel,.export-options{border:1px solid var(--border);background:var(--bg2);padding:12px}
 .panel-title{font-family:var(--pixel);font-size:10px;color:var(--green);letter-spacing:2px;margin-bottom:10px}
 .fx-grid,.fade-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .fx-item label{display:block;font-size:10px;color:var(--muted);margin-bottom:4px;font-family:var(--pixel);letter-spacing:1px}
@@ -561,6 +581,23 @@ input[type=range]::-moz-range-thumb{
 .sr-label{font-size:10px;color:var(--muted);font-family:var(--pixel);letter-spacing:1px}
 .sr-btn{padding:6px 10px;font-size:10px;min-width:100px}
 .sample-rate-select .dropdown-menu{top:100%;right:0;left:auto;margin-top:4px;min-width:120px}
+
+/* ============ 主题切换 ============ */
+.theme-panel{margin-top:12px}
+.theme-row{display:flex;align-items:center;gap:10px;margin-top:8px}
+.theme-btn{
+  width:28px;height:28px;border-radius:50%;
+  border:2px solid var(--border);
+  background:var(--theme-color);
+  cursor:pointer;transition:all 0.15s;
+  padding:0;
+}
+.theme-btn:hover{transform:scale(1.15);border-color:var(--text)}
+.theme-btn.active{
+  border-color:var(--text);
+  box-shadow:0 0 8px var(--theme-color), inset 0 0 4px rgba(255,255,255,0.3);
+  transform:scale(1.1);
+}
 
 @media(max-width:600px){
   .fx-grid,.fade-grid{grid-template-columns:1fr}
@@ -1299,6 +1336,18 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
         </div>
       </div>
 
+      <!-- 主题切换 -->
+      <div class="theme-panel">
+        <div class="panel-title">THEME</div>
+        <div class="theme-row">
+          <button class="theme-btn active" data-theme="default" style="--theme-color:#00ff88" title="经典绿"></button>
+          <button class="theme-btn" data-theme="pink" style="--theme-color:#ff2d95" title="品红粉"></button>
+          <button class="theme-btn" data-theme="blue" style="--theme-color:#00aaff" title="电蓝"></button>
+          <button class="theme-btn" data-theme="amber" style="--theme-color:#ffaa00" title="琥珀橙"></button>
+          <button class="theme-btn" data-theme="purple" style="--theme-color:#aa44ff" title="紫电"></button>
+        </div>
+      </div>
+
       <!-- 导出选项 -->
       <div class="export-options">
         <label class="toggle">
@@ -1323,7 +1372,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.10 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.11 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -1408,6 +1457,7 @@ let recordedChunks = [];
 let loopMode = false;
 let currentBitrate = 128;
 let exportSampleRate = parseInt(localStorage.getItem('exportSampleRate')) || 44100;
+let currentTheme = localStorage.getItem('theme') || 'default';
 let abLoopMode = false;
 let waveZoom = 1;
 let waveOffset = 0;
@@ -3643,6 +3693,26 @@ document.querySelectorAll('.dropdown-item[data-sr]').forEach(item=>{
     localStorage.setItem('exportSampleRate', exportSampleRate);
     sampleRateBtn.textContent = exportSampleRate + ' Hz \u25BE';
     sampleRateMenu.classList.add('hidden');
+  });
+});
+
+/* ============ 主题切换 ============ */
+function applyTheme(theme){
+  if(theme === 'default'){
+    document.documentElement.removeAttribute('data-theme');
+  }else{
+    document.documentElement.setAttribute('data-theme', theme);
+  }
+  document.querySelectorAll('.theme-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.theme === theme);
+  });
+  currentTheme = theme;
+  localStorage.setItem('theme', theme);
+}
+applyTheme(currentTheme);
+document.querySelectorAll('.theme-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    applyTheme(btn.dataset.theme);
   });
 });
 

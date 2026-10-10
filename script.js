@@ -418,6 +418,7 @@ let recordedChunks = [];
 let loopMode = false;
 let currentBitrate = 128;
 let exportSampleRate = parseInt(localStorage.getItem('exportSampleRate')) || 44100;
+let currentTheme = localStorage.getItem('theme') || 'default';
 let abLoopMode = false;
 let waveZoom = 1;
 let waveOffset = 0;
@@ -2653,6 +2654,26 @@ document.querySelectorAll('.dropdown-item[data-sr]').forEach(item=>{
     localStorage.setItem('exportSampleRate', exportSampleRate);
     sampleRateBtn.textContent = exportSampleRate + ' Hz \u25BE';
     sampleRateMenu.classList.add('hidden');
+  });
+});
+
+/* ============ 主题切换 ============ */
+function applyTheme(theme){
+  if(theme === 'default'){
+    document.documentElement.removeAttribute('data-theme');
+  }else{
+    document.documentElement.setAttribute('data-theme', theme);
+  }
+  document.querySelectorAll('.theme-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.theme === theme);
+  });
+  currentTheme = theme;
+  localStorage.setItem('theme', theme);
+}
+applyTheme(currentTheme);
+document.querySelectorAll('.theme-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    applyTheme(btn.dataset.theme);
   });
 });
 
