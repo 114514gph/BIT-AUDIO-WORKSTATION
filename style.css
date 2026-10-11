@@ -290,6 +290,10 @@ header .blink{
 }
 .demo-bar .demo-btn:hover{background:rgba(255,204,0,0.16)}
 .demo-bar .hint{font-size:15px;color:var(--muted)}
+#noiseBtn{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.06)}
+#noiseBtn:hover{background:rgba(0,229,255,0.16)}
+.demo-bar{position:relative}
+#noiseMenu{top:100%;left:50%;transform:translateX(-50%);margin-top:8px;min-width:160px;z-index:100}
 
 /* ============ CONTROLS ============ */
 .controls{

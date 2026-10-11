@@ -1526,6 +1526,88 @@ demoBtn.addEventListener('click', ()=>{
   }, 100);
 });
 
+/* ============ 噪声生成器 ============ */
+function generateNoise(type, duration, sampleRate){
+  const sr = sampleRate || 44100;
+  const len = Math.floor(duration * sr);
+  const buf = audioCtx.createBuffer(2, len, sr);
+  for(let ch=0; ch<2; ch++){
+    const data = buf.getChannelData(ch);
+    if(type === 'white'){
+      for(let i=0;i<len;i++) data[i] = Math.random()*2-1;
+    }else if(type === 'pink'){
+      // Paul Kellet 粉噪声算法
+      let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+      for(let i=0;i<len;i++){
+        const white = Math.random()*2-1;
+        b0 = 0.99886*b0 + white*0.0555179;
+        b1 = 0.99332*b1 + white*0.0750759;
+        b2 = 0.96900*b2 + white*0.1538520;
+        b3 = 0.86650*b3 + white*0.3104856;
+        b4 = 0.55000*b4 + white*0.5329522;
+        b5 = -0.7616*b5 - white*0.0168980;
+        data[i] = (b0+b1+b2+b3+b4+b5+b6+white*0.5362)*0.11;
+        b6 = white*0.115926;
+      }
+    }else if(type === 'brown'){
+      // 棕色噪声（布朗噪声）
+      let last = 0;
+      for(let i=0;i<len;i++){
+        const white = Math.random()*2-1;
+        last = (last + 0.02*white)/1.02;
+        data[i] = last*3.5;
+      }
+    }
+  }
+  return buf;
+}
+const noiseBtn = $('noiseBtn');
+const noiseMenu = $('noiseMenu');
+if(noiseBtn){
+  noiseBtn.addEventListener('click', e=>{
+    e.stopPropagation();
+    noiseMenu.classList.toggle('hidden');
+  });
+}
+document.querySelectorAll('.dropdown-item[data-noise]').forEach(item=>{
+  item.addEventListener('click', ()=>{
+    const val = item.dataset.noise;
+    noiseMenu.classList.add('hidden');
+    stop();
+    startFakeProgress('生成噪声中…', true);
+    setTimeout(()=>{
+      try{
+        let type = val, dur = 10;
+        if(val.includes('-')){
+          const parts = val.split('-');
+          type = parts[0];
+          dur = parseInt(parts[1]);
+        }
+        const typeNames = {white:'白噪声', pink:'粉噪声', brown:'棕噪声'};
+        originalBuffer = generateNoise(type, dur);
+        clearMarkers();
+        currentFileName = type + '-' + dur + 's';
+        fileNameEl.textContent = type + '-' + dur + 's.wav';
+        fileMetaEl.textContent = '2ch · 44100Hz · ' + dur + 's · ' + typeNames[type];
+        computeAudioStats(originalBuffer);
+        clearSelection();
+        addToPlaylist(type + '-' + dur + 's.wav', originalBuffer);
+        showWorkspace();
+        processAudio().then(()=>{
+          drawWaveform();
+          updateProgress(100);
+          hideProgress();
+          showToast(typeNames[type] + ' 生成完成');
+        });
+      }catch(e){
+        console.error('noise gen error:', e);
+        hideProgress();
+        showToast('噪声生成失败: ' + (e.message || e), true);
+      }
+    }, 100);
+  });
+});
+
 urlLoadBtn.addEventListener('click', (e)=>{
   e.stopPropagation();
   if(urlInput.value.trim()){

@@ -190,6 +190,17 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.12.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.12
+- 新增噪声生成器：白噪声 / 粉噪声 / 棕色噪声
+- 支持 10s / 30s / 60s 多种时长
+- 生成后自动加载到工作区，可继续处理和导出
+- Paul Kellet 粉噪声算法，棕色噪声积分算法
+
+</details>
+
+<details>
 <summary><b>STABLE 1.11.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.11
