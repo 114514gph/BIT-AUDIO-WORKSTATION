@@ -190,6 +190,17 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.13.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.13
+- 新增播放列表随机播放模式
+- 新增重复模式：列表循环 / 单曲循环 / 不循环
+- 随机播放和重复模式自动保存
+- 播放结束自动切换下一曲（支持随机和循环逻辑）
+
+</details>
+
+<details>
 <summary><b>STABLE 1.12.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.12

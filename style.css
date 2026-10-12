@@ -185,6 +185,14 @@ header .blink{
 .playlist-panel{background:var(--panel);border:1px solid var(--border);padding:10px 14px;margin-bottom:8px;animation:slideDown 0.2s ease}
 .playlist-panel.hidden{display:none}
 .playlist-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.playlist-controls{display:flex;align-items:center;gap:6px}
+.pl-ctrl-btn{
+  padding:3px 8px;font-size:10px;font-family:'VT323',monospace;
+  background:var(--bg);border:1px solid var(--border);color:var(--muted);
+  cursor:pointer;transition:all 0.15s;letter-spacing:1px;
+}
+.pl-ctrl-btn:hover{border-color:var(--green);color:var(--green)}
+.pl-ctrl-btn.active{border-color:var(--green);color:var(--green);background:rgba(0,255,136,0.08)}
 .playlist-title{font-size:12px;color:var(--muted);font-family:'VT323',monospace;letter-spacing:1px}
 .playlist-count{font-size:12px;color:var(--green);font-family:'VT323',monospace;background:var(--bg);padding:2px 8px;border:1px solid var(--border)}
 .playlist-items{display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto}

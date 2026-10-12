@@ -426,6 +426,8 @@ let markers = [];
 // 播放列表
 let playlist = [];
 let currentPlaylistIndex = -1;
+let shuffleMode = localStorage.getItem('shuffleMode') === 'true';
+let repeatMode = localStorage.getItem('repeatMode') || 'all'; // none / one / all
 // 加载取消
 let loadAbortController = null;
 let loadCancelled = false;
@@ -988,22 +990,69 @@ function escapeHtml(str){
 }
 
 // 播放列表上一曲/下一曲
+function getNextIndex(){
+  if(playlist.length < 2) return -1;
+  if(shuffleMode){
+    let idx;
+    do { idx = Math.floor(Math.random() * playlist.length); }
+    while(idx === currentPlaylistIndex);
+    return idx;
+  }
+  let nextIdx = currentPlaylistIndex + 1;
+  if(nextIdx >= playlist.length) nextIdx = 0;
+  return nextIdx;
+}
 function playPrev(){
   if(playlist.length < 2) return;
   let prevIdx = currentPlaylistIndex - 1;
-  if(prevIdx < 0) prevIdx = playlist.length - 1; // 循环到最后
+  if(prevIdx < 0) prevIdx = playlist.length - 1;
   switchPlaylistItem(prevIdx);
   showToast('上一曲: ' + playlist[prevIdx].name);
 }
 function playNext(){
   if(playlist.length < 2) return;
-  let nextIdx = currentPlaylistIndex + 1;
-  if(nextIdx >= playlist.length) nextIdx = 0; // 循环到第一首
+  const nextIdx = getNextIndex();
+  if(nextIdx < 0) return;
   switchPlaylistItem(nextIdx);
   showToast('下一曲: ' + playlist[nextIdx].name);
 }
 if(prevBtn) prevBtn.addEventListener('click', playPrev);
 if(nextBtn) nextBtn.addEventListener('click', playNext);
+
+/* 随机播放和重复模式 */
+const shuffleBtn = $('shuffleBtn');
+const repeatBtn = $('repeatBtn');
+function updateShuffleBtn(){
+  if(shuffleBtn) shuffleBtn.classList.toggle('active', shuffleMode);
+}
+function updateRepeatBtn(){
+  if(repeatBtn){
+    const labels = {none:'OFF', one:'ONE', all:'ALL'};
+    repeatBtn.textContent = '\u21BB ' + labels[repeatMode];
+    repeatBtn.classList.toggle('active', repeatMode !== 'none');
+  }
+}
+updateShuffleBtn();
+updateRepeatBtn();
+if(shuffleBtn){
+  shuffleBtn.addEventListener('click', ()=>{
+    shuffleMode = !shuffleMode;
+    localStorage.setItem('shuffleMode', shuffleMode);
+    updateShuffleBtn();
+    showToast(shuffleMode ? '随机播放已开启' : '随机播放已关闭');
+  });
+}
+if(repeatBtn){
+  repeatBtn.addEventListener('click', ()=>{
+    const modes = ['all', 'one', 'none'];
+    const curIdx = modes.indexOf(repeatMode);
+    repeatMode = modes[(curIdx + 1) % modes.length];
+    localStorage.setItem('repeatMode', repeatMode);
+    updateRepeatBtn();
+    const labels = {all:'列表循环', one:'单曲循环', none:'不循环'};
+    showToast('重复模式: ' + labels[repeatMode]);
+  });
+}
 
 async function loadFile(file){
   if(!file) return;
@@ -1971,16 +2020,36 @@ function onSourceEnded(){
       play();
       return;
     }
-    // 播放列表自动播放下一曲
-    if(playlist.length > 1 && currentPlaylistIndex < playlist.length - 1){
-      isPlaying = false;
-      playBtn.innerHTML = '&#9654; PLAY';
-      cancelAnimationFrame(rafId);
-      playhead.style.display = 'none';
+    // 重复模式：单曲循环
+    if(repeatMode === 'one'){
       pausedAt = 0;
-      if(isRecording) stopRecording();
-      setTimeout(() => { switchPlaylistItem(currentPlaylistIndex + 1); play(); }, 300);
+      isPlaying = false;
+      play();
       return;
+    }
+    // 播放列表自动播放下一曲
+    if(playlist.length > 1){
+      const nextIdx = getNextIndex();
+      // 不循环模式下，如果是最后一首且不是随机播放，则停止
+      if(repeatMode === 'none' && !shuffleMode && currentPlaylistIndex >= playlist.length - 1){
+        isPlaying = false;
+        playBtn.innerHTML = '&#9654; PLAY';
+        cancelAnimationFrame(rafId);
+        playhead.style.display = 'none';
+        pausedAt = 0;
+        if(isRecording) stopRecording();
+        return;
+      }
+      if(nextIdx >= 0){
+        isPlaying = false;
+        playBtn.innerHTML = '&#9654; PLAY';
+        cancelAnimationFrame(rafId);
+        playhead.style.display = 'none';
+        pausedAt = 0;
+        if(isRecording) stopRecording();
+        setTimeout(() => { switchPlaylistItem(nextIdx); play(); }, 300);
+        return;
+      }
     }
     isPlaying = false;
     playBtn.innerHTML = '&#9654; PLAY';
