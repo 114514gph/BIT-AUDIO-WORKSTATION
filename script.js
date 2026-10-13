@@ -415,7 +415,6 @@ let exportFormat = 'wav';
 let recMode = false;
 let mediaRecorder = null;
 let recordedChunks = [];
-let loopMode = false;
 let currentBitrate = 128;
 let exportSampleRate = parseInt(localStorage.getItem('exportSampleRate')) || 44100;
 let currentTheme = localStorage.getItem('theme') || 'default';
@@ -2013,13 +2012,6 @@ function onSourceEnded(){
       play();
       return;
     }
-    if(loopMode){
-      // 循环播放：重置位置并重新播放
-      pausedAt = 0;
-      isPlaying = false;
-      play();
-      return;
-    }
     // 重复模式：单曲循环
     if(repeatMode === 'one'){
       pausedAt = 0;
@@ -2928,12 +2920,7 @@ document.addEventListener('click', unlockCtx, {once:true});
 
 /* ============ STABLE 1.1 新功能：循环播放 + 标记点 + AB循环 + 波形缩放 ============ */
 
-/* --- 循环播放 --- */
-const loopToggle = $('loopToggle');
-loopToggle.addEventListener('change', ()=>{
-  loopMode = loopToggle.checked;
-  showToast(loopMode ? '循环播放已开启' : '循环播放已关闭');
-});
+/* --- AB 循环 --- */
 const abLoopToggle = $('abLoopToggle');
 abLoopToggle.addEventListener('change', ()=>{
   abLoopMode = abLoopToggle.checked;

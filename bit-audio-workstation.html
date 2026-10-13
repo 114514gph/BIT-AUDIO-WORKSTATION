@@ -1155,8 +1155,8 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
         <div class="playlist-header">
           <span class="playlist-title">&#127925; PLAYLIST 播放列表</span>
           <div class="playlist-controls">
-            <button class="pl-ctrl-btn" id="shuffleBtn" title="随机播放">&#128256;</button>
-            <button class="pl-ctrl-btn" id="repeatBtn" title="重复模式">&#128257; ALL</button>
+            <button class="pl-ctrl-btn" id="shuffleBtn" title="随机播放">SHUF</button>
+            <button class="pl-ctrl-btn" id="repeatBtn" title="重复模式">↻ ALL</button>
             <span class="playlist-count" id="playlistCount">0</span>
           </div>
         </div>
@@ -1218,10 +1218,6 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
           <label class="toggle">
             <input type="checkbox" id="bypassToggle">
             <span>BYPASS 旁通</span>
-          </label>
-          <label class="toggle">
-            <input type="checkbox" id="loopToggle">
-            <span>LOOP 循环</span>
           </label>
           <label class="toggle">
             <input type="checkbox" id="abLoopToggle">
@@ -1397,7 +1393,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.13 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.13.1 (Bugfix) <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -1479,7 +1475,6 @@ let exportFormat = 'wav';
 let recMode = false;
 let mediaRecorder = null;
 let recordedChunks = [];
-let loopMode = false;
 let currentBitrate = 128;
 let exportSampleRate = parseInt(localStorage.getItem('exportSampleRate')) || 44100;
 let currentTheme = localStorage.getItem('theme') || 'default';
@@ -3077,13 +3072,6 @@ function onSourceEnded(){
       play();
       return;
     }
-    if(loopMode){
-      // 循环播放：重置位置并重新播放
-      pausedAt = 0;
-      isPlaying = false;
-      play();
-      return;
-    }
     // 重复模式：单曲循环
     if(repeatMode === 'one'){
       pausedAt = 0;
@@ -3992,12 +3980,7 @@ document.addEventListener('click', unlockCtx, {once:true});
 
 /* ============ STABLE 1.1 新功能：循环播放 + 标记点 + AB循环 + 波形缩放 ============ */
 
-/* --- 循环播放 --- */
-const loopToggle = $('loopToggle');
-loopToggle.addEventListener('change', ()=>{
-  loopMode = loopToggle.checked;
-  showToast(loopMode ? '循环播放已开启' : '循环播放已关闭');
-});
+/* --- AB 循环 --- */
 const abLoopToggle = $('abLoopToggle');
 abLoopToggle.addEventListener('change', ()=>{
   abLoopMode = abLoopToggle.checked;
