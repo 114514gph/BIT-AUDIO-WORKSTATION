@@ -190,6 +190,17 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.14.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.14
+- 新增频谱峰值保持功能（Peak Hold）
+- 品红色峰值线显示各频段最大电平
+- 峰值缓慢衰减，便于观察音频动态范围
+- 可一键开关，自动保存设置
+
+</details>
+
+<details>
 <summary><b>STABLE 1.13.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.13

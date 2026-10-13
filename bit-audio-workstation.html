@@ -1302,6 +1302,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
             <button class="ss-btn active" data-style="bars" title="柱状图">▌</button>
             <button class="ss-btn" data-style="line" title="折线图">╱</button>
             <button class="ss-btn" data-style="mirror" title="镜像柱状图">⇅</button>
+            <button class="ss-btn" id="peakHoldBtn" title="峰值保持">PEAK</button>
           </div>
         </div>
         <canvas id="spectrum"></canvas>
@@ -1393,7 +1394,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.13.1 (Bugfix) <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.14 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -1456,6 +1457,9 @@ let reversedBuffer = null;
 let isReversed = false;
 let spectrumRaf = null;
 let spectrumStyle = localStorage.getItem('spectrumStyle') || 'bars'; // bars / line / mirror
+let peakHoldMode = localStorage.getItem('peakHoldMode') === 'true';
+let peakValues = null;
+const PEAK_DECAY = 0.003; // 每帧衰减量
 let clipTimer = null;
 let workletReady = false;
 let isPlaying = false;
@@ -4120,6 +4124,17 @@ function startSpectrum(){
       if(b < numBars/3){ v *= 0.5 + 0.5 * (b / (numBars/3)); }
       values[b] = v;
     }
+    // 峰值保持
+    if(peakHoldMode){
+      if(!peakValues || peakValues.length !== numBars) peakValues = new Float32Array(numBars);
+      for(let b=0;b<numBars;b++){
+        if(values[b] > peakValues[b]){
+          peakValues[b] = values[b];
+        }else{
+          peakValues[b] = Math.max(0, peakValues[b] - PEAK_DECAY);
+        }
+      }
+    }
     const barW = w / numBars;
     if(spectrumStyle === 'bars'){
       // 柱状图
@@ -4167,6 +4182,26 @@ function startSpectrum(){
       ctx2d.lineTo(w, midY);
       ctx2d.stroke();
     }
+    // 峰值保持线
+    if(peakHoldMode && peakValues){
+      ctx2d.strokeStyle = '#ff2d95';
+      ctx2d.lineWidth = 2;
+      ctx2d.beginPath();
+      for(let b=0;b<numBars;b++){
+        const x = b*barW + barW/2;
+        const y = h - peakValues[b] * h;
+        if(b === 0) ctx2d.moveTo(x, y);
+        else ctx2d.lineTo(x, y);
+      }
+      ctx2d.stroke();
+      // 峰值点
+      ctx2d.fillStyle = '#ff2d95';
+      for(let b=0;b<numBars;b++){
+        const x = b*barW + barW/2;
+        const y = h - peakValues[b] * h;
+        ctx2d.fillRect(x-1, y-1, 3, 3);
+      }
+    }
     checkClipping();
   }
   draw();
@@ -4176,19 +4211,32 @@ function stopSpectrum(){
 }
 
 // 频谱样式切换
-document.querySelectorAll('.ss-btn').forEach(btn => {
+document.querySelectorAll('.ss-btn[data-style]').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.ss-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.ss-btn[data-style]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     spectrumStyle = btn.dataset.style;
     localStorage.setItem('spectrumStyle', spectrumStyle);
   });
 });
 // 初始化样式按钮状态
-document.querySelectorAll('.ss-btn').forEach(btn => {
+document.querySelectorAll('.ss-btn[data-style]').forEach(btn => {
   if(btn.dataset.style === spectrumStyle) btn.classList.add('active');
   else btn.classList.remove('active');
 });
+
+// 峰值保持开关
+const peakHoldBtn = $('peakHoldBtn');
+if(peakHoldBtn){
+  if(peakHoldMode) peakHoldBtn.classList.add('active');
+  peakHoldBtn.addEventListener('click', ()=>{
+    peakHoldMode = !peakHoldMode;
+    localStorage.setItem('peakHoldMode', peakHoldMode);
+    peakHoldBtn.classList.toggle('active', peakHoldMode);
+    if(!peakHoldMode) peakValues = null;
+    showToast(peakHoldMode ? '峰值保持已开启' : '峰值保持已关闭');
+  });
+}
 
 /* --- 削波检测 --- */
 const clipLed = $('clipLed');

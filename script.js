@@ -396,6 +396,9 @@ let reversedBuffer = null;
 let isReversed = false;
 let spectrumRaf = null;
 let spectrumStyle = localStorage.getItem('spectrumStyle') || 'bars'; // bars / line / mirror
+let peakHoldMode = localStorage.getItem('peakHoldMode') === 'true';
+let peakValues = null;
+const PEAK_DECAY = 0.003; // 每帧衰减量
 let clipTimer = null;
 let workletReady = false;
 let isPlaying = false;
@@ -3060,6 +3063,17 @@ function startSpectrum(){
       if(b < numBars/3){ v *= 0.5 + 0.5 * (b / (numBars/3)); }
       values[b] = v;
     }
+    // 峰值保持
+    if(peakHoldMode){
+      if(!peakValues || peakValues.length !== numBars) peakValues = new Float32Array(numBars);
+      for(let b=0;b<numBars;b++){
+        if(values[b] > peakValues[b]){
+          peakValues[b] = values[b];
+        }else{
+          peakValues[b] = Math.max(0, peakValues[b] - PEAK_DECAY);
+        }
+      }
+    }
     const barW = w / numBars;
     if(spectrumStyle === 'bars'){
       // 柱状图
@@ -3107,6 +3121,26 @@ function startSpectrum(){
       ctx2d.lineTo(w, midY);
       ctx2d.stroke();
     }
+    // 峰值保持线
+    if(peakHoldMode && peakValues){
+      ctx2d.strokeStyle = '#ff2d95';
+      ctx2d.lineWidth = 2;
+      ctx2d.beginPath();
+      for(let b=0;b<numBars;b++){
+        const x = b*barW + barW/2;
+        const y = h - peakValues[b] * h;
+        if(b === 0) ctx2d.moveTo(x, y);
+        else ctx2d.lineTo(x, y);
+      }
+      ctx2d.stroke();
+      // 峰值点
+      ctx2d.fillStyle = '#ff2d95';
+      for(let b=0;b<numBars;b++){
+        const x = b*barW + barW/2;
+        const y = h - peakValues[b] * h;
+        ctx2d.fillRect(x-1, y-1, 3, 3);
+      }
+    }
     checkClipping();
   }
   draw();
@@ -3116,19 +3150,32 @@ function stopSpectrum(){
 }
 
 // 频谱样式切换
-document.querySelectorAll('.ss-btn').forEach(btn => {
+document.querySelectorAll('.ss-btn[data-style]').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.ss-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.ss-btn[data-style]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     spectrumStyle = btn.dataset.style;
     localStorage.setItem('spectrumStyle', spectrumStyle);
   });
 });
 // 初始化样式按钮状态
-document.querySelectorAll('.ss-btn').forEach(btn => {
+document.querySelectorAll('.ss-btn[data-style]').forEach(btn => {
   if(btn.dataset.style === spectrumStyle) btn.classList.add('active');
   else btn.classList.remove('active');
 });
+
+// 峰值保持开关
+const peakHoldBtn = $('peakHoldBtn');
+if(peakHoldBtn){
+  if(peakHoldMode) peakHoldBtn.classList.add('active');
+  peakHoldBtn.addEventListener('click', ()=>{
+    peakHoldMode = !peakHoldMode;
+    localStorage.setItem('peakHoldMode', peakHoldMode);
+    peakHoldBtn.classList.toggle('active', peakHoldMode);
+    if(!peakHoldMode) peakValues = null;
+    showToast(peakHoldMode ? '峰值保持已开启' : '峰值保持已关闭');
+  });
+}
 
 /* --- 削波检测 --- */
 const clipLed = $('clipLed');
