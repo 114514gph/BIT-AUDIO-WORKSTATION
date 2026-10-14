@@ -190,6 +190,17 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.15.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.15
+- 新增均衡器预设功能（EQ Presets）
+- 7 种预设：平坦、流行、摇滚、古典、人声、低音、高音
+- 一键应用预设，自动调整三段 EQ
+- 手动调节时自动清除预设高亮
+
+</details>
+
+<details>
 <summary><b>STABLE 1.14.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.14

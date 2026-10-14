@@ -1974,6 +1974,38 @@ eqHighSlider.addEventListener('input', ()=>{
   eqHighVal.textContent = parseFloat(eqHighSlider.value).toFixed(1) + 'dB';
   if(highFilter) highFilter.gain.value = parseFloat(eqHighSlider.value);
   updateExportHint();
+  // 手动调节时清除预设高亮
+  document.querySelectorAll('.eq-preset-btn').forEach(b=>b.classList.remove('active'));
+});
+
+// EQ 预设
+const EQ_PRESETS = {
+  flat:      { low: 0,   mid: 0,   high: 0,   name: '平坦' },
+  pop:       { low: 4,   mid: -1,  high: 3,   name: '流行' },
+  rock:      { low: 5,   mid: 1,   high: 4,   name: '摇滚' },
+  classical: { low: 4,   mid: 0,   high: 5,   name: '古典' },
+  vocal:     { low: -2,  mid: 4,   high: 2,   name: '人声' },
+  bass:      { low: 8,   mid: 2,   high: -1,  name: '低音' },
+  treble:    { low: -2,  mid: 1,   high: 7,   name: '高音' }
+};
+document.querySelectorAll('.eq-preset-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const preset = EQ_PRESETS[btn.dataset.preset];
+    if(!preset) return;
+    eqLowSlider.value = preset.low;
+    eqMidSlider.value = preset.mid;
+    eqHighSlider.value = preset.high;
+    eqLowVal.textContent = preset.low.toFixed(1) + 'dB';
+    eqMidVal.textContent = preset.mid.toFixed(1) + 'dB';
+    eqHighVal.textContent = preset.high.toFixed(1) + 'dB';
+    if(lowFilter) lowFilter.gain.value = preset.low;
+    if(midFilter) midFilter.gain.value = preset.mid;
+    if(highFilter) highFilter.gain.value = preset.high;
+    document.querySelectorAll('.eq-preset-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    updateExportHint();
+    showToast('EQ 预设: ' + preset.name);
+  });
 });
 bypassToggle.addEventListener('change', ()=>{
   drawWaveform();

@@ -405,6 +405,22 @@ input[type=range]::-moz-range-thumb{
   font-family:var(--pixel);font-size:9px;color:var(--muted);
   letter-spacing:1px;
 }
+.eq-presets{
+  display:flex;flex-wrap:wrap;justify-content:center;gap:4px;
+  margin-top:12px;padding-top:10px;border-top:1px solid var(--border);
+}
+.eq-preset-btn{
+  font-family:var(--pixel);font-size:8px;color:var(--muted);
+  background:var(--panel2);border:1px solid var(--border);
+  padding:4px 6px;cursor:pointer;letter-spacing:1px;
+  transition:all 0.15s;
+}
+.eq-preset-btn:hover{
+  color:var(--cyan);border-color:var(--cyan);
+}
+.eq-preset-btn.active{
+  color:var(--bg);background:var(--cyan);border-color:var(--cyan);
+}
 
 /* ============ TRANSPORT ============ */
 .transport-export{
