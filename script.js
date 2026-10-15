@@ -1756,13 +1756,12 @@ async function renderFullFX(buffer, targetSampleRate){
   fadeGain.gain.value = 1;
   const now = 0;
   if(fadeIn > 0){
-    fadeGain.gain.setValueAtTime(0, now);
-    fadeGain.gain.linearRampToValueAtTime(1, now + fadeIn);
+    applyFadeCurve(fadeGain.gain, now, fadeIn, fadeInCurve, true);
   }
   if(fadeOut > 0){
     const fadeStart = Math.max(fadeIn, outDur - fadeOut);
     fadeGain.gain.setValueAtTime(1, fadeStart);
-    fadeGain.gain.linearRampToValueAtTime(0, outDur);
+    applyFadeCurve(fadeGain.gain, fadeStart, fadeOut, fadeOutCurve, false);
   }
 
   // 声像
@@ -2114,8 +2113,7 @@ async function play(){
     const now = ctx.currentTime;
     fadeGainNode.gain.cancelScheduledValues(now);
     if(fadeIn > 0 && offset < 0.05){
-      fadeGainNode.gain.setValueAtTime(0, now);
-      fadeGainNode.gain.linearRampToValueAtTime(1, now + fadeIn);
+      applyFadeCurve(fadeGainNode.gain, now, fadeIn, fadeInCurve, true);
     }else{
       fadeGainNode.gain.setValueAtTime(1, now);
     }
@@ -2123,7 +2121,7 @@ async function play(){
       const safeRate = Math.max(0.25, parseFloat(speedSlider.value));
     const fadeStart = now + (buf.duration - offset) / safeRate - fadeOut;
       if(fadeStart > now) fadeGainNode.gain.setValueAtTime(1, fadeStart);
-      fadeGainNode.gain.linearRampToValueAtTime(0, now + (buf.duration - offset) / safeRate);
+      applyFadeCurve(fadeGainNode.gain, fadeStart, fadeOut, fadeOutCurve, false);
     }
     sourceNode.start(0, Math.max(0, offset));
     const playRate = Math.max(0.25, parseFloat(speedSlider.value));
@@ -3258,6 +3256,67 @@ const fadeInSlider = $('fadeInSlider'), fadeInVal = $('fadeInVal');
 fadeInSlider.addEventListener('input', ()=>{ fadeInVal.textContent = fadeInSlider.value; });
 const fadeOutSlider = $('fadeOutSlider'), fadeOutVal = $('fadeOutVal');
 fadeOutSlider.addEventListener('input', ()=>{ fadeOutVal.textContent = fadeOutSlider.value; });
+
+// 淡入淡出曲线
+let fadeInCurve = 'linear', fadeOutCurve = 'linear';
+function generateFadeCurve(type, duration, isFadeIn){
+  const sampleRate = 44100;
+  const samples = Math.max(2, Math.floor(duration * sampleRate / 100)); // 每10ms一个采样点
+  const curve = new Float32Array(samples);
+  for(let i = 0; i < samples; i++){
+    const t = i / (samples - 1);
+    let v;
+    switch(type){
+      case 'exp':
+        v = isFadeIn ? Math.pow(t, 2.5) : 1 - Math.pow(1 - t, 2.5);
+        break;
+      case 'log':
+        v = isFadeIn ? Math.pow(t, 0.4) : 1 - Math.pow(1 - t, 0.4);
+        break;
+      case 's':
+        v = isFadeIn ? (t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2) : (t < 0.5 ? 1 - 2*t*t : Math.pow(2*t-1, 2)/2);
+        break;
+      default:
+        v = t;
+    }
+    curve[i] = Math.max(0, Math.min(1, v));
+  }
+  return curve;
+}
+function applyFadeCurve(gainParam, startTime, duration, type, isFadeIn){
+  if(type === 'linear'){
+    if(isFadeIn){
+      gainParam.setValueAtTime(0, startTime);
+      gainParam.linearRampToValueAtTime(1, startTime + duration);
+    } else {
+      gainParam.setValueAtTime(1, startTime);
+      gainParam.linearRampToValueAtTime(0, startTime + duration);
+    }
+  } else {
+    const curve = generateFadeCurve(type, duration, isFadeIn);
+    if(isFadeIn){
+      gainParam.setValueAtTime(0, startTime);
+      gainParam.setValueCurveAtTime(curve, startTime, duration);
+    } else {
+      gainParam.setValueAtTime(1, startTime);
+      gainParam.setValueCurveAtTime(curve, startTime, duration);
+    }
+  }
+}
+document.querySelectorAll('.fade-curve-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const target = btn.dataset.target;
+    const curve = btn.dataset.curve;
+    if(target === 'in'){
+      fadeInCurve = curve;
+      document.querySelectorAll('.fade-curve-btn[data-target="in"]').forEach(b=>b.classList.remove('active'));
+    } else {
+      fadeOutCurve = curve;
+      document.querySelectorAll('.fade-curve-btn[data-target="out"]').forEach(b=>b.classList.remove('active'));
+    }
+    btn.classList.add('active');
+  });
+});
 
 /* --- 预设系统 --- */
 const presetName = $('presetName'), presetSelect = $('presetSelect');

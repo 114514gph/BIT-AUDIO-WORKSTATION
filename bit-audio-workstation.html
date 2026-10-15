@@ -594,6 +594,12 @@ input[type=range]::-moz-range-thumb{
 .fx-item label{display:block;font-size:10px;color:var(--muted);margin-bottom:4px;font-family:var(--pixel);letter-spacing:1px}
 .fx-item label span{color:var(--pink)}
 .fx-item input[type=range]{width:100%}
+.fade-curves{display:flex;justify-content:space-between;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.fade-curve-group{display:flex;align-items:center;gap:4px}
+.fade-curve-label{font-family:var(--pixel);font-size:8px;color:var(--muted);letter-spacing:1px;min-width:24px}
+.fade-curve-btn{font-family:var(--pixel);font-size:8px;color:var(--muted);background:var(--panel2);border:1px solid var(--border);padding:3px 5px;cursor:pointer;letter-spacing:1px;transition:all 0.15s}
+.fade-curve-btn:hover{color:var(--green);border-color:var(--green)}
+.fade-curve-btn.active{color:var(--bg);background:var(--green);border-color:var(--green)}
 
 /* ============ 预设系统 ============ */
 .preset-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -1369,6 +1375,22 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
             <input type="range" id="fadeOutSlider" min="0" max="10" step="0.1" value="0">
           </div>
         </div>
+        <div class="fade-curves">
+          <div class="fade-curve-group">
+            <span class="fade-curve-label">IN</span>
+            <button class="fade-curve-btn active" data-curve="linear" data-target="in">LIN</button>
+            <button class="fade-curve-btn" data-curve="exp" data-target="in">EXP</button>
+            <button class="fade-curve-btn" data-curve="log" data-target="in">LOG</button>
+            <button class="fade-curve-btn" data-curve="s" data-target="in">S</button>
+          </div>
+          <div class="fade-curve-group">
+            <span class="fade-curve-label">OUT</span>
+            <button class="fade-curve-btn active" data-curve="linear" data-target="out">LIN</button>
+            <button class="fade-curve-btn" data-curve="exp" data-target="out">EXP</button>
+            <button class="fade-curve-btn" data-curve="log" data-target="out">LOG</button>
+            <button class="fade-curve-btn" data-curve="s" data-target="out">S</button>
+          </div>
+        </div>
       </div>
 
       <!-- 预设系统 -->
@@ -1419,7 +1441,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.15 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.16 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -2842,13 +2864,12 @@ async function renderFullFX(buffer, targetSampleRate){
   fadeGain.gain.value = 1;
   const now = 0;
   if(fadeIn > 0){
-    fadeGain.gain.setValueAtTime(0, now);
-    fadeGain.gain.linearRampToValueAtTime(1, now + fadeIn);
+    applyFadeCurve(fadeGain.gain, now, fadeIn, fadeInCurve, true);
   }
   if(fadeOut > 0){
     const fadeStart = Math.max(fadeIn, outDur - fadeOut);
     fadeGain.gain.setValueAtTime(1, fadeStart);
-    fadeGain.gain.linearRampToValueAtTime(0, outDur);
+    applyFadeCurve(fadeGain.gain, fadeStart, fadeOut, fadeOutCurve, false);
   }
 
   // 声像
@@ -3200,8 +3221,7 @@ async function play(){
     const now = ctx.currentTime;
     fadeGainNode.gain.cancelScheduledValues(now);
     if(fadeIn > 0 && offset < 0.05){
-      fadeGainNode.gain.setValueAtTime(0, now);
-      fadeGainNode.gain.linearRampToValueAtTime(1, now + fadeIn);
+      applyFadeCurve(fadeGainNode.gain, now, fadeIn, fadeInCurve, true);
     }else{
       fadeGainNode.gain.setValueAtTime(1, now);
     }
@@ -3209,7 +3229,7 @@ async function play(){
       const safeRate = Math.max(0.25, parseFloat(speedSlider.value));
     const fadeStart = now + (buf.duration - offset) / safeRate - fadeOut;
       if(fadeStart > now) fadeGainNode.gain.setValueAtTime(1, fadeStart);
-      fadeGainNode.gain.linearRampToValueAtTime(0, now + (buf.duration - offset) / safeRate);
+      applyFadeCurve(fadeGainNode.gain, fadeStart, fadeOut, fadeOutCurve, false);
     }
     sourceNode.start(0, Math.max(0, offset));
     const playRate = Math.max(0.25, parseFloat(speedSlider.value));
@@ -4344,6 +4364,67 @@ const fadeInSlider = $('fadeInSlider'), fadeInVal = $('fadeInVal');
 fadeInSlider.addEventListener('input', ()=>{ fadeInVal.textContent = fadeInSlider.value; });
 const fadeOutSlider = $('fadeOutSlider'), fadeOutVal = $('fadeOutVal');
 fadeOutSlider.addEventListener('input', ()=>{ fadeOutVal.textContent = fadeOutSlider.value; });
+
+// 淡入淡出曲线
+let fadeInCurve = 'linear', fadeOutCurve = 'linear';
+function generateFadeCurve(type, duration, isFadeIn){
+  const sampleRate = 44100;
+  const samples = Math.max(2, Math.floor(duration * sampleRate / 100)); // 每10ms一个采样点
+  const curve = new Float32Array(samples);
+  for(let i = 0; i < samples; i++){
+    const t = i / (samples - 1);
+    let v;
+    switch(type){
+      case 'exp':
+        v = isFadeIn ? Math.pow(t, 2.5) : 1 - Math.pow(1 - t, 2.5);
+        break;
+      case 'log':
+        v = isFadeIn ? Math.pow(t, 0.4) : 1 - Math.pow(1 - t, 0.4);
+        break;
+      case 's':
+        v = isFadeIn ? (t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2) : (t < 0.5 ? 1 - 2*t*t : Math.pow(2*t-1, 2)/2);
+        break;
+      default:
+        v = t;
+    }
+    curve[i] = Math.max(0, Math.min(1, v));
+  }
+  return curve;
+}
+function applyFadeCurve(gainParam, startTime, duration, type, isFadeIn){
+  if(type === 'linear'){
+    if(isFadeIn){
+      gainParam.setValueAtTime(0, startTime);
+      gainParam.linearRampToValueAtTime(1, startTime + duration);
+    } else {
+      gainParam.setValueAtTime(1, startTime);
+      gainParam.linearRampToValueAtTime(0, startTime + duration);
+    }
+  } else {
+    const curve = generateFadeCurve(type, duration, isFadeIn);
+    if(isFadeIn){
+      gainParam.setValueAtTime(0, startTime);
+      gainParam.setValueCurveAtTime(curve, startTime, duration);
+    } else {
+      gainParam.setValueAtTime(1, startTime);
+      gainParam.setValueCurveAtTime(curve, startTime, duration);
+    }
+  }
+}
+document.querySelectorAll('.fade-curve-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const target = btn.dataset.target;
+    const curve = btn.dataset.curve;
+    if(target === 'in'){
+      fadeInCurve = curve;
+      document.querySelectorAll('.fade-curve-btn[data-target="in"]').forEach(b=>b.classList.remove('active'));
+    } else {
+      fadeOutCurve = curve;
+      document.querySelectorAll('.fade-curve-btn[data-target="out"]').forEach(b=>b.classList.remove('active'));
+    }
+    btn.classList.add('active');
+  });
+});
 
 /* --- 预设系统 --- */
 const presetName = $('presetName'), presetSelect = $('presetSelect');

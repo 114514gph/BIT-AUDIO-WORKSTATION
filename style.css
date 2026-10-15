@@ -587,6 +587,12 @@ input[type=range]::-moz-range-thumb{
 .fx-item label{display:block;font-size:10px;color:var(--muted);margin-bottom:4px;font-family:var(--pixel);letter-spacing:1px}
 .fx-item label span{color:var(--pink)}
 .fx-item input[type=range]{width:100%}
+.fade-curves{display:flex;justify-content:space-between;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.fade-curve-group{display:flex;align-items:center;gap:4px}
+.fade-curve-label{font-family:var(--pixel);font-size:8px;color:var(--muted);letter-spacing:1px;min-width:24px}
+.fade-curve-btn{font-family:var(--pixel);font-size:8px;color:var(--muted);background:var(--panel2);border:1px solid var(--border);padding:3px 5px;cursor:pointer;letter-spacing:1px;transition:all 0.15s}
+.fade-curve-btn:hover{color:var(--green);border-color:var(--green)}
+.fade-curve-btn.active{color:var(--bg);background:var(--green);border-color:var(--green)}
 
 /* ============ 预设系统 ============ */
 .preset-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}

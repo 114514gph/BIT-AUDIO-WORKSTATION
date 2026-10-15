@@ -190,6 +190,17 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.16.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.16
+- 新增淡入淡出曲线选择功能
+- 支持 4 种曲线：线性(LIN)、指数(EXP)、对数(LOG)、S曲线(S)
+- 淡入和淡出可分别选择不同曲线
+- 实时播放和导出均应用所选曲线
+
+</details>
+
+<details>
 <summary><b>STABLE 1.15.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.15
