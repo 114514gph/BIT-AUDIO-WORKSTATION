@@ -192,6 +192,22 @@ BIT-AUDIO-WORKSTATION/
 <details>
 <summary><b>STABLE 1.16.x</b> — 最新版本（点击展开）</summary>
 
+### STABLE 1.16.1 (Bugfix)
+- 修复淡入淡出曲线选择功能中淡出曲线公式错误的问题
+- exp/log 淡出曲线方向反转（原公式从 0→1，修正为 1→0）
+- S 曲线淡出终点值错误（原 t=1 时为 0.5，修正为 0）
+
+### STABLE 1.16
+- 新增淡入淡出曲线选择功能
+- 支持 4 种曲线：线性(LIN)、指数(EXP)、对数(LOG)、S曲线(S)
+- 淡入和淡出可分别选择不同曲线
+- 实时播放和导出均应用所选曲线
+
+</details>
+
+<details>
+<summary><b>STABLE 1.15.x</b> — 最新版本（点击展开）</summary>
+
 ### STABLE 1.16
 - 新增淡入淡出曲线选择功能
 - 支持 4 种曲线：线性(LIN)、指数(EXP)、对数(LOG)、S曲线(S)

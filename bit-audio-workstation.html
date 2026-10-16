@@ -1441,7 +1441,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.16 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.16.1 (Bugfix) <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -4376,13 +4376,13 @@ function generateFadeCurve(type, duration, isFadeIn){
     let v;
     switch(type){
       case 'exp':
-        v = isFadeIn ? Math.pow(t, 2.5) : 1 - Math.pow(1 - t, 2.5);
+        v = isFadeIn ? Math.pow(t, 2.5) : Math.pow(1 - t, 2.5);
         break;
       case 'log':
-        v = isFadeIn ? Math.pow(t, 0.4) : 1 - Math.pow(1 - t, 0.4);
+        v = isFadeIn ? Math.pow(t, 0.4) : Math.pow(1 - t, 0.4);
         break;
       case 's':
-        v = isFadeIn ? (t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2) : (t < 0.5 ? 1 - 2*t*t : Math.pow(2*t-1, 2)/2);
+        v = isFadeIn ? (t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2) : (t < 0.5 ? 1 - 2*t*t : Math.pow(-2*t+2, 2)/2);
         break;
       default:
         v = t;

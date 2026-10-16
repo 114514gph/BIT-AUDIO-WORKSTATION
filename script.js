@@ -3268,13 +3268,13 @@ function generateFadeCurve(type, duration, isFadeIn){
     let v;
     switch(type){
       case 'exp':
-        v = isFadeIn ? Math.pow(t, 2.5) : 1 - Math.pow(1 - t, 2.5);
+        v = isFadeIn ? Math.pow(t, 2.5) : Math.pow(1 - t, 2.5);
         break;
       case 'log':
-        v = isFadeIn ? Math.pow(t, 0.4) : 1 - Math.pow(1 - t, 0.4);
+        v = isFadeIn ? Math.pow(t, 0.4) : Math.pow(1 - t, 0.4);
         break;
       case 's':
-        v = isFadeIn ? (t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2) : (t < 0.5 ? 1 - 2*t*t : Math.pow(2*t-1, 2)/2);
+        v = isFadeIn ? (t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2) : (t < 0.5 ? 1 - 2*t*t : Math.pow(-2*t+2, 2)/2);
         break;
       default:
         v = t;
