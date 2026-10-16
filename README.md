@@ -190,6 +190,17 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.17.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.17
+- 新增输入增益调节功能（Gain/Trim）
+- 支持 -12dB ~ +12dB 范围调节，步长 0.5dB
+- 实时播放和离线导出均应用增益
+- 位于 OPTIONS 面板，紧凑布局不占额外空间
+
+</details>
+
+<details>
 <summary><b>STABLE 1.16.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.16.1 (Bugfix)

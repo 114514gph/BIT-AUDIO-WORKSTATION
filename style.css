@@ -450,6 +450,10 @@ input[type=range]::-moz-range-thumb{
   padding:4px 0;justify-content:center;
 }
 .options-row .toggle{font-size:10px}
+.gain-control{display:flex;align-items:center;gap:8px}
+.gain-label{font-family:var(--pixel);font-size:9px;color:var(--muted);letter-spacing:1px;white-space:nowrap}
+.gain-label span{color:var(--pink)}
+.gain-control input[type=range]{width:80px}
 .mp3-bitrate-select{display:flex;align-items:center;gap:6px}
 .mp3-bitrate-select.hidden{display:none}
 .mp3-bitrate-select .br-label{font-family:var(--pixel);font-size:9px;color:var(--muted);letter-spacing:1px}

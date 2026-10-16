@@ -383,6 +383,7 @@ let originalBuffer = null;
 let processedBuffer = null;   // 离线处理结果，用于波形显示和导出
 let sourceNode = null;
 let gainNode = null;
+let inputGainNode = null;  // STABLE 1.17 新增：输入增益调节
 let lowFilter = null, midFilter = null, highFilter = null;
 let workletNode = null;
 // STABLE 1.0 新增
@@ -610,6 +611,8 @@ function ensureCtx(){
     analyserNode = audioCtx.createAnalyser(); analyserNode.fftSize = 256;
     // 主输出
     gainNode = audioCtx.createGain(); gainNode.gain.value = 0.9;
+    // STABLE 1.17 新增：输入增益
+    inputGainNode = audioCtx.createGain(); inputGainNode.gain.value = 1;
     // STABLE 1.2 新增：声像调节（左右声道平衡）
     pannerNode = audioCtx.createStereoPanner(); pannerNode.pan.value = 0;
     // 连接链
@@ -1715,6 +1718,10 @@ async function renderFullFX(buffer, targetSampleRate){
   src.buffer = buffer;
   src.playbackRate.value = speed;
 
+  // 输入增益（STABLE 1.17）
+  const inputGain = ctx.createGain();
+  inputGain.gain.value = Math.pow(10, parseFloat(gainSlider.value) / 20);
+
   // EQ
   const lf = ctx.createBiquadFilter();
   lf.type = 'lowshelf'; lf.frequency.value = 200; lf.gain.value = low;
@@ -1769,7 +1776,7 @@ async function renderFullFX(buffer, targetSampleRate){
   panner.pan.value = panVal;
 
   // 连接：src → EQ → 压缩器 → (dry + reverb + delay) → fade → panner → dest
-  src.connect(lf); lf.connect(mf); mf.connect(hf);
+  src.connect(inputGain); inputGain.connect(lf); lf.connect(mf); mf.connect(hf);
   hf.connect(comp); comp.connect(dryGain); comp.connect(convolver); comp.connect(delayNode);
   convolver.connect(reverbGain);
   delayNode.connect(delayWetGain);
@@ -2014,6 +2021,15 @@ bypassToggle.addEventListener('change', ()=>{
   }
 });
 
+// STABLE 1.17 新增：输入增益调节
+const gainSlider = $('gainSlider'), gainVal = $('gainVal');
+gainSlider.addEventListener('input', ()=>{
+  gainVal.textContent = parseFloat(gainSlider.value).toFixed(1);
+  if(inputGainNode){
+    inputGainNode.gain.value = Math.pow(10, parseFloat(gainSlider.value) / 20);
+  }
+});
+
 // MP3 比特率按钮选择
 const _mp3BrBtns = $('mp3BitrateBtns'); if(_mp3BrBtns){
   _mp3BrBtns.querySelectorAll('.br-btn').forEach(btn=>{
@@ -2099,10 +2115,10 @@ async function play(){
     sourceNode.buffer = isReversed && reversedBuffer ? reversedBuffer : originalBuffer;
     sourceNode.playbackRate.value = parseFloat(speedSlider.value);
     if(bypassToggle.checked || !workletNode){
-      sourceNode.connect(lowFilter);
+      sourceNode.connect(inputGainNode); inputGainNode.connect(lowFilter);
     }else{
-      try{ sourceNode.connect(workletNode); }
-      catch(e){ console.warn('worklet connect failed, bypass', e); sourceNode.connect(lowFilter); }
+      try{ sourceNode.connect(inputGainNode); inputGainNode.connect(workletNode); }
+      catch(e){ console.warn('worklet connect failed, bypass', e); sourceNode.connect(inputGainNode); inputGainNode.connect(lowFilter); }
     }
     sourceNode.onended = onSourceEnded;
     const buf = sourceNode.buffer;
