@@ -3234,7 +3234,7 @@ async function play(){
       sourceNode.connect(inputGainNode); inputGainNode.connect(lowFilter);
     }else{
       try{ sourceNode.connect(inputGainNode); inputGainNode.connect(workletNode); }
-      catch(e){ console.warn('worklet connect failed, bypass', e); sourceNode.connect(inputGainNode); inputGainNode.connect(lowFilter); }
+      catch(e){ console.warn('worklet connect failed, bypass', e); inputGainNode.connect(lowFilter); }
     }
     sourceNode.onended = onSourceEnded;
     const buf = sourceNode.buffer;
@@ -4470,7 +4470,8 @@ function getCurrentParams(){
     bit: Math.round(parseFloat(bitSlider.value)), down: downSlider.value, noise: noiseSlider.value,
     speed: speedSlider.value, eqLow: eqLowSlider.value, eqMid: eqMidSlider.value, eqHigh: eqHighSlider.value,
     comp: compSlider.value, rev: revSlider.value, delay: delaySlider.value, delayTime: delayTimeSlider.value,
-    fadeIn: fadeInSlider.value, fadeOut: fadeOutSlider.value, bypass: bypassToggle.checked
+    fadeIn: fadeInSlider.value, fadeOut: fadeOutSlider.value, bypass: bypassToggle.checked,
+    gain: gainSlider.value
   };
 }
 function applyParams(p){
@@ -4495,6 +4496,8 @@ function applyParams(p){
   fadeInVal.textContent = setVal(fadeInSlider, p.fadeIn, 0, 10, 0);
   fadeOutVal.textContent = setVal(fadeOutSlider, p.fadeOut, 0, 10, 0);
   bypassToggle.checked = !!p.bypass;
+  gainVal.textContent = setVal(gainSlider, p.gain, -12, 12, 0).toFixed(1);
+  gainSlider.dispatchEvent(new Event('input'));
   scheduleProcess();
   showToast('预设已加载: ' + (presetSelect.value||''));
 }
