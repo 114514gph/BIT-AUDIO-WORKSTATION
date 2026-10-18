@@ -1662,6 +1662,190 @@ document.querySelectorAll('.dropdown-item[data-noise]').forEach(item=>{
   });
 });
 
+// STABLE 1.18 新增：静音检测与去除
+let silenceRegions = [];  // [{start, end}] 静音区域（秒）
+let silenceStats = null;  // {totalSilence, silenceRatio, regionCount}
+
+function detectSilence(buffer, thresholdDb, minDurationMs){
+  const sr = buffer.sampleRate;
+  const ch = buffer.numberOfChannels;
+  const threshold = Math.pow(10, thresholdDb / 20);
+  const minSamples = Math.floor(sr * minDurationMs / 1000);
+  const regions = [];
+  // 分块检测，每块 10ms
+  const blockSize = Math.max(1, Math.floor(sr * 0.01));
+  const totalBlocks = Math.floor(buffer.length / blockSize);
+  let inSilence = false;
+  let silenceStart = 0;
+  let totalSilenceSamples = 0;
+
+  for(let b = 0; b < totalBlocks; b++){
+    const start = b * blockSize;
+    const end = Math.min(start + blockSize, buffer.length);
+    let peak = 0;
+    for(let c = 0; c < ch; c++){
+      const data = buffer.getChannelData(c);
+      for(let i = start; i < end; i++){
+        const v = Math.abs(data[i]);
+        if(v > peak) peak = v;
+      }
+    }
+    const isSilent = peak < threshold;
+    if(isSilent && !inSilence){
+      inSilence = true;
+      silenceStart = start;
+    }else if(!isSilent && inSilence){
+      inSilence = false;
+      const dur = start - silenceStart;
+      if(dur >= minSamples){
+        regions.push({start: silenceStart / sr, end: start / sr});
+        totalSilenceSamples += dur;
+      }
+    }
+  }
+  // 处理文件末尾的静音
+  if(inSilence){
+    const dur = buffer.length - silenceStart;
+    if(dur >= minSamples){
+      regions.push({start: silenceStart / sr, end: buffer.length / sr});
+      totalSilenceSamples += dur;
+    }
+  }
+  return {
+    regions,
+    totalSilence: totalSilenceSamples / sr,
+    silenceRatio: totalSilenceSamples / buffer.length,
+    regionCount: regions.length
+  };
+}
+
+function removeSilence(buffer, regions){
+  if(!regions || regions.length === 0) return buffer;
+  const sr = buffer.sampleRate;
+  const ch = buffer.numberOfChannels;
+  // 计算非静音片段
+  const keepRanges = [];
+  let lastEnd = 0;
+  for(const r of regions){
+    const startSample = Math.floor(r.start * sr);
+    if(startSample > lastEnd){
+      keepRanges.push({start: lastEnd, end: startSample});
+    }
+    lastEnd = Math.floor(r.end * sr);
+  }
+  if(lastEnd < buffer.length){
+    keepRanges.push({start: lastEnd, end: buffer.length});
+  }
+  // 计算新长度
+  let newLen = 0;
+  for(const r of keepRanges) newLen += r.end - r.start;
+  if(newLen <= 0) return buffer;
+  const newBuf = audioCtx.createBuffer(ch, newLen, sr);
+  for(let c = 0; c < ch; c++){
+    const src = buffer.getChannelData(c);
+    const dst = newBuf.getChannelData(c);
+    let offset = 0;
+    for(const r of keepRanges){
+      dst.set(src.subarray(r.start, r.end), offset);
+      offset += r.end - r.start;
+    }
+  }
+  return newBuf;
+}
+
+const silenceBtn = $('silenceBtn');
+const silenceMenu = $('silenceMenu');
+const silenceThreshold = $('silenceThreshold');
+const silenceThresholdVal = $('silenceThresholdVal');
+const silenceMinDur = $('silenceMinDur');
+const silenceMinDurVal = $('silenceMinDurVal');
+
+if(silenceBtn){
+  silenceBtn.addEventListener('click', e=>{
+    e.stopPropagation();
+    silenceMenu.classList.toggle('hidden');
+  });
+}
+if(silenceThreshold){
+  silenceThreshold.addEventListener('input', ()=>{
+    silenceThresholdVal.textContent = silenceThreshold.value + 'dB';
+  });
+}
+if(silenceMinDur){
+  silenceMinDur.addEventListener('input', ()=>{
+    silenceMinDurVal.textContent = silenceMinDur.value + 'ms';
+  });
+}
+document.querySelectorAll('.dropdown-item[data-silence]').forEach(item=>{
+  item.addEventListener('click', ()=>{
+    const action = item.dataset.silence;
+    silenceMenu.classList.add('hidden');
+    if(!originalBuffer){ showToast('请先加载音频', true); return; }
+
+    if(action === 'detect'){
+      startFakeProgress('检测静音中…', true);
+      setTimeout(()=>{
+        try{
+          const result = detectSilence(originalBuffer,
+            parseInt(silenceThreshold.value),
+            parseInt(silenceMinDur.value));
+          silenceRegions = result.regions;
+          silenceStats = result;
+          drawWaveform();
+          updateProgress(100);
+          hideProgress();
+          showToast(`检测到 ${result.regionCount} 处静音，共 ${result.totalSilence.toFixed(1)}s (${(result.silenceRatio*100).toFixed(1)}%)`);
+        }catch(e){
+          console.error('silence detect error:', e);
+          hideProgress();
+          showToast('静音检测失败', true);
+        }
+      }, 100);
+    }else if(action === 'remove'){
+      if(!silenceRegions || silenceRegions.length === 0){
+        // 先检测再去除
+        const result = detectSilence(originalBuffer,
+          parseInt(silenceThreshold.value),
+          parseInt(silenceMinDur.value));
+        silenceRegions = result.regions;
+      }
+      if(silenceRegions.length === 0){
+        showToast('未检测到静音', true);
+        return;
+      }
+      startFakeProgress('去除静音中…', true);
+      setTimeout(()=>{
+        try{
+          stop();
+          const newBuf = removeSilence(originalBuffer, silenceRegions);
+          const oldDur = originalBuffer.duration;
+          originalBuffer = newBuf;
+          silenceRegions = [];
+          silenceStats = null;
+          clearMarkers();
+          computeAudioStats(originalBuffer);
+          clearSelection();
+          processAudio().then(()=>{
+            drawWaveform();
+            updateProgress(100);
+            hideProgress();
+            showToast(`静音已去除：${oldDur.toFixed(1)}s → ${newBuf.duration.toFixed(1)}s`);
+          });
+        }catch(e){
+          console.error('silence remove error:', e);
+          hideProgress();
+          showToast('去除静音失败', true);
+        }
+      }, 100);
+    }else if(action === 'clear'){
+      silenceRegions = [];
+      silenceStats = null;
+      drawWaveform();
+      showToast('静音标记已清除');
+    }
+  });
+});
+
 urlLoadBtn.addEventListener('click', (e)=>{
   e.stopPropagation();
   if(urlInput.value.trim()){
@@ -2521,6 +2705,17 @@ function drawWaveform(){
   }
   ctx2d.strokeStyle = 'rgba(0,255,136,0.18)';
   ctx2d.beginPath(); ctx2d.moveTo(0,mid+0.5); ctx2d.lineTo(w,mid+0.5); ctx2d.stroke();
+
+  // STABLE 1.18 新增：静音区域标记
+  if(silenceRegions && silenceRegions.length > 0){
+    ctx2d.fillStyle = 'rgba(255,165,0,0.15)';
+    for(const r of silenceRegions){
+      const rx1 = (r.start / buf.duration - waveOffset) * waveZoom * w;
+      const rx2 = (r.end / buf.duration - waveOffset) * waveZoom * w;
+      if(rx2 < 0 || rx1 > w) continue;
+      ctx2d.fillRect(Math.max(0, rx1), 0, Math.min(w, rx2) - Math.max(0, rx1), h);
+    }
+  }
 
   // bars (pixel style) - 从峰值缓存取数据
   const color = bypassToggle.checked ? '#6a8aff' : '#00ff88';

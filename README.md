@@ -190,6 +190,19 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.18.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.18
+- 新增静音检测与去除功能（Silence Detection & Removal）
+- 自动检测音频中的静音片段，阈值可调（-60dB ~ -20dB）
+- 最小时长可调（100ms ~ 2000ms），避免误判短暂停顿
+- 波形上用橙色半透明区域标记静音位置
+- 一键去除静音，自动拼接非静音片段
+- 显示静音统计：数量、总时长、占比
+
+</details>
+
+<details>
 <summary><b>STABLE 1.17.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.17

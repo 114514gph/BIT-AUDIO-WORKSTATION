@@ -47,6 +47,23 @@
         <div class="dropdown-item" data-noise="pink-30">粉噪声 30s</div>
         <div class="dropdown-item" data-noise="brown-60">棕噪声 60s</div>
       </div>
+      <button class="btn demo-btn" id="silenceBtn">&#128263; SILENCE</button>
+      <div class="dropdown-menu hidden" id="silenceMenu">
+        <div class="dropdown-item" data-silence="detect">检测静音</div>
+        <div class="dropdown-item" data-silence="remove">去除静音</div>
+        <div class="dropdown-item" data-silence="clear">清除标记</div>
+        <div class="dropdown-divider"></div>
+        <div class="silence-threshold-row">
+          <span class="df-hint">阈值</span>
+          <input type="range" id="silenceThreshold" min="-60" max="-20" step="1" value="-40">
+          <span id="silenceThresholdVal">-40dB</span>
+        </div>
+        <div class="silence-min-row">
+          <span class="df-hint">最小时长</span>
+          <input type="range" id="silenceMinDur" min="100" max="2000" step="100" value="500">
+          <span id="silenceMinDurVal">500ms</span>
+        </div>
+      </div>
     </div>
 
     <!-- ===== 工作区 ===== -->
@@ -342,7 +359,7 @@
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.17 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.18 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 

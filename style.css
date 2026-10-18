@@ -302,6 +302,12 @@ header .blink{
 #noiseBtn:hover{background:rgba(0,229,255,0.16)}
 .demo-bar{position:relative}
 #noiseMenu{top:100%;left:50%;transform:translateX(-50%);margin-top:8px;min-width:160px;z-index:100}
+#silenceBtn{border-color:var(--orange);color:var(--orange);background:rgba(255,165,0,0.06)}
+#silenceBtn:hover{background:rgba(255,165,0,0.16)}
+#silenceMenu{top:100%;left:50%;transform:translateX(-50%);margin-top:8px;min-width:200px;z-index:100}
+.silence-threshold-row,.silence-min-row{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:10px}
+.silence-threshold-row input[type=range],.silence-min-row input[type=range]{flex:1;width:80px}
+.silence-threshold-row span:last-child,.silence-min-row span:last-child{min-width:50px;text-align:right;color:var(--muted)}
 
 /* ============ CONTROLS ============ */
 .controls{
