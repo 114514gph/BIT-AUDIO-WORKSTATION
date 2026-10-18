@@ -1740,7 +1740,8 @@ function removeSilence(buffer, regions){
   let newLen = 0;
   for(const r of keepRanges) newLen += r.end - r.start;
   if(newLen <= 0) return buffer;
-  const newBuf = audioCtx.createBuffer(ch, newLen, sr);
+  const ctx = ensureCtx();
+  const newBuf = ctx.createBuffer(ch, newLen, sr);
   for(let c = 0; c < ch; c++){
     const src = buffer.getChannelData(c);
     const dst = newBuf.getChannelData(c);
@@ -1823,6 +1824,11 @@ document.querySelectorAll('.dropdown-item[data-silence]').forEach(item=>{
           silenceRegions = [];
           silenceStats = null;
           clearMarkers();
+          invalidateWaveformCache();
+          fileMetaEl.textContent =
+            originalBuffer.numberOfChannels + 'ch · ' +
+            originalBuffer.sampleRate + 'Hz · ' +
+            fmtTime(originalBuffer.duration);
           computeAudioStats(originalBuffer);
           clearSelection();
           processAudio().then(()=>{
