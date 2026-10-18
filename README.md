@@ -190,6 +190,19 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.19.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.19
+- 新增音频声道处理功能（Channel Processing）
+- 支持左右声道交换（L/R Swap）
+- 支持合并为单声道（Mono Mix）
+- 支持仅左声道/仅右声道输出
+- 支持相位反转（Phase Invert）
+- 可一键恢复原始声道
+
+</details>
+
+<details>
 <summary><b>STABLE 1.18.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.18

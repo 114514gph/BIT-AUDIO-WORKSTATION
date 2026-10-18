@@ -315,6 +315,9 @@ header .blink{
 .silence-threshold-row,.silence-min-row{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:10px}
 .silence-threshold-row input[type=range],.silence-min-row input[type=range]{flex:1;width:80px}
 .silence-threshold-row span:last-child,.silence-min-row span:last-child{min-width:50px;text-align:right;color:var(--muted)}
+#channelBtn{border-color:var(--purple);color:var(--purple);background:rgba(180,100,255,0.06)}
+#channelBtn:hover{background:rgba(180,100,255,0.16)}
+#channelMenu{top:100%;left:50%;transform:translateX(-50%);margin-top:8px;min-width:140px;z-index:100}
 
 /* ============ CONTROLS ============ */
 .controls{
@@ -1177,6 +1180,16 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
           <span id="silenceMinDurVal">500ms</span>
         </div>
       </div>
+      <button class="btn demo-btn" id="channelBtn">&#127911; CHANNEL</button>
+      <div class="dropdown-menu hidden" id="channelMenu">
+        <div class="dropdown-item" data-channel="swap">左右交换</div>
+        <div class="dropdown-item" data-channel="mono">合并单声道</div>
+        <div class="dropdown-item" data-channel="left">仅左声道</div>
+        <div class="dropdown-item" data-channel="right">仅右声道</div>
+        <div class="dropdown-item" data-channel="phase">相位反转</div>
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-item" data-channel="restore">恢复原始</div>
+      </div>
     </div>
 
     <!-- ===== 工作区 ===== -->
@@ -1472,7 +1485,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.18 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.19 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -2988,6 +3001,130 @@ document.querySelectorAll('.dropdown-item[data-silence]').forEach(item=>{
       drawWaveform();
       showToast('静音标记已清除');
     }
+  });
+});
+
+// STABLE 1.19 新增：音频声道处理
+let originalChannelBuffer = null;  // 保存原始声道 buffer 用于恢复
+
+function processChannels(buffer, mode){
+  const sr = buffer.sampleRate;
+  const len = buffer.length;
+  const ch = buffer.numberOfChannels;
+  if(ch < 2) return buffer;  // 单声道无需处理
+  const ctx = ensureCtx();
+  const left = buffer.getChannelData(0);
+  const right = buffer.getChannelData(1);
+  let newBuf;
+
+  switch(mode){
+    case 'swap': {
+      newBuf = ctx.createBuffer(2, len, sr);
+      newBuf.copyToChannel(right, 0);
+      newBuf.copyToChannel(left, 1);
+      break;
+    }
+    case 'mono': {
+      newBuf = ctx.createBuffer(1, len, sr);
+      const mono = newBuf.getChannelData(0);
+      for(let i = 0; i < len; i++){
+        mono[i] = (left[i] + right[i]) * 0.5;
+      }
+      break;
+    }
+    case 'left': {
+      newBuf = ctx.createBuffer(2, len, sr);
+      newBuf.copyToChannel(left, 0);
+      newBuf.copyToChannel(left, 1);
+      break;
+    }
+    case 'right': {
+      newBuf = ctx.createBuffer(2, len, sr);
+      newBuf.copyToChannel(right, 0);
+      newBuf.copyToChannel(right, 1);
+      break;
+    }
+    case 'phase': {
+      newBuf = ctx.createBuffer(2, len, sr);
+      const newLeft = newBuf.getChannelData(0);
+      const newRight = newBuf.getChannelData(1);
+      for(let i = 0; i < len; i++){
+        newLeft[i] = -left[i];
+        newRight[i] = -right[i];
+      }
+      break;
+    }
+    default:
+      return buffer;
+  }
+  return newBuf;
+}
+
+const channelBtn = $('channelBtn');
+const channelMenu = $('channelMenu');
+if(channelBtn){
+  channelBtn.addEventListener('click', e=>{
+    e.stopPropagation();
+    channelMenu.classList.toggle('hidden');
+  });
+}
+document.querySelectorAll('.dropdown-item[data-channel]').forEach(item=>{
+  item.addEventListener('click', ()=>{
+    const mode = item.dataset.channel;
+    channelMenu.classList.add('hidden');
+    if(!originalBuffer){ showToast('请先加载音频', true); return; }
+
+    if(mode === 'restore'){
+      if(originalChannelBuffer){
+        stop();
+        originalBuffer = originalChannelBuffer;
+        originalChannelBuffer = null;
+        invalidateWaveformCache();
+        fileMetaEl.textContent =
+          originalBuffer.numberOfChannels + 'ch · ' +
+          originalBuffer.sampleRate + 'Hz · ' +
+          fmtTime(originalBuffer.duration);
+        computeAudioStats(originalBuffer);
+        clearSelection();
+        processAudio().then(()=>{
+          drawWaveform();
+          showToast('已恢复原始声道');
+        });
+      }else{
+        showToast('当前已是原始声道', true);
+      }
+      return;
+    }
+
+    const modeNames = {swap:'左右交换', mono:'合并单声道', left:'仅左声道', right:'仅右声道', phase:'相位反转'};
+    startFakeProgress('处理声道中…', true);
+    setTimeout(()=>{
+      try{
+        stop();
+        if(!originalChannelBuffer){
+          originalChannelBuffer = originalBuffer;
+        }
+        const newBuf = processChannels(originalBuffer, mode);
+        originalBuffer = newBuf;
+        invalidateWaveformCache();
+        fileMetaEl.textContent =
+          originalBuffer.numberOfChannels + 'ch · ' +
+          originalBuffer.sampleRate + 'Hz · ' +
+          fmtTime(originalBuffer.duration);
+        computeAudioStats(originalBuffer);
+        clearSelection();
+        processAudio().then(()=>{
+          drawWaveform();
+          updateProgress(100);
+          hideProgress();
+          showToast(modeNames[mode] + ' 完成');
+        });
+      }catch(e){
+        console.error('channel process error:', e);
+        hideProgress();
+        showToast('声道处理失败', true);
+      }
+    }, 100);
   });
 });
 

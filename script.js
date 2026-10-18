@@ -1852,6 +1852,130 @@ document.querySelectorAll('.dropdown-item[data-silence]').forEach(item=>{
   });
 });
 
+// STABLE 1.19 新增：音频声道处理
+let originalChannelBuffer = null;  // 保存原始声道 buffer 用于恢复
+
+function processChannels(buffer, mode){
+  const sr = buffer.sampleRate;
+  const len = buffer.length;
+  const ch = buffer.numberOfChannels;
+  if(ch < 2) return buffer;  // 单声道无需处理
+  const ctx = ensureCtx();
+  const left = buffer.getChannelData(0);
+  const right = buffer.getChannelData(1);
+  let newBuf;
+
+  switch(mode){
+    case 'swap': {
+      newBuf = ctx.createBuffer(2, len, sr);
+      newBuf.copyToChannel(right, 0);
+      newBuf.copyToChannel(left, 1);
+      break;
+    }
+    case 'mono': {
+      newBuf = ctx.createBuffer(1, len, sr);
+      const mono = newBuf.getChannelData(0);
+      for(let i = 0; i < len; i++){
+        mono[i] = (left[i] + right[i]) * 0.5;
+      }
+      break;
+    }
+    case 'left': {
+      newBuf = ctx.createBuffer(2, len, sr);
+      newBuf.copyToChannel(left, 0);
+      newBuf.copyToChannel(left, 1);
+      break;
+    }
+    case 'right': {
+      newBuf = ctx.createBuffer(2, len, sr);
+      newBuf.copyToChannel(right, 0);
+      newBuf.copyToChannel(right, 1);
+      break;
+    }
+    case 'phase': {
+      newBuf = ctx.createBuffer(2, len, sr);
+      const newLeft = newBuf.getChannelData(0);
+      const newRight = newBuf.getChannelData(1);
+      for(let i = 0; i < len; i++){
+        newLeft[i] = -left[i];
+        newRight[i] = -right[i];
+      }
+      break;
+    }
+    default:
+      return buffer;
+  }
+  return newBuf;
+}
+
+const channelBtn = $('channelBtn');
+const channelMenu = $('channelMenu');
+if(channelBtn){
+  channelBtn.addEventListener('click', e=>{
+    e.stopPropagation();
+    channelMenu.classList.toggle('hidden');
+  });
+}
+document.querySelectorAll('.dropdown-item[data-channel]').forEach(item=>{
+  item.addEventListener('click', ()=>{
+    const mode = item.dataset.channel;
+    channelMenu.classList.add('hidden');
+    if(!originalBuffer){ showToast('请先加载音频', true); return; }
+
+    if(mode === 'restore'){
+      if(originalChannelBuffer){
+        stop();
+        originalBuffer = originalChannelBuffer;
+        originalChannelBuffer = null;
+        invalidateWaveformCache();
+        fileMetaEl.textContent =
+          originalBuffer.numberOfChannels + 'ch · ' +
+          originalBuffer.sampleRate + 'Hz · ' +
+          fmtTime(originalBuffer.duration);
+        computeAudioStats(originalBuffer);
+        clearSelection();
+        processAudio().then(()=>{
+          drawWaveform();
+          showToast('已恢复原始声道');
+        });
+      }else{
+        showToast('当前已是原始声道', true);
+      }
+      return;
+    }
+
+    const modeNames = {swap:'左右交换', mono:'合并单声道', left:'仅左声道', right:'仅右声道', phase:'相位反转'};
+    startFakeProgress('处理声道中…', true);
+    setTimeout(()=>{
+      try{
+        stop();
+        if(!originalChannelBuffer){
+          originalChannelBuffer = originalBuffer;
+        }
+        const newBuf = processChannels(originalBuffer, mode);
+        originalBuffer = newBuf;
+        invalidateWaveformCache();
+        fileMetaEl.textContent =
+          originalBuffer.numberOfChannels + 'ch · ' +
+          originalBuffer.sampleRate + 'Hz · ' +
+          fmtTime(originalBuffer.duration);
+        computeAudioStats(originalBuffer);
+        clearSelection();
+        processAudio().then(()=>{
+          drawWaveform();
+          updateProgress(100);
+          hideProgress();
+          showToast(modeNames[mode] + ' 完成');
+        });
+      }catch(e){
+        console.error('channel process error:', e);
+        hideProgress();
+        showToast('声道处理失败', true);
+      }
+    }, 100);
+  });
+});
+
 urlLoadBtn.addEventListener('click', (e)=>{
   e.stopPropagation();
   if(urlInput.value.trim()){

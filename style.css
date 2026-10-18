@@ -308,6 +308,9 @@ header .blink{
 .silence-threshold-row,.silence-min-row{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:10px}
 .silence-threshold-row input[type=range],.silence-min-row input[type=range]{flex:1;width:80px}
 .silence-threshold-row span:last-child,.silence-min-row span:last-child{min-width:50px;text-align:right;color:var(--muted)}
+#channelBtn{border-color:var(--purple);color:var(--purple);background:rgba(180,100,255,0.06)}
+#channelBtn:hover{background:rgba(180,100,255,0.16)}
+#channelMenu{top:100%;left:50%;transform:translateX(-50%);margin-top:8px;min-width:140px;z-index:100}
 
 /* ============ CONTROLS ============ */
 .controls{
