@@ -1146,51 +1146,10 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
           <input type="text" id="urlInput" placeholder="或粘贴音频直链 URL (需 CORS)…">
           <button class="btn" id="urlLoadBtn">&#9654; LOAD</button>
         </div>
+        <button class="btn demo-btn" id="demoBtn" style="margin-top:12px">&#9835; GEN. DEMO</button>
       </div>
       <input type="file" id="fileInput" accept="audio/*" hidden>
     </section>
-
-    <!-- ===== 示例按钮（在 dropzone 外） ===== -->
-    <div class="demo-bar" id="demoBar">
-      <button class="btn demo-btn" id="demoBtn">&#9835; GEN. DEMO</button>
-      <span class="hint">生成随机示例</span>
-      <button class="btn demo-btn" id="noiseBtn">&#9889; NOISE</button>
-      <div class="dropdown-menu hidden" id="noiseMenu">
-        <div class="dropdown-item" data-noise="white">白噪声 <span class="df-hint">White</span></div>
-        <div class="dropdown-item" data-noise="pink">粉噪声 <span class="df-hint">Pink</span></div>
-        <div class="dropdown-item" data-noise="brown">棕噪声 <span class="df-hint">Brown</span></div>
-        <div class="dropdown-item" data-noise="white-30">白噪声 30s</div>
-        <div class="dropdown-item" data-noise="pink-30">粉噪声 30s</div>
-        <div class="dropdown-item" data-noise="brown-60">棕噪声 60s</div>
-      </div>
-      <button class="btn demo-btn" id="silenceBtn">&#128263; SILENCE</button>
-      <div class="dropdown-menu hidden" id="silenceMenu">
-        <div class="dropdown-item" data-silence="detect">检测静音</div>
-        <div class="dropdown-item" data-silence="remove">去除静音</div>
-        <div class="dropdown-item" data-silence="clear">清除标记</div>
-        <div class="dropdown-divider"></div>
-        <div class="silence-threshold-row">
-          <span class="df-hint">阈值</span>
-          <input type="range" id="silenceThreshold" min="-60" max="-20" step="1" value="-40">
-          <span id="silenceThresholdVal">-40dB</span>
-        </div>
-        <div class="silence-min-row">
-          <span class="df-hint">最小时长</span>
-          <input type="range" id="silenceMinDur" min="100" max="2000" step="100" value="500">
-          <span id="silenceMinDurVal">500ms</span>
-        </div>
-      </div>
-      <button class="btn demo-btn" id="channelBtn">&#127911; CHANNEL</button>
-      <div class="dropdown-menu hidden" id="channelMenu">
-        <div class="dropdown-item" data-channel="swap">左右交换</div>
-        <div class="dropdown-item" data-channel="mono">合并单声道</div>
-        <div class="dropdown-item" data-channel="left">仅左声道</div>
-        <div class="dropdown-item" data-channel="right">仅右声道</div>
-        <div class="dropdown-item" data-channel="phase">相位反转</div>
-        <div class="dropdown-divider"></div>
-        <div class="dropdown-item" data-channel="restore">恢复原始</div>
-      </div>
-    </div>
 
     <!-- ===== 工作区 ===== -->
     <section class="workspace hidden" id="workspace">
@@ -1223,6 +1182,45 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
           </div>
         </div>
         <div class="playlist-items" id="playlistItems"></div>
+      </div>
+
+      <div class="demo-bar" id="demoBar">
+        <button class="btn demo-btn" id="noiseBtn">&#9889; NOISE</button>
+        <div class="dropdown-menu hidden" id="noiseMenu">
+          <div class="dropdown-item" data-noise="white">白噪声 <span class="df-hint">White</span></div>
+          <div class="dropdown-item" data-noise="pink">粉噪声 <span class="df-hint">Pink</span></div>
+          <div class="dropdown-item" data-noise="brown">棕噪声 <span class="df-hint">Brown</span></div>
+          <div class="dropdown-item" data-noise="white-30">白噪声 30s</div>
+          <div class="dropdown-item" data-noise="pink-30">粉噪声 30s</div>
+          <div class="dropdown-item" data-noise="brown-60">棕噪声 60s</div>
+        </div>
+        <button class="btn demo-btn" id="silenceBtn">&#128263; SILENCE</button>
+        <div class="dropdown-menu hidden" id="silenceMenu">
+          <div class="dropdown-item" data-silence="detect">检测静音</div>
+          <div class="dropdown-item" data-silence="remove">去除静音</div>
+          <div class="dropdown-item" data-silence="clear">清除标记</div>
+          <div class="dropdown-divider"></div>
+          <div class="silence-threshold-row">
+            <span class="df-hint">阈值</span>
+            <input type="range" id="silenceThreshold" min="-60" max="-20" step="1" value="-40">
+            <span id="silenceThresholdVal">-40dB</span>
+          </div>
+          <div class="silence-min-row">
+            <span class="df-hint">最小时长</span>
+            <input type="range" id="silenceMinDur" min="100" max="2000" step="100" value="500">
+            <span id="silenceMinDurVal">500ms</span>
+          </div>
+        </div>
+        <button class="btn demo-btn" id="channelBtn">&#127911; CHANNEL</button>
+        <div class="dropdown-menu hidden" id="channelMenu">
+          <div class="dropdown-item" data-channel="swap">左右交换</div>
+          <div class="dropdown-item" data-channel="mono">合并单声道</div>
+          <div class="dropdown-item" data-channel="left">仅左声道</div>
+          <div class="dropdown-item" data-channel="right">仅右声道</div>
+          <div class="dropdown-item" data-channel="phase">相位反转</div>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-item" data-channel="restore">恢复原始</div>
+        </div>
       </div>
 
       <div class="waveform-container">
@@ -2030,7 +2028,6 @@ dropzone.addEventListener('drop', e=>{
 
 function showWorkspace(){
   dropzone.classList.add('hidden');
-  demoBar.classList.add('hidden');
   workspace.classList.remove('hidden');
 }
 function hideWorkspace(){
@@ -2038,7 +2035,6 @@ function hideWorkspace(){
   originalBuffer = null; processedBuffer = null;
   workspace.classList.add('hidden');
   dropzone.classList.remove('hidden');
-  demoBar.classList.remove('hidden');
   fileInput.value = '';
   urlInput.value = '';
 }
@@ -2740,7 +2736,8 @@ demoBtn.addEventListener('click', ()=>{
 function generateNoise(type, duration, sampleRate){
   const sr = sampleRate || 44100;
   const len = Math.floor(duration * sr);
-  const buf = audioCtx.createBuffer(2, len, sr);
+  const ctx = ensureCtx();
+  const buf = ctx.createBuffer(2, len, sr);
   for(let ch=0; ch<2; ch++){
     const data = buf.getChannelData(ch);
     if(type === 'white'){
@@ -2776,6 +2773,8 @@ const noiseMenu = $('noiseMenu');
 if(noiseBtn){
   noiseBtn.addEventListener('click', e=>{
     e.stopPropagation();
+    silenceMenu.classList.add('hidden');
+    channelMenu.classList.add('hidden');
     noiseMenu.classList.toggle('hidden');
   });
 }
@@ -2921,6 +2920,8 @@ const silenceMinDurVal = $('silenceMinDurVal');
 if(silenceBtn){
   silenceBtn.addEventListener('click', e=>{
     e.stopPropagation();
+    noiseMenu.classList.add('hidden');
+    channelMenu.classList.add('hidden');
     silenceMenu.classList.toggle('hidden');
   });
 }
@@ -3070,6 +3071,8 @@ const channelMenu = $('channelMenu');
 if(channelBtn){
   channelBtn.addEventListener('click', e=>{
     e.stopPropagation();
+    noiseMenu.classList.add('hidden');
+    silenceMenu.classList.add('hidden');
     channelMenu.classList.toggle('hidden');
   });
 }

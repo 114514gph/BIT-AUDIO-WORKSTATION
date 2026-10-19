@@ -30,51 +30,10 @@
           <input type="text" id="urlInput" placeholder="或粘贴音频直链 URL (需 CORS)…">
           <button class="btn" id="urlLoadBtn">&#9654; LOAD</button>
         </div>
+        <button class="btn demo-btn" id="demoBtn" style="margin-top:12px">&#9835; GEN. DEMO</button>
       </div>
       <input type="file" id="fileInput" accept="audio/*" hidden>
     </section>
-
-    <!-- ===== 示例按钮（在 dropzone 外） ===== -->
-    <div class="demo-bar" id="demoBar">
-      <button class="btn demo-btn" id="demoBtn">&#9835; GEN. DEMO</button>
-      <span class="hint">生成随机示例</span>
-      <button class="btn demo-btn" id="noiseBtn">&#9889; NOISE</button>
-      <div class="dropdown-menu hidden" id="noiseMenu">
-        <div class="dropdown-item" data-noise="white">白噪声 <span class="df-hint">White</span></div>
-        <div class="dropdown-item" data-noise="pink">粉噪声 <span class="df-hint">Pink</span></div>
-        <div class="dropdown-item" data-noise="brown">棕噪声 <span class="df-hint">Brown</span></div>
-        <div class="dropdown-item" data-noise="white-30">白噪声 30s</div>
-        <div class="dropdown-item" data-noise="pink-30">粉噪声 30s</div>
-        <div class="dropdown-item" data-noise="brown-60">棕噪声 60s</div>
-      </div>
-      <button class="btn demo-btn" id="silenceBtn">&#128263; SILENCE</button>
-      <div class="dropdown-menu hidden" id="silenceMenu">
-        <div class="dropdown-item" data-silence="detect">检测静音</div>
-        <div class="dropdown-item" data-silence="remove">去除静音</div>
-        <div class="dropdown-item" data-silence="clear">清除标记</div>
-        <div class="dropdown-divider"></div>
-        <div class="silence-threshold-row">
-          <span class="df-hint">阈值</span>
-          <input type="range" id="silenceThreshold" min="-60" max="-20" step="1" value="-40">
-          <span id="silenceThresholdVal">-40dB</span>
-        </div>
-        <div class="silence-min-row">
-          <span class="df-hint">最小时长</span>
-          <input type="range" id="silenceMinDur" min="100" max="2000" step="100" value="500">
-          <span id="silenceMinDurVal">500ms</span>
-        </div>
-      </div>
-      <button class="btn demo-btn" id="channelBtn">&#127911; CHANNEL</button>
-      <div class="dropdown-menu hidden" id="channelMenu">
-        <div class="dropdown-item" data-channel="swap">左右交换</div>
-        <div class="dropdown-item" data-channel="mono">合并单声道</div>
-        <div class="dropdown-item" data-channel="left">仅左声道</div>
-        <div class="dropdown-item" data-channel="right">仅右声道</div>
-        <div class="dropdown-item" data-channel="phase">相位反转</div>
-        <div class="dropdown-divider"></div>
-        <div class="dropdown-item" data-channel="restore">恢复原始</div>
-      </div>
-    </div>
 
     <!-- ===== 工作区 ===== -->
     <section class="workspace hidden" id="workspace">
@@ -107,6 +66,45 @@
           </div>
         </div>
         <div class="playlist-items" id="playlistItems"></div>
+      </div>
+
+      <div class="demo-bar" id="demoBar">
+        <button class="btn demo-btn" id="noiseBtn">&#9889; NOISE</button>
+        <div class="dropdown-menu hidden" id="noiseMenu">
+          <div class="dropdown-item" data-noise="white">白噪声 <span class="df-hint">White</span></div>
+          <div class="dropdown-item" data-noise="pink">粉噪声 <span class="df-hint">Pink</span></div>
+          <div class="dropdown-item" data-noise="brown">棕噪声 <span class="df-hint">Brown</span></div>
+          <div class="dropdown-item" data-noise="white-30">白噪声 30s</div>
+          <div class="dropdown-item" data-noise="pink-30">粉噪声 30s</div>
+          <div class="dropdown-item" data-noise="brown-60">棕噪声 60s</div>
+        </div>
+        <button class="btn demo-btn" id="silenceBtn">&#128263; SILENCE</button>
+        <div class="dropdown-menu hidden" id="silenceMenu">
+          <div class="dropdown-item" data-silence="detect">检测静音</div>
+          <div class="dropdown-item" data-silence="remove">去除静音</div>
+          <div class="dropdown-item" data-silence="clear">清除标记</div>
+          <div class="dropdown-divider"></div>
+          <div class="silence-threshold-row">
+            <span class="df-hint">阈值</span>
+            <input type="range" id="silenceThreshold" min="-60" max="-20" step="1" value="-40">
+            <span id="silenceThresholdVal">-40dB</span>
+          </div>
+          <div class="silence-min-row">
+            <span class="df-hint">最小时长</span>
+            <input type="range" id="silenceMinDur" min="100" max="2000" step="100" value="500">
+            <span id="silenceMinDurVal">500ms</span>
+          </div>
+        </div>
+        <button class="btn demo-btn" id="channelBtn">&#127911; CHANNEL</button>
+        <div class="dropdown-menu hidden" id="channelMenu">
+          <div class="dropdown-item" data-channel="swap">左右交换</div>
+          <div class="dropdown-item" data-channel="mono">合并单声道</div>
+          <div class="dropdown-item" data-channel="left">仅左声道</div>
+          <div class="dropdown-item" data-channel="right">仅右声道</div>
+          <div class="dropdown-item" data-channel="phase">相位反转</div>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-item" data-channel="restore">恢复原始</div>
+        </div>
       </div>
 
       <div class="waveform-container">

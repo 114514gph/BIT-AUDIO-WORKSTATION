@@ -878,7 +878,6 @@ dropzone.addEventListener('drop', e=>{
 
 function showWorkspace(){
   dropzone.classList.add('hidden');
-  demoBar.classList.add('hidden');
   workspace.classList.remove('hidden');
 }
 function hideWorkspace(){
@@ -886,7 +885,6 @@ function hideWorkspace(){
   originalBuffer = null; processedBuffer = null;
   workspace.classList.add('hidden');
   dropzone.classList.remove('hidden');
-  demoBar.classList.remove('hidden');
   fileInput.value = '';
   urlInput.value = '';
 }
@@ -1588,7 +1586,8 @@ demoBtn.addEventListener('click', ()=>{
 function generateNoise(type, duration, sampleRate){
   const sr = sampleRate || 44100;
   const len = Math.floor(duration * sr);
-  const buf = audioCtx.createBuffer(2, len, sr);
+  const ctx = ensureCtx();
+  const buf = ctx.createBuffer(2, len, sr);
   for(let ch=0; ch<2; ch++){
     const data = buf.getChannelData(ch);
     if(type === 'white'){
@@ -1624,6 +1623,8 @@ const noiseMenu = $('noiseMenu');
 if(noiseBtn){
   noiseBtn.addEventListener('click', e=>{
     e.stopPropagation();
+    silenceMenu.classList.add('hidden');
+    channelMenu.classList.add('hidden');
     noiseMenu.classList.toggle('hidden');
   });
 }
@@ -1769,6 +1770,8 @@ const silenceMinDurVal = $('silenceMinDurVal');
 if(silenceBtn){
   silenceBtn.addEventListener('click', e=>{
     e.stopPropagation();
+    noiseMenu.classList.add('hidden');
+    channelMenu.classList.add('hidden');
     silenceMenu.classList.toggle('hidden');
   });
 }
@@ -1918,6 +1921,8 @@ const channelMenu = $('channelMenu');
 if(channelBtn){
   channelBtn.addEventListener('click', e=>{
     e.stopPropagation();
+    noiseMenu.classList.add('hidden');
+    silenceMenu.classList.add('hidden');
     channelMenu.classList.toggle('hidden');
   });
 }
