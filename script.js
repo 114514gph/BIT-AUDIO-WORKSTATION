@@ -952,6 +952,7 @@ function switchPlaylistItem(idx){
   const item = playlist[idx];
   currentPlaylistIndex = idx;
   originalBuffer = item.buffer;
+  originalChannelBuffer = null;
   currentFileName = item.name.replace(/\.[^.]+$/, '');
   fileNameEl.textContent = item.name;
   fileMetaEl.textContent =
@@ -1073,6 +1074,7 @@ async function loadFile(file){
     if(loadCancelled) return;
     updateProgress(95);
     originalBuffer = await ctx.decodeAudioData(ab.slice(0));
+    originalChannelBuffer = null;
     clearMarkers();
     if(loadCancelled) return;
     currentFileName = file.name.replace(/\.[^.]+$/, '');
@@ -1136,6 +1138,7 @@ async function loadFromUrl(url){
       startFakeProgress('解码中…', true);
       const ctx = ensureCtx();
       originalBuffer = await ctx.decodeAudioData(ab.buffer);
+      originalChannelBuffer = null;
       clearMarkers();
       if(loadCancelled) return;
       const name = url.split('/').pop().split('?')[0] || 'stream';
@@ -1554,6 +1557,7 @@ demoBtn.addEventListener('click', ()=>{
   setTimeout(async ()=>{
     try{
       originalBuffer = await generateDemoAudio();
+      originalChannelBuffer = null;
       clearMarkers();
       if(loadCancelled) return;
       updateProgress(90);
@@ -1639,6 +1643,7 @@ document.querySelectorAll('.dropdown-item[data-noise]').forEach(item=>{
         }
         const typeNames = {white:'白噪声', pink:'粉噪声', brown:'棕噪声'};
         originalBuffer = generateNoise(type, dur);
+        originalChannelBuffer = null;
         clearMarkers();
         currentFileName = type + '-' + dur + 's';
         fileNameEl.textContent = type + '-' + dur + 's.wav';
