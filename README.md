@@ -192,6 +192,11 @@ BIT-AUDIO-WORKSTATION/
 <details>
 <summary><b>STABLE 1.19.x</b> — 最新版本（点击展开）</summary>
 
+### STABLE 1.19.1 (Bugfix)
+- 修复 NOISE/SILENCE/CHANNEL 按钮在主屏幕错误显示的问题
+- 修复下拉菜单重叠问题（点击一个按钮时自动关闭其他菜单）
+- 修复噪声生成器使用未初始化 audioCtx 导致崩溃的问题
+
 ### STABLE 1.19
 - 新增音频声道处理功能（Channel Processing）
 - 支持左右声道交换（L/R Swap）
