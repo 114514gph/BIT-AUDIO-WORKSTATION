@@ -105,6 +105,20 @@
           <div class="dropdown-divider"></div>
           <div class="dropdown-item" data-channel="restore">恢复原始</div>
         </div>
+        <button class="btn demo-btn" id="beatBtn">&#127928; BEAT</button>
+        <div class="dropdown-menu hidden" id="beatMenu">
+          <div class="dropdown-item" data-beat="detect">检测节拍</div>
+          <div class="dropdown-item" data-beat="clear">清除标记</div>
+          <div class="dropdown-divider"></div>
+          <div class="beat-info-row">
+            <span class="df-hint">BPM</span>
+            <span id="beatBpmVal">--</span>
+          </div>
+          <div class="beat-info-row">
+            <span class="df-hint">节拍数</span>
+            <span id="beatCountVal">--</span>
+          </div>
+        </div>
       </div>
 
       <div class="waveform-container">
@@ -367,7 +381,7 @@
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.19.1 (Bugfix) <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.20 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 

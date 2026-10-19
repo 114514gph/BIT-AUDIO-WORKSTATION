@@ -311,6 +311,11 @@ header .blink{
 #channelBtn{border-color:var(--purple);color:var(--purple);background:rgba(180,100,255,0.06)}
 #channelBtn:hover{background:rgba(180,100,255,0.16)}
 #channelMenu{top:100%;left:50%;transform:translateX(-50%);margin-top:8px;min-width:140px;z-index:100}
+#beatBtn{border-color:var(--pink);color:var(--pink);background:rgba(255,0,255,0.06)}
+#beatBtn:hover{background:rgba(255,0,255,0.16)}
+#beatMenu{top:100%;left:50%;transform:translateX(-50%);margin-top:8px;min-width:140px;z-index:100}
+.beat-info-row{display:flex;justify-content:space-between;align-items:center;padding:6px 12px;font-size:13px;color:var(--text)}
+.beat-info-row span:last-child{color:var(--pink);font-weight:bold}
 
 /* ============ CONTROLS ============ */
 .controls{

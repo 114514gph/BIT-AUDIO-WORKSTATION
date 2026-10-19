@@ -1986,6 +1986,125 @@ document.querySelectorAll('.dropdown-item[data-channel]').forEach(item=>{
   });
 });
 
+// STABLE 1.20 新增：音频节拍检测
+let beatPositions = [];  // 节拍位置（秒）
+let beatBpm = 0;
+
+function detectBeats(buffer){
+  const sr = buffer.sampleRate;
+  const ch = buffer.numberOfChannels;
+  // 使用低频能量检测节拍（鼓点通常在低频）
+  const windowSize = Math.floor(sr * 0.05);  // 50ms 窗口
+  const hopSize = Math.floor(sr * 0.01);  // 10ms 步长
+  const totalWindows = Math.floor((buffer.length - windowSize) / hopSize);
+  
+  // 计算每个窗口的低频能量
+  const energies = [];
+  const data = buffer.getChannelData(0);
+  for(let w = 0; w < totalWindows; w++){
+    const start = w * hopSize;
+    let energy = 0;
+    for(let i = 0; i < windowSize; i += 4){  // 降采样加速
+      const v = data[start + i];
+      energy += v * v;
+    }
+    energies.push(energy / (windowSize / 4));
+  }
+  
+  // 计算局部能量平均值
+  const historySize = 43;  // 约 430ms 历史
+  const beats = [];
+  const beatTimes = [];
+  
+  for(let i = historySize; i < energies.length; i++){
+    let avg = 0;
+    for(let j = i - historySize; j < i; j++){
+      avg += energies[j];
+    }
+    avg /= historySize;
+    
+    // 能量超过平均值的 C 倍则认为是节拍
+    const C = 1.4;
+    if(energies[i] > avg * C && energies[i] > energies[i-1]){
+      const time = (i * hopSize) / sr;
+      // 避免相邻节拍太近（最小间隔 200ms）
+      if(beatTimes.length === 0 || time - beatTimes[beatTimes.length-1] > 0.2){
+        beatTimes.push(time);
+        beats.push(i);
+      }
+    }
+  }
+  
+  // 计算 BPM：节拍间隔的中位数
+  if(beatTimes.length > 1){
+    const intervals = [];
+    for(let i = 1; i < beatTimes.length; i++){
+      intervals.push(beatTimes[i] - beatTimes[i-1]);
+    }
+    intervals.sort((a, b) => a - b);
+    const medianInterval = intervals[Math.floor(intervals.length / 2)];
+    beatBpm = Math.round(60 / medianInterval);
+  }else{
+    beatBpm = 0;
+  }
+  
+  return {beats: beatTimes, bpm: beatBpm};
+}
+
+const beatBtn = $('beatBtn');
+const beatMenu = $('beatMenu');
+const beatBpmVal = $('beatBpmVal');
+const beatCountVal = $('beatCountVal');
+if(beatBtn){
+  beatBtn.addEventListener('click', e=>{
+    e.stopPropagation();
+    noiseMenu.classList.add('hidden');
+    silenceMenu.classList.add('hidden');
+    channelMenu.classList.add('hidden');
+    beatMenu.classList.toggle('hidden');
+  });
+}
+document.querySelectorAll('.dropdown-item[data-beat]').forEach(item=>{
+  item.addEventListener('click', ()=>{
+    const action = item.dataset.beat;
+    beatMenu.classList.add('hidden');
+    if(!originalBuffer){ showToast('请先加载音频', true); return; }
+
+    if(action === 'clear'){
+      beatPositions = [];
+      beatBpm = 0;
+      if(beatBpmVal) beatBpmVal.textContent = '--';
+      if(beatCountVal) beatCountVal.textContent = '--';
+      drawWaveform();
+      showToast('节拍标记已清除');
+      return;
+    }
+
+    startFakeProgress('检测节拍中…', true);
+    setTimeout(()=>{
+      try{
+        const result = detectBeats(originalBuffer);
+        beatPositions = result.beats;
+        beatBpm = result.bpm;
+        if(beatBpmVal) beatBpmVal.textContent = beatBpm > 0 ? beatBpm + ' BPM' : '--';
+        if(beatCountVal) beatCountVal.textContent = beatPositions.length;
+        drawWaveform();
+        updateProgress(100);
+        hideProgress();
+        if(beatBpm > 0){
+          showToast('检测完成：' + beatBpm + ' BPM，' + beatPositions.length + ' 个节拍');
+        }else{
+          showToast('未检测到明显节拍', true);
+        }
+      }catch(e){
+        console.error('beat detect error:', e);
+        hideProgress();
+        showToast('节拍检测失败', true);
+      }
+    }, 100);
+  });
+});
+
 urlLoadBtn.addEventListener('click', (e)=>{
   e.stopPropagation();
   if(urlInput.value.trim()){
@@ -2854,6 +2973,20 @@ function drawWaveform(){
       const rx2 = (r.end / buf.duration - waveOffset) * waveZoom * w;
       if(rx2 < 0 || rx1 > w) continue;
       ctx2d.fillRect(Math.max(0, rx1), 0, Math.min(w, rx2) - Math.max(0, rx1), h);
+    }
+  }
+
+  // 节拍标记（品红色垂直线）
+  if(beatPositions && beatPositions.length > 0){
+    ctx2d.strokeStyle = 'rgba(255,0,255,0.7)';
+    ctx2d.lineWidth = 1;
+    for(const t of beatPositions){
+      const x = (t / buf.duration - waveOffset) * waveZoom * w;
+      if(x < 0 || x > w) continue;
+      ctx2d.beginPath();
+      ctx2d.moveTo(x, 0);
+      ctx2d.lineTo(x, h);
+      ctx2d.stroke();
     }
   }
 

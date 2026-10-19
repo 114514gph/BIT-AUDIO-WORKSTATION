@@ -190,6 +190,18 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.20.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.20
+- 新增音频节拍检测功能（Beat Detection）
+- 自动检测 BPM（每分钟节拍数）
+- 波形上用品红色垂直线标记节拍位置
+- 显示检测到的 BPM 和节拍数量
+- 可清除节拍标记
+
+</details>
+
+<details>
 <summary><b>STABLE 1.19.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.19.1 (Bugfix)
