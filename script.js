@@ -1841,6 +1841,8 @@ document.querySelectorAll('.dropdown-item[data-silence]').forEach(item=>{
           originalBuffer = newBuf;
           silenceRegions = [];
           silenceStats = null;
+          beatPositions = [];
+          beatBpm = 0;
           clearMarkers();
           invalidateWaveformCache();
           fileMetaEl.textContent =
@@ -1947,6 +1949,8 @@ document.querySelectorAll('.dropdown-item[data-channel]').forEach(item=>{
         stop();
         originalBuffer = originalChannelBuffer;
         originalChannelBuffer = null;
+        beatPositions = [];
+        beatBpm = 0;
         invalidateWaveformCache();
         fileMetaEl.textContent =
           originalBuffer.numberOfChannels + 'ch · ' +
@@ -1974,6 +1978,8 @@ document.querySelectorAll('.dropdown-item[data-channel]').forEach(item=>{
         }
         const newBuf = processChannels(originalBuffer, mode);
         originalBuffer = newBuf;
+        beatPositions = [];
+        beatBpm = 0;
         invalidateWaveformCache();
         fileMetaEl.textContent =
           originalBuffer.numberOfChannels + 'ch · ' +
@@ -2875,6 +2881,8 @@ cropKeepBtn.addEventListener('click', async ()=>{
   const s = Math.min(selStart, selEnd);
   const e = Math.max(selStart, selEnd);
   originalBuffer = sliceBuffer(originalBuffer, s, e);
+  beatPositions = [];
+  beatBpm = 0;
   await afterCrop();
 });
 
@@ -2890,6 +2898,8 @@ cropDeleteBtn.addEventListener('click', async ()=>{
   else if(e >= dur - 0.001) nb = sliceBuffer(originalBuffer, 0, s);
   else nb = concatBuffers(sliceBuffer(originalBuffer, 0, s), sliceBuffer(originalBuffer, e, dur));
   originalBuffer = nb;
+  beatPositions = [];
+  beatBpm = 0;
   await afterCrop();
 });
 
