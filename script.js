@@ -951,6 +951,8 @@ function switchPlaylistItem(idx){
   currentPlaylistIndex = idx;
   originalBuffer = item.buffer;
   originalChannelBuffer = null;
+  beatPositions = [];
+  beatBpm = 0;
   currentFileName = item.name.replace(/\.[^.]+$/, '');
   fileNameEl.textContent = item.name;
   fileMetaEl.textContent =
@@ -1073,6 +1075,8 @@ async function loadFile(file){
     updateProgress(95);
     originalBuffer = await ctx.decodeAudioData(ab.slice(0));
     originalChannelBuffer = null;
+    beatPositions = [];
+    beatBpm = 0;
     clearMarkers();
     if(loadCancelled) return;
     currentFileName = file.name.replace(/\.[^.]+$/, '');
@@ -1137,6 +1141,8 @@ async function loadFromUrl(url){
       const ctx = ensureCtx();
       originalBuffer = await ctx.decodeAudioData(ab.buffer);
       originalChannelBuffer = null;
+      beatPositions = [];
+      beatBpm = 0;
       clearMarkers();
       if(loadCancelled) return;
       const name = url.split('/').pop().split('?')[0] || 'stream';
@@ -1556,6 +1562,8 @@ demoBtn.addEventListener('click', ()=>{
     try{
       originalBuffer = await generateDemoAudio();
       originalChannelBuffer = null;
+      beatPositions = [];
+      beatBpm = 0;
       clearMarkers();
       if(loadCancelled) return;
       updateProgress(90);
@@ -1645,6 +1653,8 @@ document.querySelectorAll('.dropdown-item[data-noise]').forEach(item=>{
         const typeNames = {white:'白噪声', pink:'粉噪声', brown:'棕噪声'};
         originalBuffer = generateNoise(type, dur);
         originalChannelBuffer = null;
+        beatPositions = [];
+        beatBpm = 0;
         clearMarkers();
         currentFileName = type + '-' + dur + 's';
         fileNameEl.textContent = type + '-' + dur + 's.wav';
@@ -1992,15 +2002,14 @@ let beatBpm = 0;
 
 function detectBeats(buffer){
   const sr = buffer.sampleRate;
-  const ch = buffer.numberOfChannels;
-  // 使用低频能量检测节拍（鼓点通常在低频）
+  // 使用能量检测节拍（鼓点通常能量较高）
   const windowSize = Math.floor(sr * 0.05);  // 50ms 窗口
   const hopSize = Math.floor(sr * 0.01);  // 10ms 步长
-  const totalWindows = Math.floor((buffer.length - windowSize) / hopSize);
   
-  // 计算每个窗口的低频能量
+  // 计算每个窗口的能量
   const energies = [];
   const data = buffer.getChannelData(0);
+  const totalWindows = Math.floor((buffer.length - windowSize) / hopSize);
   for(let w = 0; w < totalWindows; w++){
     const start = w * hopSize;
     let energy = 0;
@@ -2013,7 +2022,6 @@ function detectBeats(buffer){
   
   // 计算局部能量平均值
   const historySize = 43;  // 约 430ms 历史
-  const beats = [];
   const beatTimes = [];
   
   for(let i = historySize; i < energies.length; i++){
@@ -2030,7 +2038,6 @@ function detectBeats(buffer){
       // 避免相邻节拍太近（最小间隔 200ms）
       if(beatTimes.length === 0 || time - beatTimes[beatTimes.length-1] > 0.2){
         beatTimes.push(time);
-        beats.push(i);
       }
     }
   }
