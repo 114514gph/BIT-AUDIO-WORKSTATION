@@ -192,6 +192,10 @@ BIT-AUDIO-WORKSTATION/
 <details>
 <summary><b>STABLE 1.20.x</b> — 最新版本（点击展开）</summary>
 
+### STABLE 1.20.1 (Bugfix)
+- 修复节拍标记在音频内容改变后未重置的问题（文件上传、URL加载、示例音乐、噪声生成器、播放列表切换、去除静音、声道处理、裁剪等10处）
+- 清理 detectBeats() 中未使用的变量
+
 ### STABLE 1.20
 - 新增音频节拍检测功能（Beat Detection）
 - 自动检测 BPM（每分钟节拍数）
