@@ -2118,6 +2118,131 @@ document.querySelectorAll('.dropdown-item[data-beat]').forEach(item=>{
   });
 });
 
+// STABLE 1.21 新增：波形导出为图片
+const exportWaveBtn = $('exportWaveBtn');
+if(exportWaveBtn){
+  exportWaveBtn.addEventListener('click', ()=>{
+    if(!originalBuffer){ showToast('请先加载音频', true); return; }
+    
+    // 创建高分辨率导出 canvas
+    const exportWidth = 1920;
+    const exportHeight = 400;
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = exportWidth;
+    exportCanvas.height = exportHeight;
+    const ctx = exportCanvas.getContext('2d');
+    
+    // 背景
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, exportWidth, exportHeight);
+    
+    // 网格线
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    for(let i = 0; i <= 10; i++){
+      const x = (exportWidth / 10) * i;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, exportHeight);
+      ctx.stroke();
+    }
+    for(let i = 0; i <= 4; i++){
+      const y = (exportHeight / 4) * i;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(exportWidth, y);
+      ctx.stroke();
+    }
+    
+    // 中心线
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.beginPath();
+    ctx.moveTo(0, exportHeight / 2);
+    ctx.lineTo(exportWidth, exportHeight / 2);
+    ctx.stroke();
+    
+    // 静音区域标记
+    if(silenceRegions && silenceRegions.length > 0){
+      ctx.fillStyle = 'rgba(255,165,0,0.15)';
+      for(const r of silenceRegions){
+        const rx1 = (r.start / originalBuffer.duration) * exportWidth;
+        const rx2 = (r.end / originalBuffer.duration) * exportWidth;
+        ctx.fillRect(rx1, 0, rx2 - rx1, exportHeight);
+      }
+    }
+    
+    // 波形
+    const data = originalBuffer.getChannelData(0);
+    const barCount = exportWidth;
+    const barWidth = exportWidth / barCount;
+    const color = bypassToggle.checked ? '#6a8aff' : '#00ff88';
+    ctx.fillStyle = color;
+    
+    for(let x = 0; x < barCount; x++){
+      const start = Math.floor((x / barCount) * data.length);
+      const end = Math.floor(((x + 1) / barCount) * data.length);
+      let max = 0;
+      for(let i = start; i < end; i += 4){
+        const v = Math.abs(data[i]);
+        if(v > max) max = v;
+      }
+      const barHeight = max * (exportHeight * 0.45);
+      ctx.fillRect(x * barWidth, exportHeight / 2 - barHeight, Math.max(1, barWidth), barHeight * 2);
+    }
+    
+    // 节拍标记
+    if(beatPositions && beatPositions.length > 0){
+      ctx.strokeStyle = 'rgba(255,0,255,0.7)';
+      ctx.lineWidth = 2;
+      for(const t of beatPositions){
+        const x = (t / originalBuffer.duration) * exportWidth;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, exportHeight);
+        ctx.stroke();
+      }
+    }
+    
+    // 标记点
+    if(markers && markers.length > 0){
+      for(const m of markers){
+        const x = (m.time / originalBuffer.duration) * exportWidth;
+        ctx.fillStyle = '#ffcc00';
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x - 6, 12);
+        ctx.lineTo(x + 6, 12);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+    
+    // 标题和信息
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '16px "Press Start 2P", monospace';
+    ctx.fillText(currentFileName || 'AUDIO', 16, 28);
+    
+    ctx.fillStyle = '#888888';
+    ctx.font = '12px "VT323", monospace';
+    const infoText = originalBuffer.numberOfChannels + 'ch · ' + originalBuffer.sampleRate + 'Hz · ' + fmtTime(originalBuffer.duration);
+    ctx.fillText(infoText, 16, exportHeight - 12);
+    
+    // BPM 信息
+    if(beatBpm > 0){
+      ctx.fillStyle = '#ff00ff';
+      ctx.fillText(beatBpm + ' BPM · ' + beatPositions.length + ' beats', exportWidth - 200, exportHeight - 12);
+    }
+    
+    // 导出为 PNG
+    const link = document.createElement('a');
+    link.download = (currentFileName || 'waveform') + '_waveform.png';
+    link.href = exportCanvas.toDataURL('image/png');
+    link.click();
+    
+    showToast('波形图片已导出');
+  });
+}
+
 urlLoadBtn.addEventListener('click', (e)=>{
   e.stopPropagation();
   if(urlInput.value.trim()){

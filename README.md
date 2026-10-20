@@ -190,6 +190,18 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.21.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.21
+- 新增波形导出为图片功能（Waveform Export）
+- 支持将当前波形导出为 1920x400 高清 PNG 图片
+- 导出图片包含静音区域标记、节拍标记、标记点
+- 图片包含文件名、音频参数、BPM 等信息
+- 一键导出，自动下载
+
+</details>
+
+<details>
 <summary><b>STABLE 1.20.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.20.1 (Bugfix)

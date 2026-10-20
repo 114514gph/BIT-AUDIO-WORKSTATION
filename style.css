@@ -232,6 +232,8 @@ header .blink{
 .waveform-zoom-controls .zoom-level{
   font-family:var(--pixel);font-size:9px;color:var(--muted);min-width:28px;text-align:center;
 }
+#exportWaveBtn{border-color:var(--amber);color:var(--amber)}
+#exportWaveBtn:hover{background:rgba(255,170,0,0.16)}
 .waveform-wrap{
   position:relative;
   background:var(--panel);
