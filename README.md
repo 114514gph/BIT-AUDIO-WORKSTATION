@@ -190,6 +190,19 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.22.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.22
+- 新增标记点导出/导入功能（Marker Import/Export）
+- 支持将标记点导出为 CSV 文件（时间、名称）
+- 支持从 CSV 文件导入标记点
+- 一键清除全部标记点
+- 显示当前标记点数量
+- 双击波形添加标记，右键删除，点击跳转
+
+</details>
+
+<details>
 <summary><b>STABLE 1.21.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.21

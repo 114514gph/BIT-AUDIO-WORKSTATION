@@ -2243,6 +2243,98 @@ if(exportWaveBtn){
   });
 }
 
+// STABLE 1.22 新增：标记点导出/导入
+const markerBtn = $('markerBtn');
+const markerMenu = $('markerMenu');
+const markerFileInput = $('markerFileInput');
+const markerCountVal = $('markerCountVal');
+
+function updateMarkerCount(){
+  if(markerCountVal) markerCountVal.textContent = markers ? markers.length : 0;
+}
+
+if(markerBtn && markerMenu){
+  markerBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    updateMarkerCount();
+    // 关闭其他菜单
+    if(noiseMenu) noiseMenu.classList.add('hidden');
+    if(silenceMenu) silenceMenu.classList.add('hidden');
+    if(channelMenu) channelMenu.classList.add('hidden');
+    if(beatMenu) beatMenu.classList.add('hidden');
+    markerMenu.classList.toggle('hidden');
+  });
+
+  markerMenu.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const item = e.target.closest('.dropdown-item');
+    if(!item) return;
+    const action = item.dataset.marker;
+    markerMenu.classList.add('hidden');
+
+    if(action === 'export'){
+      if(!markers || markers.length === 0){ showToast('没有标记点可导出', true); return; }
+      let csv = 'time_seconds,name\n';
+      for(const m of markers){
+        csv += m.time.toFixed(3) + ',' + (m.name || '') + '\n';
+      }
+      const blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
+      const link = document.createElement('a');
+      link.download = (currentFileName || 'markers') + '_markers.csv';
+      link.href = URL.createObjectURL(blob);
+      link.click();
+      setTimeout(()=>URL.revokeObjectURL(link.href), 1000);
+      showToast('已导出 ' + markers.length + ' 个标记点');
+    }
+    else if(action === 'import'){
+      markerFileInput.click();
+    }
+    else if(action === 'clear'){
+      if(markers.length === 0){ showToast('没有标记点', true); return; }
+      clearMarkers();
+      updateMarkerCount();
+      showToast('已清除全部标记点');
+    }
+  });
+}
+
+if(markerFileInput){
+  markerFileInput.addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      try{
+        const text = ev.target.result;
+        const lines = text.split(/\r?\n/).filter(l => l.trim());
+        let imported = 0;
+        for(let i = 0; i < lines.length; i++){
+          // 跳过表头
+          if(i === 0 && lines[i].toLowerCase().includes('time')) continue;
+          const parts = lines[i].split(',');
+          const time = parseFloat(parts[0]);
+          if(!isNaN(time) && time >= 0){
+            const name = parts[1] ? parts[1].trim() : ('M' + (markers.length + 1));
+            addMarker(time, name);
+            imported++;
+          }
+        }
+        updateMarkerCount();
+        showToast('已导入 ' + imported + ' 个标记点');
+      }catch(err){
+        showToast('导入失败：文件格式错误', true);
+      }
+    };
+    reader.readAsText(file);
+    markerFileInput.value = '';
+  });
+}
+
+// 点击页面其他地方关闭菜单
+document.addEventListener('click', ()=>{
+  if(markerMenu) markerMenu.classList.add('hidden');
+});
+
 urlLoadBtn.addEventListener('click', (e)=>{
   e.stopPropagation();
   if(urlInput.value.trim()){
