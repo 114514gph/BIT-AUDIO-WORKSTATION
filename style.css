@@ -603,6 +603,8 @@ input[type=range]::-moz-range-thumb{
 .ss-btn{background:var(--bg);border:1px solid var(--border);color:var(--muted);font-size:12px;padding:2px 8px;cursor:pointer;font-family:'VT323',monospace;transition:all 0.15s}
 .ss-btn:hover{border-color:var(--green);color:var(--green)}
 .ss-btn.active{border-color:var(--green);color:var(--green);background:rgba(0,255,136,0.1)}
+#exportSpectrumBtn{border-color:var(--amber);color:var(--amber)}
+#exportSpectrumBtn:hover{background:rgba(255,170,0,0.16)}
 
 /* ============ 效果/淡入淡出面板 ============ */
 .fx-panel,.fade-panel,.preset-panel,.theme-panel,.export-options{border:1px solid var(--border);background:var(--bg2);padding:12px}

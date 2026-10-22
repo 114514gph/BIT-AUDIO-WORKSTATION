@@ -190,6 +190,18 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.23.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.23
+- 新增频谱导出为图片功能（Spectrum Export）
+- 支持将当前频谱实时快照导出为 1920x400 高清 PNG 图片
+- 导出图片包含频率标签、频谱样式、峰值保持状态
+- 图片包含文件名和频谱样式信息
+- 与波形导出图片功能形成配套
+
+</details>
+
+<details>
 <summary><b>STABLE 1.22.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.22

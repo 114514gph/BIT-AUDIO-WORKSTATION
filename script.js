@@ -2335,6 +2335,79 @@ document.addEventListener('click', ()=>{
   if(markerMenu) markerMenu.classList.add('hidden');
 });
 
+// STABLE 1.23 新增：频谱导出为图片
+const exportSpectrumBtn = $('exportSpectrumBtn');
+if(exportSpectrumBtn){
+  exportSpectrumBtn.addEventListener('click', ()=>{
+    const spectrumCanvas = $('spectrum');
+    if(!spectrumCanvas){ showToast('频谱仪未就绪', true); return; }
+    
+    // 创建高分辨率导出 canvas
+    const exportWidth = 1920;
+    const exportHeight = 400;
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = exportWidth;
+    exportCanvas.height = exportHeight;
+    const ctx = exportCanvas.getContext('2d');
+    
+    // 背景
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, exportWidth, exportHeight);
+    
+    // 网格线
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    for(let i = 0; i <= 10; i++){
+      const x = (exportWidth / 10) * i;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, exportHeight);
+      ctx.stroke();
+    }
+    for(let i = 0; i <= 4; i++){
+      const y = (exportHeight / 4) * i;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(exportWidth, y);
+      ctx.stroke();
+    }
+    
+    // 频率标签
+    ctx.fillStyle = '#666';
+    ctx.font = '11px "VT323", monospace';
+    const freqLabels = ['60Hz', '100Hz', '200Hz', '500Hz', '1kHz', '2kHz', '5kHz', '10kHz', '16kHz'];
+    for(let i = 0; i < freqLabels.length; i++){
+      const x = (i / (freqLabels.length - 1)) * exportWidth;
+      ctx.fillText(freqLabels[i], Math.min(x, exportWidth - 40), exportHeight - 6);
+    }
+    
+    // 从当前频谱 canvas 复制内容并放大
+    ctx.drawImage(spectrumCanvas, 0, 0, exportWidth, exportHeight - 20);
+    
+    // 标题和信息
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '14px "Press Start 2P", monospace';
+    ctx.fillText('SPECTRUM', 16, 24);
+    
+    ctx.fillStyle = '#888888';
+    ctx.font = '12px "VT323", monospace';
+    const styleText = spectrumStyle === 'bars' ? 'Bars' : spectrumStyle === 'line' ? 'Line' : 'Mirror';
+    ctx.fillText('Style: ' + styleText + (peakHoldMode ? ' + Peak Hold' : ''), 16, exportHeight - 26);
+    
+    if(currentFileName){
+      ctx.fillText(currentFileName, exportWidth - 300, 24);
+    }
+    
+    // 导出为 PNG
+    const link = document.createElement('a');
+    link.download = (currentFileName || 'spectrum') + '_spectrum.png';
+    link.href = exportCanvas.toDataURL('image/png');
+    link.click();
+    
+    showToast('频谱图片已导出');
+  });
+}
+
 urlLoadBtn.addEventListener('click', (e)=>{
   e.stopPropagation();
   if(urlInput.value.trim()){
