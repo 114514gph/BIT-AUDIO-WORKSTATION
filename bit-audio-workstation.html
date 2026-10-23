@@ -329,6 +329,10 @@ header .blink{
 #markerBtn:hover{background:rgba(255,170,0,0.16)}
 #markerMenu{top:100%;left:50%;transform:translateX(-50%);margin-top:8px;min-width:160px;z-index:100}
 #markerMenu .beat-info-row span:last-child{color:var(--amber)}
+#dcBtn{border-color:var(--blue);color:var(--blue);background:rgba(100,200,255,0.06)}
+#dcBtn:hover{background:rgba(100,200,255,0.16)}
+#dcMenu{top:100%;left:50%;transform:translateX(-50%);margin-top:8px;min-width:140px;z-index:100}
+#dcMenu .beat-info-row span:last-child{color:var(--blue)}
 
 /* ============ CONTROLS ============ */
 .controls{
@@ -1261,6 +1265,16 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
           </div>
         </div>
         <input type="file" id="markerFileInput" accept=".csv,.txt" style="display:none">
+        <button class="btn demo-btn" id="dcBtn">&#9881; DC</button>
+        <div class="dropdown-menu hidden" id="dcMenu">
+          <div class="dropdown-item" data-dc="detect">检测直流偏移</div>
+          <div class="dropdown-item" data-dc="correct">校正直流偏移</div>
+          <div class="dropdown-divider"></div>
+          <div class="beat-info-row">
+            <span class="df-hint">偏移量</span>
+            <span id="dcOffsetVal">--</span>
+          </div>
+        </div>
       </div>
 
       <div class="waveform-container">
@@ -1525,7 +1539,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.23 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.24 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -3599,6 +3613,100 @@ if(exportSpectrumBtn){
     showToast('频谱图片已导出');
   });
 }
+
+// STABLE 1.24 新增：直流偏移校正
+const dcBtn = $('dcBtn');
+const dcMenu = $('dcMenu');
+const dcOffsetVal = $('dcOffsetVal');
+let dcOffsetValue = 0;
+
+function detectDCOffset(buffer){
+  if(!buffer) return 0;
+  let sum = 0;
+  let count = 0;
+  // 分块计算平均值
+  const chunkSize = 256000;
+  for(let ch = 0; ch < buffer.numberOfChannels; ch++){
+    const data = buffer.getChannelData(ch);
+    for(let i = 0; i < data.length; i += chunkSize){
+      const end = Math.min(i + chunkSize, data.length);
+      for(let j = i; j < end; j++){
+        sum += data[j];
+        count++;
+      }
+    }
+  }
+  return count > 0 ? sum / count : 0;
+}
+
+if(dcBtn && dcMenu){
+  dcBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    // 关闭其他菜单
+    if(noiseMenu) noiseMenu.classList.add('hidden');
+    if(silenceMenu) silenceMenu.classList.add('hidden');
+    if(channelMenu) channelMenu.classList.add('hidden');
+    if(beatMenu) beatMenu.classList.add('hidden');
+    if(markerMenu) markerMenu.classList.add('hidden');
+    dcMenu.classList.toggle('hidden');
+  });
+
+  dcMenu.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const item = e.target.closest('.dropdown-item');
+    if(!item) return;
+    const action = item.dataset.dc;
+    dcMenu.classList.add('hidden');
+
+    if(action === 'detect'){
+      if(!audioBuffer){ showToast('请先加载音频', true); return; }
+      dcOffsetValue = detectDCOffset(audioBuffer);
+      const dbValue = 20 * Math.log10(Math.abs(dcOffsetValue) + 0.0001);
+      dcOffsetVal.textContent = dcOffsetValue.toFixed(4) + ' (' + dbValue.toFixed(1) + 'dB)';
+      if(Math.abs(dcOffsetValue) > 0.001){
+        showToast('检测到直流偏移: ' + dcOffsetValue.toFixed(4));
+      } else {
+        showToast('未检测到明显直流偏移');
+      }
+    }
+    else if(action === 'correct'){
+      if(!audioBuffer){ showToast('请先加载音频', true); return; }
+      const offset = detectDCOffset(audioBuffer);
+      if(Math.abs(offset) < 0.0001){
+        showToast('无需校正：偏移量极小', true);
+        return;
+      }
+      // 创建新 buffer 并减去偏移
+      const newBuffer = audioCtx.createBuffer(
+        audioBuffer.numberOfChannels,
+        audioBuffer.length,
+        audioBuffer.sampleRate
+      );
+      for(let ch = 0; ch < audioBuffer.numberOfChannels; ch++){
+        const oldData = audioBuffer.getChannelData(ch);
+        const newData = newBuffer.getChannelData(ch);
+        for(let i = 0; i < oldData.length; i++){
+          newData[i] = oldData[i] - offset;
+        }
+      }
+      audioBuffer = newBuffer;
+      dcOffsetValue = 0;
+      dcOffsetVal.textContent = '--';
+      // 重置播放状态
+      stopPlayback();
+      currentTime = 0;
+      playheadOffset = 0;
+      renderWaveform();
+      invalidateWaveformCache();
+      showToast('直流偏移已校正: ' + offset.toFixed(4));
+    }
+  });
+}
+
+// 点击页面其他地方关闭菜单
+document.addEventListener('click', ()=>{
+  if(dcMenu) dcMenu.classList.add('hidden');
+});
 
 urlLoadBtn.addEventListener('click', (e)=>{
   e.stopPropagation();

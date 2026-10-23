@@ -190,6 +190,18 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.24.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.24
+- 新增直流偏移校正功能（DC Offset Correction）
+- 支持检测音频中的直流偏移量（以 dB 显示）
+- 一键校正直流偏移，自动减去平均值
+- 分块计算支持大音频文件
+- 校正后自动更新波形显示和峰值缓存
+
+</details>
+
+<details>
 <summary><b>STABLE 1.23.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.23

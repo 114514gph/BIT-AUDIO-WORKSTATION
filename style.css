@@ -322,6 +322,10 @@ header .blink{
 #markerBtn:hover{background:rgba(255,170,0,0.16)}
 #markerMenu{top:100%;left:50%;transform:translateX(-50%);margin-top:8px;min-width:160px;z-index:100}
 #markerMenu .beat-info-row span:last-child{color:var(--amber)}
+#dcBtn{border-color:var(--blue);color:var(--blue);background:rgba(100,200,255,0.06)}
+#dcBtn:hover{background:rgba(100,200,255,0.16)}
+#dcMenu{top:100%;left:50%;transform:translateX(-50%);margin-top:8px;min-width:140px;z-index:100}
+#dcMenu .beat-info-row span:last-child{color:var(--blue)}
 
 /* ============ CONTROLS ============ */
 .controls{

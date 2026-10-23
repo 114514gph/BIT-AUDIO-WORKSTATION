@@ -132,6 +132,16 @@
           </div>
         </div>
         <input type="file" id="markerFileInput" accept=".csv,.txt" style="display:none">
+        <button class="btn demo-btn" id="dcBtn">&#9881; DC</button>
+        <div class="dropdown-menu hidden" id="dcMenu">
+          <div class="dropdown-item" data-dc="detect">检测直流偏移</div>
+          <div class="dropdown-item" data-dc="correct">校正直流偏移</div>
+          <div class="dropdown-divider"></div>
+          <div class="beat-info-row">
+            <span class="df-hint">偏移量</span>
+            <span id="dcOffsetVal">--</span>
+          </div>
+        </div>
       </div>
 
       <div class="waveform-container">
@@ -396,7 +406,7 @@
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.23 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.24 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
