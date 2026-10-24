@@ -190,6 +190,17 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.24.1 (Bugfix)</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.24.1 (Bugfix)
+- 修复 VT323 字体损坏导致的加载失败（OTS parsing error）
+- 移除重复的 Cubic11 字体定义
+- 修复工作区按钮拥挤问题（demo-bar 添加 flex-wrap 自动换行）
+- 缩小按钮间距（gap 12px → 8px），窄屏幕自动换行不挤
+
+</details>
+
+<details>
 <summary><b>STABLE 1.24.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.24
