@@ -441,6 +441,14 @@ input[type=range]::-moz-range-thumb{
   color:var(--bg);background:var(--cyan);border-color:var(--cyan);
 }
 
+/* FX presets */
+.fx-presets{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+.fx-preset-group{display:flex;align-items:center;gap:4px}
+.fx-preset-label{font-family:var(--pixel);font-size:8px;color:var(--muted);letter-spacing:1px;margin-right:2px}
+.fx-preset-btn{font-family:var(--pixel);font-size:8px;color:var(--muted);background:var(--panel2);border:1px solid var(--border);padding:3px 5px;cursor:pointer;letter-spacing:1px;transition:all 0.15s}
+.fx-preset-btn:hover{color:var(--pink);border-color:var(--pink)}
+.fx-preset-btn.active{color:var(--bg);background:var(--pink);border-color:var(--pink)}
+
 /* ============ TRANSPORT ============ */
 .transport-export{
   display:flex;flex-direction:column;gap:8px;
@@ -1446,6 +1454,29 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
             <input type="range" id="delayTimeSlider" min="50" max="1000" step="10" value="300">
           </div>
         </div>
+        <div class="fx-presets">
+          <div class="fx-preset-group">
+            <span class="fx-preset-label">COMP</span>
+            <button class="fx-preset-btn" data-fx="comp" data-val="0">OFF</button>
+            <button class="fx-preset-btn" data-fx="comp" data-val="40">VOCAL</button>
+            <button class="fx-preset-btn" data-fx="comp" data-val="65">DRUM</button>
+            <button class="fx-preset-btn" data-fx="comp" data-val="85">MASTER</button>
+          </div>
+          <div class="fx-preset-group">
+            <span class="fx-preset-label">REV</span>
+            <button class="fx-preset-btn" data-fx="rev" data-val="0">OFF</button>
+            <button class="fx-preset-btn" data-fx="rev" data-val="25">ROOM</button>
+            <button class="fx-preset-btn" data-fx="rev" data-val="55">HALL</button>
+            <button class="fx-preset-btn" data-fx="rev" data-val="40">PLATE</button>
+          </div>
+          <div class="fx-preset-group">
+            <span class="fx-preset-label">DELAY</span>
+            <button class="fx-preset-btn" data-fx="delay" data-val="0" data-time="300">OFF</button>
+            <button class="fx-preset-btn" data-fx="delay" data-val="30" data-time="120">SLAP</button>
+            <button class="fx-preset-btn" data-fx="delay" data-val="40" data-time="300">PING</button>
+            <button class="fx-preset-btn" data-fx="delay" data-val="35" data-time="200">TAPE</button>
+          </div>
+        </div>
       </div>
 
       <!-- 淡入淡出 -->
@@ -1527,7 +1558,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.24.1 (Bugfix) <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.25 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -5328,6 +5359,43 @@ const delayTimeSlider = $('delayTimeSlider'), delayTimeVal = $('delayTimeVal');
 delayTimeSlider.addEventListener('input', ()=>{
   delayTimeVal.textContent = delayTimeSlider.value;
   if(delayNode) delayNode.delayTime.value = parseInt(delayTimeSlider.value)/1000;
+  // 手动调节时清除预设高亮
+  document.querySelectorAll('.fx-preset-btn[data-fx="delay"]').forEach(b=>b.classList.remove('active'));
+});
+
+/* --- STABLE 1.25: FX 预设 --- */
+document.querySelectorAll('.fx-preset-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const fx = btn.dataset.fx;
+    const val = parseInt(btn.dataset.val);
+    // 清除同组高亮
+    document.querySelectorAll(`.fx-preset-btn[data-fx="${fx}"]`).forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    if(fx === 'comp'){
+      compSlider.value = val;
+      compSlider.dispatchEvent(new Event('input'));
+    } else if(fx === 'rev'){
+      revSlider.value = val;
+      revSlider.dispatchEvent(new Event('input'));
+    } else if(fx === 'delay'){
+      delaySlider.value = val;
+      delaySlider.dispatchEvent(new Event('input'));
+      if(btn.dataset.time){
+        delayTimeSlider.value = btn.dataset.time;
+        delayTimeSlider.dispatchEvent(new Event('input'));
+      }
+    }
+  });
+});
+// 手动调节 comp/rev 滑块时清除对应预设高亮
+compSlider.addEventListener('input', ()=>{
+  document.querySelectorAll('.fx-preset-btn[data-fx="comp"]').forEach(b=>b.classList.remove('active'));
+});
+revSlider.addEventListener('input', ()=>{
+  document.querySelectorAll('.fx-preset-btn[data-fx="rev"]').forEach(b=>b.classList.remove('active'));
+});
+delaySlider.addEventListener('input', ()=>{
+  document.querySelectorAll('.fx-preset-btn[data-fx="delay"]').forEach(b=>b.classList.remove('active'));
 });
 
 /* --- 淡入淡出滑块 --- */

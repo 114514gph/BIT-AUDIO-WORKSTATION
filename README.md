@@ -190,6 +190,19 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.25.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.25
+- 新增效果器预设系统（FX Presets）
+- 压缩器预设：VOCAL / DRUM / MASTER / OFF
+- 混响预设：ROOM / HALL / PLATE / OFF
+- 延迟预设：SLAP / PING / TAPE / OFF（含延迟时间自动匹配）
+- 手动调节滑块时自动清除预设高亮
+- 与 EQ 预设风格统一，紧凑排列不占额外空间
+
+</details>
+
+<details>
 <summary><b>STABLE 1.24.1 (Bugfix)</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.24.1 (Bugfix)

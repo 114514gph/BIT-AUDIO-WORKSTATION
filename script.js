@@ -4134,6 +4134,43 @@ const delayTimeSlider = $('delayTimeSlider'), delayTimeVal = $('delayTimeVal');
 delayTimeSlider.addEventListener('input', ()=>{
   delayTimeVal.textContent = delayTimeSlider.value;
   if(delayNode) delayNode.delayTime.value = parseInt(delayTimeSlider.value)/1000;
+  // 手动调节时清除预设高亮
+  document.querySelectorAll('.fx-preset-btn[data-fx="delay"]').forEach(b=>b.classList.remove('active'));
+});
+
+/* --- STABLE 1.25: FX 预设 --- */
+document.querySelectorAll('.fx-preset-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const fx = btn.dataset.fx;
+    const val = parseInt(btn.dataset.val);
+    // 清除同组高亮
+    document.querySelectorAll(`.fx-preset-btn[data-fx="${fx}"]`).forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    if(fx === 'comp'){
+      compSlider.value = val;
+      compSlider.dispatchEvent(new Event('input'));
+    } else if(fx === 'rev'){
+      revSlider.value = val;
+      revSlider.dispatchEvent(new Event('input'));
+    } else if(fx === 'delay'){
+      delaySlider.value = val;
+      delaySlider.dispatchEvent(new Event('input'));
+      if(btn.dataset.time){
+        delayTimeSlider.value = btn.dataset.time;
+        delayTimeSlider.dispatchEvent(new Event('input'));
+      }
+    }
+  });
+});
+// 手动调节 comp/rev 滑块时清除对应预设高亮
+compSlider.addEventListener('input', ()=>{
+  document.querySelectorAll('.fx-preset-btn[data-fx="comp"]').forEach(b=>b.classList.remove('active'));
+});
+revSlider.addEventListener('input', ()=>{
+  document.querySelectorAll('.fx-preset-btn[data-fx="rev"]').forEach(b=>b.classList.remove('active'));
+});
+delaySlider.addEventListener('input', ()=>{
+  document.querySelectorAll('.fx-preset-btn[data-fx="delay"]').forEach(b=>b.classList.remove('active'));
 });
 
 /* --- 淡入淡出滑块 --- */

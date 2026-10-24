@@ -434,6 +434,14 @@ input[type=range]::-moz-range-thumb{
   color:var(--bg);background:var(--cyan);border-color:var(--cyan);
 }
 
+/* FX presets */
+.fx-presets{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+.fx-preset-group{display:flex;align-items:center;gap:4px}
+.fx-preset-label{font-family:var(--pixel);font-size:8px;color:var(--muted);letter-spacing:1px;margin-right:2px}
+.fx-preset-btn{font-family:var(--pixel);font-size:8px;color:var(--muted);background:var(--panel2);border:1px solid var(--border);padding:3px 5px;cursor:pointer;letter-spacing:1px;transition:all 0.15s}
+.fx-preset-btn:hover{color:var(--pink);border-color:var(--pink)}
+.fx-preset-btn.active{color:var(--bg);background:var(--pink);border-color:var(--pink)}
+
 /* ============ TRANSPORT ============ */
 .transport-export{
   display:flex;flex-direction:column;gap:8px;
