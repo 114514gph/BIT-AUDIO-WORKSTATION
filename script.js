@@ -443,7 +443,7 @@ const WORKLET_CODE = `
 class BitCrushProcessor extends AudioWorkletProcessor {
   constructor(){
     super();
-    this.bits=8; this.downsample=1; this.noiseThreshold=0; this.dither=0;
+    this.bits=8; this.downsample=1; this.noiseThreshold=0; this.dither=0; this.stereoWidth=1.0;
     this.hold=[]; this.counter=[];
     this.env=[]; this.noiseFloor=[]; this.gateGain=[]; this.lpState=[];
     this.port.onmessage=(e)=>{
@@ -452,6 +452,7 @@ class BitCrushProcessor extends AudioWorkletProcessor {
       if(d.downsample!==undefined) this.downsample=d.downsample;
       if(d.noiseThreshold!==undefined) this.noiseThreshold=d.noiseThreshold;
       if(d.dither!==undefined) this.dither=d.dither;
+      if(d.stereoWidth!==undefined) this.stereoWidth=d.stereoWidth;
     };
   }
   process(inputs,outputs){
@@ -510,6 +511,18 @@ class BitCrushProcessor extends AudioWorkletProcessor {
       }
       this.hold[c]=hold; this.counter[c]=counter; this.env[c]=env;
       this.noiseFloor[c]=noiseFloor; this.gateGain[c]=gateGain; this.lpState[c]=lp;
+    }
+    // STABLE 1.26: 立体声宽度（Mid-Side 处理）
+    if(output.length>=2 && this.stereoWidth!==1.0){
+      const w=this.stereoWidth;
+      const L=output[0], R=output[1];
+      const len=Math.min(L.length,R.length);
+      for(let i=0;i<len;i++){
+        const mid=(L[i]+R[i])*0.5;
+        const side=(L[i]-R[i])*0.5;
+        L[i]=mid+side*w;
+        R[i]=mid-side*w;
+      }
     }
     return true;
   }
@@ -710,7 +723,8 @@ function sendParams(){
     bits: Math.round(parseFloat(bitSlider.value)),
     downsample: parseInt(downSlider.value, 10),
     noiseThreshold: parseInt(noiseSlider.value, 10) / 100 * 0.05,
-    dither: ditherOn ? 1 : 0
+    dither: ditherOn ? 1 : 0,
+    stereoWidth: parseInt(widthSlider.value, 10) / 100
   });
 }
 
@@ -2627,7 +2641,22 @@ async function renderFullFX(buffer, targetSampleRate){
   panner.connect(ctx.destination);
 
   src.start();
-  return await ctx.startRendering();
+  const rendered = await ctx.startRendering();
+
+  // STABLE 1.26: 立体声宽度后处理（Mid-Side）
+  const widthVal = parseInt(widthSlider.value, 10) / 100;
+  if(widthVal !== 1.0 && rendered.numberOfChannels >= 2){
+    const L = rendered.getChannelData(0);
+    const R = rendered.getChannelData(1);
+    const len = Math.min(L.length, R.length);
+    for(let i = 0; i < len; i++){
+      const mid = (L[i] + R[i]) * 0.5;
+      const side = (L[i] - R[i]) * 0.5;
+      L[i] = mid + side * widthVal;
+      R[i] = mid - side * widthVal;
+    }
+  }
+  return rendered;
 }
 
 /* 加强降噪：自适应底噪 + 扩展器（四次方衰减）+ 高频嘶声压制 */
@@ -2794,6 +2823,12 @@ panSlider.addEventListener('input', ()=>{
   else if(v < 0) panVal.textContent = 'L' + Math.abs(v);
   else panVal.textContent = 'R' + v;
   if(pannerNode) pannerNode.pan.value = v / 100;
+});
+// STABLE 1.26: 立体声宽度
+const widthSlider = $('widthSlider'), widthVal = $('widthVal');
+widthSlider.addEventListener('input', ()=>{
+  widthVal.textContent = widthSlider.value;
+  sendParams();
 });
 // STABLE 1.3 新增：Dither 抖动开关（按钮式）
 let ditherOn = false;

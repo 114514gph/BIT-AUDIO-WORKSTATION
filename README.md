@@ -190,6 +190,18 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.26.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.26
+- 新增立体声宽度调节（Stereo Width）
+- 0% = 单声道（Mono），100% = 原始立体声，200% = 超宽立体声
+- 基于 Mid-Side 矩阵处理，实时调节无延迟
+- 导出时同步应用宽度设置
+- 位于 PAN 声像滑块旁，与声像调节配合使用
+
+</details>
+
+<details>
 <summary><b>STABLE 1.25.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.25

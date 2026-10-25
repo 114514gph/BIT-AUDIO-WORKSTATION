@@ -251,6 +251,12 @@
           <input type="range" id="panSlider" min="-100" max="100" step="1" value="0">
           <div class="ticks"><span>L</span><span>C</span><span>R</span></div>
         </div>
+        <!-- STABLE 1.26 新增：立体声宽度 -->
+        <div class="ctrl width">
+          <label>WIDTH <span id="widthVal">100</span>%</label>
+          <input type="range" id="widthSlider" min="0" max="200" step="1" value="100">
+          <div class="ticks"><span>MONO</span><span>NORM</span><span>WIDE</span></div>
+        </div>
         <!-- STABLE 1.3 新增：Dither 抖动开关（替换快捷键功能） -->
         <div class="ctrl dither">
           <label>DITHER <span id="ditherVal">OFF</span></label>
@@ -429,7 +435,7 @@
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.25 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.26 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
