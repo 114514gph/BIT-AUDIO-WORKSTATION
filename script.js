@@ -444,6 +444,7 @@ class BitCrushProcessor extends AudioWorkletProcessor {
   constructor(){
     super();
     this.bits=8; this.downsample=1; this.noiseThreshold=0; this.dither=0; this.stereoWidth=1.0;
+    this.swapChannels=false; this.invertL=false; this.invertR=false;
     this.hold=[]; this.counter=[];
     this.env=[]; this.noiseFloor=[]; this.gateGain=[]; this.lpState=[];
     this.port.onmessage=(e)=>{
@@ -453,6 +454,9 @@ class BitCrushProcessor extends AudioWorkletProcessor {
       if(d.noiseThreshold!==undefined) this.noiseThreshold=d.noiseThreshold;
       if(d.dither!==undefined) this.dither=d.dither;
       if(d.stereoWidth!==undefined) this.stereoWidth=d.stereoWidth;
+      if(d.swapChannels!==undefined) this.swapChannels=d.swapChannels;
+      if(d.invertL!==undefined) this.invertL=d.invertL;
+      if(d.invertR!==undefined) this.invertR=d.invertR;
     };
   }
   process(inputs,outputs){
@@ -511,6 +515,20 @@ class BitCrushProcessor extends AudioWorkletProcessor {
       }
       this.hold[c]=hold; this.counter[c]=counter; this.env[c]=env;
       this.noiseFloor[c]=noiseFloor; this.gateGain[c]=gateGain; this.lpState[c]=lp;
+    }
+    // STABLE 1.27: 声道交换 + 反相
+    if(output.length>=2){
+      if(this.swapChannels){
+        const tmp=output[0]; output[0]=output[1]; output[1]=tmp;
+      }
+      if(this.invertL){
+        const L=output[0];
+        for(let i=0;i<L.length;i++) L[i]=-L[i];
+      }
+      if(this.invertR){
+        const R=output[1];
+        for(let i=0;i<R.length;i++) R[i]=-R[i];
+      }
     }
     // STABLE 1.26: 立体声宽度（Mid-Side 处理）
     if(output.length>=2 && this.stereoWidth!==1.0){
@@ -724,7 +742,10 @@ function sendParams(){
     downsample: parseInt(downSlider.value, 10),
     noiseThreshold: parseInt(noiseSlider.value, 10) / 100 * 0.05,
     dither: ditherOn ? 1 : 0,
-    stereoWidth: parseInt(widthSlider.value, 10) / 100
+    stereoWidth: parseInt(widthSlider.value, 10) / 100,
+    swapChannels: swapOn,
+    invertL: invertLOn,
+    invertR: invertROn
   });
 }
 
@@ -2643,6 +2664,26 @@ async function renderFullFX(buffer, targetSampleRate){
   src.start();
   const rendered = await ctx.startRendering();
 
+  // STABLE 1.27: 声道交换 + 反相后处理
+  if(rendered.numberOfChannels >= 2){
+    if(swapOn){
+      const L = rendered.getChannelData(0);
+      const R = rendered.getChannelData(1);
+      const len = Math.min(L.length, R.length);
+      for(let i = 0; i < len; i++){
+        const tmp = L[i]; L[i] = R[i]; R[i] = tmp;
+      }
+    }
+    if(invertLOn){
+      const L = rendered.getChannelData(0);
+      for(let i = 0; i < L.length; i++) L[i] = -L[i];
+    }
+    if(invertROn){
+      const R = rendered.getChannelData(1);
+      for(let i = 0; i < R.length; i++) R[i] = -R[i];
+    }
+  }
+
   // STABLE 1.26: 立体声宽度后处理（Mid-Side）
   const widthVal = parseInt(widthSlider.value, 10) / 100;
   if(widthVal !== 1.0 && rendered.numberOfChannels >= 2){
@@ -2828,6 +2869,24 @@ panSlider.addEventListener('input', ()=>{
 const widthSlider = $('widthSlider'), widthVal = $('widthVal');
 widthSlider.addEventListener('input', ()=>{
   widthVal.textContent = widthSlider.value;
+  sendParams();
+});
+// STABLE 1.27: 声道交换 + 反相
+let swapOn = false, invertLOn = false, invertROn = false;
+const swapBtn = $('swapBtn'), invertLBtn = $('invertLBtn'), invertRBtn = $('invertRBtn');
+swapBtn.addEventListener('click', ()=>{
+  swapOn = !swapOn;
+  swapBtn.classList.toggle('active', swapOn);
+  sendParams();
+});
+invertLBtn.addEventListener('click', ()=>{
+  invertLOn = !invertLOn;
+  invertLBtn.classList.toggle('active', invertLOn);
+  sendParams();
+});
+invertRBtn.addEventListener('click', ()=>{
+  invertROn = !invertROn;
+  invertRBtn.classList.toggle('active', invertROn);
   sendParams();
 });
 // STABLE 1.3 新增：Dither 抖动开关（按钮式）

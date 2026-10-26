@@ -190,6 +190,19 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.27.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.27
+- 新增声道交换（Swap L/R）按钮：一键交换左右声道
+- 新增左声道反相（Invert L）按钮：将左声道波形取反
+- 新增右声道反相（Invert R）按钮：将右声道波形取反
+- 录音时左右声道接反可一键修复
+- 反相功能可用于相位校正或特殊效果制作
+- 实时处理无延迟，导出时同步应用
+
+</details>
+
+<details>
 <summary><b>STABLE 1.26.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.26
