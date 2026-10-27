@@ -601,6 +601,7 @@ input[type=range]::-moz-range-thumb{
 .clip-led{width:12px;height:12px;background:#333;border:1px solid #555;transition:background 0.1s}
 .clip-led.on{background:#ff3366;box-shadow:0 0 8px #ff3366}
 .clip-label{font-size:11px;color:var(--muted);font-family:var(--mono)}
+#peakMeter{background:#111;border:1px solid #333;border-radius:2px;margin-left:4px}
 
 /* ============ 频谱仪 ============ */
 .spectrum-panel{border:1px solid var(--border);background:var(--bg2);padding:10px}
@@ -1308,7 +1309,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
           <button id="nextBtn" class="btn nav-btn" title="下一曲">&#9193; NEXT</button>
           <button id="reloadBtn" class="btn reload-btn">&#8635; RELOAD</button>
           <button id="reverseBtn" class="btn">&#8646; REV</button>
-          <div class="clipper"><span class="clip-led" id="clipLed"></span><span class="clip-label">CLIP</span></div>
+          <div class="clipper"><span class="clip-led" id="clipLed"></span><span class="clip-label">CLIP</span><canvas id="peakMeter" width="80" height="14" title="输出电平"></canvas></div>
         </div>
         <div class="export-bar">
           <div class="export-group">
@@ -1573,7 +1574,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.27 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.28 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -5426,8 +5427,11 @@ if(peakHoldBtn){
   });
 }
 
-/* --- 削波检测 --- */
+/* --- 削波检测 + 实时电平表 --- */
 const clipLed = $('clipLed');
+const peakMeter = $('peakMeter');
+const peakCtx = peakMeter.getContext('2d');
+let peakHoldVal = 0;
 function checkClipping(){
   if(!analyserNode) return;
   const timeData = new Uint8Array(analyserNode.fftSize);
@@ -5442,6 +5446,30 @@ function checkClipping(){
     if(clipTimer) clearTimeout(clipTimer);
     clipTimer = setTimeout(()=> clipLed.classList.remove('on'), 300);
   }
+  // STABLE 1.28: 绘制实时电平表 (-60dB ~ 0dB)
+  const dB = peak > 0.0001 ? 20 * Math.log10(peak) : -60;
+  const ratio = Math.max(0, Math.min(1, (dB + 60) / 60));
+  const w = peakMeter.width, h = peakMeter.height;
+  peakCtx.clearRect(0, 0, w, h);
+  // 背景
+  peakCtx.fillStyle = '#111';
+  peakCtx.fillRect(0, 0, w, h);
+  // 电平条
+  const barW = Math.floor(w * ratio);
+  if(ratio > 0.9){
+    peakCtx.fillStyle = '#ff3366';
+  } else if(ratio > 0.7){
+    peakCtx.fillStyle = '#ffaa00';
+  } else {
+    peakCtx.fillStyle = '#00cc66';
+  }
+  peakCtx.fillRect(0, 0, barW, h);
+  // 峰值保持
+  if(dB > peakHoldVal) peakHoldVal = dB;
+  else peakHoldVal = Math.max(-60, peakHoldVal - 0.5);
+  const holdRatio = Math.max(0, Math.min(1, (peakHoldVal + 60) / 60));
+  peakCtx.fillStyle = '#fff';
+  peakCtx.fillRect(Math.floor(w * holdRatio) - 1, 0, 1, h);
 }
 
 /* --- 效果滑块 --- */

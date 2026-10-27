@@ -4186,8 +4186,11 @@ if(peakHoldBtn){
   });
 }
 
-/* --- 削波检测 --- */
+/* --- 削波检测 + 实时电平表 --- */
 const clipLed = $('clipLed');
+const peakMeter = $('peakMeter');
+const peakCtx = peakMeter.getContext('2d');
+let peakHoldVal = 0;
 function checkClipping(){
   if(!analyserNode) return;
   const timeData = new Uint8Array(analyserNode.fftSize);
@@ -4202,6 +4205,30 @@ function checkClipping(){
     if(clipTimer) clearTimeout(clipTimer);
     clipTimer = setTimeout(()=> clipLed.classList.remove('on'), 300);
   }
+  // STABLE 1.28: 绘制实时电平表 (-60dB ~ 0dB)
+  const dB = peak > 0.0001 ? 20 * Math.log10(peak) : -60;
+  const ratio = Math.max(0, Math.min(1, (dB + 60) / 60));
+  const w = peakMeter.width, h = peakMeter.height;
+  peakCtx.clearRect(0, 0, w, h);
+  // 背景
+  peakCtx.fillStyle = '#111';
+  peakCtx.fillRect(0, 0, w, h);
+  // 电平条
+  const barW = Math.floor(w * ratio);
+  if(ratio > 0.9){
+    peakCtx.fillStyle = '#ff3366';
+  } else if(ratio > 0.7){
+    peakCtx.fillStyle = '#ffaa00';
+  } else {
+    peakCtx.fillStyle = '#00cc66';
+  }
+  peakCtx.fillRect(0, 0, barW, h);
+  // 峰值保持
+  if(dB > peakHoldVal) peakHoldVal = dB;
+  else peakHoldVal = Math.max(-60, peakHoldVal - 0.5);
+  const holdRatio = Math.max(0, Math.min(1, (peakHoldVal + 60) / 60));
+  peakCtx.fillStyle = '#fff';
+  peakCtx.fillRect(Math.floor(w * holdRatio) - 1, 0, 1, h);
 }
 
 /* --- 效果滑块 --- */

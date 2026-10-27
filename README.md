@@ -190,6 +190,18 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.28.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.28
+- 新增实时峰值电平表（Peak Meter）
+- 在 CLIP 指示灯旁显示输出电平，范围 -60dB 到 0dB
+- 绿色为正常电平，黄色接近削波，红色超过 -1dB
+- 白色竖线为峰值保持标记，缓慢衰减
+- 与削波指示灯联动，实时监控输出电平
+
+</details>
+
+<details>
 <summary><b>STABLE 1.27.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.27
