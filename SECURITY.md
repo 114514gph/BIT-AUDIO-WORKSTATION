@@ -6,9 +6,9 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
+| STABLE 1.29.x | :white_check_mark: |
 | STABLE 1.28.x | :white_check_mark: |
-| STABLE 1.27.x | :white_check_mark: |
-| STABLE 1.26.x | :x: |
+| STABLE 1.27.x | :x: |
 | STABLE 1.4.x | :x: |
 | STABLE 1.3.x | :x: |
 | BETA 版本 | :warning: 测试版，仅接收关键安全修复 |

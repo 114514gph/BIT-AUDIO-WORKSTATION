@@ -190,6 +190,18 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.29.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.29
+- 新增人声消除（Vocal Remove）功能
+- 基于 Mid-Side 矩阵去除居中声道，保留两侧乐器
+- 在 CHANNEL 控制面板新增 VOCAL RM 按钮
+- 适用于 KTV 伴奏制作：消除居中人声，保留鼓点和和声
+- 实时处理无延迟，导出时同步应用
+
+</details>
+
+<details>
 <summary><b>STABLE 1.28.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.28
