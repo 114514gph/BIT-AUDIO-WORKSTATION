@@ -190,6 +190,17 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.30.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.30
+- 新增音频信息面板（INFO）
+- 显示当前加载音频的详细信息：文件名、时长、采样率、声道数、文件大小、峰值电平
+- 在 demo-bar 新增 INFO 按钮，点击展开信息面板
+- 专业音频工具标配功能，快速查看音频参数
+
+</details>
+
+<details>
 <summary><b>STABLE 1.29.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.29

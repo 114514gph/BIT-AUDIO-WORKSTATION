@@ -1125,6 +1125,7 @@ async function loadFile(file){
     clearMarkers();
     if(loadCancelled) return;
     currentFileName = file.name.replace(/\.[^.]+$/, '');
+    currentFileSize = file.size;
     fileNameEl.textContent = file.name;
     fileMetaEl.textContent =
       originalBuffer.numberOfChannels + 'ch · ' +
@@ -2542,9 +2543,70 @@ if(dcBtn && dcMenu){
   });
 }
 
+// STABLE 1.30: 音频信息面板
+const infoBtn = $('infoBtn');
+const infoMenu = $('infoMenu');
+const infoFileName = $('infoFileName');
+const infoDuration = $('infoDuration');
+const infoSampleRate = $('infoSampleRate');
+const infoChannels = $('infoChannels');
+const infoFileSize = $('infoFileSize');
+const infoPeak = $('infoPeak');
+
+let currentFileSize = 0;
+
+function updateAudioInfo(){
+  if(!audioBuffer) return;
+  infoFileName.textContent = currentFileName || '(示例音频)';
+  const dur = audioBuffer.duration;
+  const min = Math.floor(dur / 60);
+  const sec = (dur % 60).toFixed(1);
+  infoDuration.textContent = min + ':' + sec.padStart(4, '0');
+  infoSampleRate.textContent = audioBuffer.sampleRate + ' Hz';
+  infoChannels.textContent = audioBuffer.numberOfChannels === 1 ? '单声道' : '立体声';
+  if(currentFileSize > 0){
+    const sizeKB = currentFileSize / 1024;
+    const sizeMB = sizeKB / 1024;
+    infoFileSize.textContent = sizeMB >= 1 ? sizeMB.toFixed(2) + ' MB' : sizeKB.toFixed(1) + ' KB';
+  } else {
+    // 估算 PCM 大小
+    const pcmBytes = audioBuffer.length * audioBuffer.numberOfChannels * 4;
+    infoFileSize.textContent = '~' + (pcmBytes / 1024 / 1024).toFixed(2) + ' MB (PCM)';
+  }
+  // 计算峰值
+  let peak = 0;
+  for(let ch = 0; ch < audioBuffer.numberOfChannels; ch++){
+    const data = audioBuffer.getChannelData(ch);
+    for(let i = 0; i < data.length; i++){
+      const abs = Math.abs(data[i]);
+      if(abs > peak) peak = abs;
+    }
+  }
+  const peakDb = 20 * Math.log10(peak + 0.000001);
+  infoPeak.textContent = peakDb.toFixed(1) + ' dBFS';
+}
+
+if(infoBtn && infoMenu){
+  infoBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if(noiseMenu) noiseMenu.classList.add('hidden');
+    if(silenceMenu) silenceMenu.classList.add('hidden');
+    if(channelMenu) channelMenu.classList.add('hidden');
+    if(beatMenu) beatMenu.classList.add('hidden');
+    if(markerMenu) markerMenu.classList.add('hidden');
+    if(dcMenu) dcMenu.classList.add('hidden');
+    updateAudioInfo();
+    infoMenu.classList.toggle('hidden');
+  });
+  infoMenu.addEventListener('click', (e)=>{
+    e.stopPropagation();
+  });
+}
+
 // 点击页面其他地方关闭菜单
 document.addEventListener('click', ()=>{
   if(dcMenu) dcMenu.classList.add('hidden');
+  if(infoMenu) infoMenu.classList.add('hidden');
 });
 
 urlLoadBtn.addEventListener('click', (e)=>{
