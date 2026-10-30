@@ -190,6 +190,16 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.31.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.31
+- 新增导出文件名自定义功能
+- 在导出选项面板新增文件名输入框，可自定义导出文件名
+- 留空则自动使用原文件名，方便批量导出和文件管理
+
+</details>
+
+<details>
 <summary><b>STABLE 1.30.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.30

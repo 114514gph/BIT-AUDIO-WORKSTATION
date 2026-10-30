@@ -3952,7 +3952,9 @@ async function doExportOriginal(){
     const url = URL.createObjectURL(result.blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = sanitizeFilename(currentFileName) + suffix + '.' + result.ext;
+    const customName = $('exportFilename') ? $('exportFilename').value.trim() : '';
+    const baseName = customName || sanitizeFilename(currentFileName);
+    a.download = baseName + suffix + '.' + result.ext;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(()=> URL.revokeObjectURL(url), 1000);
     showToast('已导出 ' + (result.blob.size/1024/1024).toFixed(2) + 'MB (' + result.ext.toUpperCase() + ')');
