@@ -190,6 +190,17 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.32.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.32
+- 新增预设导出/导入功能
+- 可将所有本地预设导出为 JSON 文件备份或分享
+- 支持从 JSON 文件批量导入预设，合并到现有预设列表
+- 方便在不同设备间迁移预设配置
+
+</details>
+
+<details>
 <summary><b>STABLE 1.31.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.31

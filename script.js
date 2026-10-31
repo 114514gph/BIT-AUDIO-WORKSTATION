@@ -4527,6 +4527,61 @@ presetDelBtn.addEventListener('click', ()=>{
   refreshPresetList();
   showToast('预设已删除: ' + name);
 });
+
+/* STABLE 1.32: 预设导出/导入 */
+const presetExportBtn = $('presetExportBtn');
+const presetImportBtn = $('presetImportBtn');
+const presetImportFile = $('presetImportFile');
+
+presetExportBtn.addEventListener('click', ()=>{
+  const presets = getPresets();
+  const keys = Object.keys(presets);
+  if(keys.length === 0){ showToast('暂无预设可导出', true); return; }
+  const data = { app: 'BIT-AUDIO-WORKSTATION', version: '1.32', presets: presets };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'bit-audio-presets.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=> URL.revokeObjectURL(url), 1000);
+  showToast('已导出 ' + keys.length + ' 个预设');
+});
+
+presetImportBtn.addEventListener('click', ()=>{
+  presetImportFile.click();
+});
+
+presetImportFile.addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    try{
+      const data = JSON.parse(ev.target.result);
+      const incoming = data.presets || data;
+      if(typeof incoming !== 'object' || incoming === null){
+        showToast('预设文件格式无效', true); return;
+      }
+      const presets = getPresets();
+      let count = 0;
+      Object.keys(incoming).forEach(name=>{
+        if(incoming[name] && typeof incoming[name] === 'object'){
+          presets[name] = incoming[name];
+          count++;
+        }
+      });
+      savePresets(presets);
+      refreshPresetList();
+      showToast('已导入 ' + count + ' 个预设');
+    }catch(err){
+      showToast('导入失败: 文件格式错误', true);
+    }
+  };
+  reader.readAsText(file);
+  presetImportFile.value = '';
+});
+
 refreshPresetList();
 
 /* --- 音量归一化 --- */
