@@ -1281,6 +1281,23 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
           <div class="beat-info-row"><span class="df-hint">文件大小</span><span id="infoFileSize">--</span></div>
           <div class="beat-info-row"><span class="df-hint">峰值电平</span><span id="infoPeak">--</span></div>
         </div>
+        <button class="btn demo-btn" id="metroBtn">&#129345; METRO</button>
+        <div class="dropdown-menu hidden" id="metroMenu">
+          <div class="beat-info-row">
+            <span class="df-hint">BPM</span>
+            <input type="range" id="metroBpm" min="40" max="240" value="120" style="width:120px">
+            <span id="metroBpmVal">120</span>
+          </div>
+          <div class="beat-info-row">
+            <span class="df-hint">拍号</span>
+            <select id="metroBeats" style="background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px">
+              <option value="2">2/4</option>
+              <option value="3">3/4</option>
+              <option value="4" selected>4/4</option>
+              <option value="6">6/8</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <div class="waveform-container">
@@ -1591,7 +1608,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.32 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.33 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -3860,6 +3877,90 @@ if(infoBtn && infoMenu){
     e.stopPropagation();
   });
 }
+
+/* STABLE 1.33: 节拍器 */
+const metroBtn = $('metroBtn');
+const metroMenu = $('metroMenu');
+const metroBpm = $('metroBpm');
+const metroBpmVal = $('metroBpmVal');
+const metroBeats = $('metroBeats');
+let metroTimer = null;
+let metroBeatCount = 0;
+let metroOn = false;
+
+if(metroBtn && metroMenu){
+  metroBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if(noiseMenu) noiseMenu.classList.add('hidden');
+    if(silenceMenu) silenceMenu.classList.add('hidden');
+    if(channelMenu) channelMenu.classList.add('hidden');
+    if(beatMenu) beatMenu.classList.add('hidden');
+    if(markerMenu) markerMenu.classList.add('hidden');
+    if(dcMenu) dcMenu.classList.add('hidden');
+    if(infoMenu) infoMenu.classList.add('hidden');
+    metroMenu.classList.toggle('hidden');
+  });
+  metroMenu.addEventListener('click', (e)=>{
+    e.stopPropagation();
+  });
+}
+
+if(metroBpm){
+  metroBpm.addEventListener('input', ()=>{
+    metroBpmVal.textContent = metroBpm.value;
+    if(metroOn) restartMetro();
+  });
+}
+
+function playMetroClick(isDownbeat){
+  if(!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.frequency.value = isDownbeat ? 1200 : 800;
+  gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.06);
+}
+
+function metroTick(){
+  const beats = parseInt(metroBeats.value) || 4;
+  const isDownbeat = (metroBeatCount % beats === 0);
+  playMetroClick(isDownbeat);
+  metroBeatCount++;
+}
+
+function startMetro(){
+  if(metroOn) return;
+  metroOn = true;
+  metroBeatCount = 0;
+  metroBtn.classList.add('active');
+  metroTick();
+  const interval = 60000 / (parseInt(metroBpm.value) || 120);
+  metroTimer = setInterval(metroTick, interval);
+  showToast('节拍器开始: ' + metroBpm.value + ' BPM');
+}
+
+function stopMetro(){
+  if(!metroOn) return;
+  metroOn = false;
+  if(metroTimer){ clearInterval(metroTimer); metroTimer = null; }
+  metroBtn.classList.remove('active');
+  showToast('节拍器停止');
+}
+
+function restartMetro(){
+  if(!metroOn) return;
+  if(metroTimer) clearInterval(metroTimer);
+  const interval = 60000 / (parseInt(metroBpm.value) || 120);
+  metroTimer = setInterval(metroTick, interval);
+}
+
+metroBtn.addEventListener('dblclick', ()=>{
+  if(metroOn) stopMetro(); else startMetro();
+});
 
 // 点击页面其他地方关闭菜单
 document.addEventListener('click', ()=>{

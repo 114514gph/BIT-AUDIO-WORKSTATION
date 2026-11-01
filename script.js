@@ -2603,6 +2603,90 @@ if(infoBtn && infoMenu){
   });
 }
 
+/* STABLE 1.33: 节拍器 */
+const metroBtn = $('metroBtn');
+const metroMenu = $('metroMenu');
+const metroBpm = $('metroBpm');
+const metroBpmVal = $('metroBpmVal');
+const metroBeats = $('metroBeats');
+let metroTimer = null;
+let metroBeatCount = 0;
+let metroOn = false;
+
+if(metroBtn && metroMenu){
+  metroBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if(noiseMenu) noiseMenu.classList.add('hidden');
+    if(silenceMenu) silenceMenu.classList.add('hidden');
+    if(channelMenu) channelMenu.classList.add('hidden');
+    if(beatMenu) beatMenu.classList.add('hidden');
+    if(markerMenu) markerMenu.classList.add('hidden');
+    if(dcMenu) dcMenu.classList.add('hidden');
+    if(infoMenu) infoMenu.classList.add('hidden');
+    metroMenu.classList.toggle('hidden');
+  });
+  metroMenu.addEventListener('click', (e)=>{
+    e.stopPropagation();
+  });
+}
+
+if(metroBpm){
+  metroBpm.addEventListener('input', ()=>{
+    metroBpmVal.textContent = metroBpm.value;
+    if(metroOn) restartMetro();
+  });
+}
+
+function playMetroClick(isDownbeat){
+  if(!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.frequency.value = isDownbeat ? 1200 : 800;
+  gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.06);
+}
+
+function metroTick(){
+  const beats = parseInt(metroBeats.value) || 4;
+  const isDownbeat = (metroBeatCount % beats === 0);
+  playMetroClick(isDownbeat);
+  metroBeatCount++;
+}
+
+function startMetro(){
+  if(metroOn) return;
+  metroOn = true;
+  metroBeatCount = 0;
+  metroBtn.classList.add('active');
+  metroTick();
+  const interval = 60000 / (parseInt(metroBpm.value) || 120);
+  metroTimer = setInterval(metroTick, interval);
+  showToast('节拍器开始: ' + metroBpm.value + ' BPM');
+}
+
+function stopMetro(){
+  if(!metroOn) return;
+  metroOn = false;
+  if(metroTimer){ clearInterval(metroTimer); metroTimer = null; }
+  metroBtn.classList.remove('active');
+  showToast('节拍器停止');
+}
+
+function restartMetro(){
+  if(!metroOn) return;
+  if(metroTimer) clearInterval(metroTimer);
+  const interval = 60000 / (parseInt(metroBpm.value) || 120);
+  metroTimer = setInterval(metroTick, interval);
+}
+
+metroBtn.addEventListener('dblclick', ()=>{
+  if(metroOn) stopMetro(); else startMetro();
+});
+
 // 点击页面其他地方关闭菜单
 document.addEventListener('click', ()=>{
   if(dcMenu) dcMenu.classList.add('hidden');

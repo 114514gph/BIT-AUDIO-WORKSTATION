@@ -151,6 +151,23 @@
           <div class="beat-info-row"><span class="df-hint">文件大小</span><span id="infoFileSize">--</span></div>
           <div class="beat-info-row"><span class="df-hint">峰值电平</span><span id="infoPeak">--</span></div>
         </div>
+        <button class="btn demo-btn" id="metroBtn">&#129345; METRO</button>
+        <div class="dropdown-menu hidden" id="metroMenu">
+          <div class="beat-info-row">
+            <span class="df-hint">BPM</span>
+            <input type="range" id="metroBpm" min="40" max="240" value="120" style="width:120px">
+            <span id="metroBpmVal">120</span>
+          </div>
+          <div class="beat-info-row">
+            <span class="df-hint">拍号</span>
+            <select id="metroBeats" style="background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px">
+              <option value="2">2/4</option>
+              <option value="3">3/4</option>
+              <option value="4" selected>4/4</option>
+              <option value="6">6/8</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <div class="waveform-container">
@@ -461,7 +478,7 @@
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.32 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.33 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 

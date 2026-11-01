@@ -190,6 +190,17 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.33.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.33
+- 新增节拍器功能
+- 双击 METRO 按钮开始/停止节拍器
+- 支持 40-240 BPM 调节，拍号可选 2/4、3/4、4/4、6/8
+- 重拍与弱拍音色不同，录音练习时提供节奏参考
+
+</details>
+
+<details>
 <summary><b>STABLE 1.32.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.32
