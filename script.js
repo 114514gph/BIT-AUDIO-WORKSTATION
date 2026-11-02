@@ -3125,6 +3125,46 @@ bypassToggle.addEventListener('change', ()=>{
     const pos = ensureCtx().currentTime - startTime;
     stop(true, false); pausedAt = pos; play();
   }
+  scheduleAutosave();
+});
+
+/* STABLE 1.34: 自动保存工作状态 */
+const autosaveToggle = $('autosaveToggle');
+const AUTOSAVE_KEY = 'bitCrusherAutosave';
+let autosaveTimer = null;
+
+autosaveToggle.checked = localStorage.getItem(AUTOSAVE_KEY + '_enabled') === 'true';
+
+function scheduleAutosave(){
+  if(!autosaveToggle.checked) return;
+  if(autosaveTimer) clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(()=>{
+    try{
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(getCurrentParams()));
+    }catch(e){}
+  }, 500);
+}
+
+function restoreAutosave(){
+  if(!autosaveToggle.checked) return;
+  try{
+    const saved = localStorage.getItem(AUTOSAVE_KEY);
+    if(saved){
+      const p = JSON.parse(saved);
+      applyParams(p);
+      showToast('已恢复上次的工作状态');
+    }
+  }catch(e){}
+}
+
+autosaveToggle.addEventListener('change', ()=>{
+  localStorage.setItem(AUTOSAVE_KEY + '_enabled', autosaveToggle.checked);
+  if(autosaveToggle.checked){
+    scheduleAutosave();
+    showToast('自动保存已开启，下次打开将恢复上次参数');
+  } else {
+    showToast('自动保存已关闭');
+  }
 });
 
 // STABLE 1.17 新增：输入增益调节
@@ -4687,4 +4727,7 @@ function normalizeBuffer(buffer){
   }
   return nb;
 }
+
+/* STABLE 1.34: 页面加载时恢复工作状态 */
+setTimeout(()=>{ restoreAutosave(); }, 500);
 

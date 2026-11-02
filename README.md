@@ -190,6 +190,17 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.34.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.34
+- 新增自动保存工作状态功能
+- 开启 AUTO-SAVE 后，所有效果器参数自动保存到本地
+- 下次打开页面时自动恢复上次的参数设置
+- 无需手动保存，关闭页面后重新打开即可继续上次工作
+
+</details>
+
+<details>
 <summary><b>STABLE 1.33.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.33
