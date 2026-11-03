@@ -190,6 +190,17 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details>
+<summary><b>STABLE 1.35.x</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.35
+- 新增实时频谱图（Spectrogram）功能
+- 在频谱仪下方添加时频分析视图
+- 实时显示音频频率随时间变化的热力图
+- 颜色从绿色（低能量）到红色（高能量）映射
+
+</details>
+
+<details>
 <summary><b>STABLE 1.34.x</b> — 最新版本（点击展开）</summary>
 
 ### STABLE 1.34

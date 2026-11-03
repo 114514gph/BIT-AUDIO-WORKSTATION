@@ -4364,6 +4364,26 @@ function startSpectrum(){
         ctx2d.fillRect(x-1, y-1, 3, 3);
       }
     }
+    // STABLE 1.35: 频谱图（Spectrogram）
+    const spectroCanvas = $('spectrogram');
+    if(spectroCanvas){
+      const sctx = spectroCanvas.getContext('2d');
+      const sw = spectroCanvas.clientWidth, sh = spectroCanvas.clientHeight;
+      const dpr2 = window.devicePixelRatio || 1;
+      if(spectroCanvas.width !== sw*dpr2){ spectroCanvas.width = sw*dpr2; spectroCanvas.height = sh*dpr2; }
+      sctx.setTransform(dpr2,0,0,dpr2,0,0);
+      // 向左滚动已有图像
+      sctx.drawImage(spectroCanvas, -1, 0, sw, sh);
+      // 在最右侧绘制新的一列
+      const colX = sw - 1;
+      for(let b=0;b<numBars;b++){
+        const v = values[b];
+        const y = sh - (b+1) * sh / numBars;
+        const hue = 120 - v * 120;
+        sctx.fillStyle = 'hsl('+hue+',100%,'+(30+v*40)+'%)';
+        sctx.fillRect(colX, y, 1, sh/numBars + 1);
+      }
+    }
     checkClipping();
   }
   draw();
