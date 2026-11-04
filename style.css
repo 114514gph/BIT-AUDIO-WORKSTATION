@@ -635,6 +635,15 @@ input[type=range]::-moz-range-thumb{
 .sr-label{font-size:10px;color:var(--muted);font-family:var(--pixel);letter-spacing:1px}
 .sr-btn{padding:6px 10px;font-size:10px;min-width:100px}
 .sample-rate-select .dropdown-menu{top:100%;right:0;left:auto;margin-top:4px;min-width:120px}
+/* STABLE 1.36：MP3 ID3 标签 */
+.id3-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.id3-input{
+  background:rgba(0,0,0,0.3);border:1px solid var(--border);color:var(--text);
+  padding:5px 8px;font-family:var(--pixel);font-size:11px;border-radius:3px;width:120px;
+}
+.id3-input::placeholder{color:var(--muted);opacity:0.65}
+.id3-input:focus{outline:none;border-color:var(--accent)}
+.id3-row.disabled{opacity:0.45;pointer-events:none}
 
 /* ============ 主题切换 ============ */
 .theme-panel{margin-top:12px}

@@ -3829,6 +3829,138 @@ function encodeWav(buffer){
   return new Blob([ab], {type: 'audio/wav'});
 }
 
+/* ============ STABLE 1.36：ID3v2.3 标签 ============ */
+const ID3_STORAGE_KEY = 'bitAudioId3Tags';
+
+function readId3Tags(){
+  const val = id => { const el = $(id); return el ? el.value.trim() : ''; };
+  return {
+    title: val('id3Title') || sanitizeFilename(currentFileName),
+    artist: val('id3Artist'),
+    album: val('id3Album'),
+    year: val('id3Year'),
+    genre: val('id3Genre')
+  };
+}
+
+/* 字符串转 UTF-16LE 字节（保证中文正确写入标签） */
+function utf16leBytes(str){
+  const out = new Uint8Array(str.length * 2);
+  for(let i = 0; i < str.length; i++){
+    const code = str.charCodeAt(i);
+    out[i*2] = code & 0xFF;
+    out[i*2+1] = (code >> 8) & 0xFF;
+  }
+  return out;
+}
+
+/* 组装单个 ID3v2.3 文本帧：帧头 10 字节 + 编码位 + BOM + 文本 */
+function buildId3Frame(frameId, text){
+  if(!text) return null;
+  const body = utf16leBytes(text);
+  const payload = new Uint8Array(3 + body.length);
+  payload[0] = 0x01;   // UTF-16 with BOM
+  payload[1] = 0xFF; payload[2] = 0xFE;  // little-endian BOM
+  payload.set(body, 3);
+  const frame = new Uint8Array(10 + payload.length);
+  for(let i = 0; i < 4; i++) frame[i] = frameId.charCodeAt(i);
+  const size = payload.length;  // v2.3 用普通 32 位大端
+  frame[4] = (size >>> 24) & 0xFF;
+  frame[5] = (size >>> 16) & 0xFF;
+  frame[6] = (size >>> 8) & 0xFF;
+  frame[7] = size & 0xFF;
+  frame[8] = 0; frame[9] = 0;
+  frame.set(payload, 10);
+  return frame;
+}
+
+/* syncsafe 长度编码（ID3 头部的 4 字节，每字节最高位恒为 0） */
+function toSyncSafe(n){
+  return [(n >>> 21) & 0x7F, (n >>> 14) & 0x7F, (n >>> 7) & 0x7F, n & 0x7F];
+}
+
+/* 生成完整的 ID3v2.3 标签块，没有任何字段时返回 null */
+function buildId3v2Tag(tags){
+  if(!tags) return null;
+  const year = /^\d{4}$/.test(tags.year) ? tags.year : '';
+  const frames = [
+    buildId3Frame('TIT2', tags.title),
+    buildId3Frame('TPE1', tags.artist),
+    buildId3Frame('TALB', tags.album),
+    buildId3Frame('TYER', year),
+    buildId3Frame('TCON', tags.genre)
+  ].filter(Boolean);
+  if(!frames.length) return null;
+  const bodyLen = frames.reduce((sum, f) => sum + f.length, 0);
+  const header = new Uint8Array(10);
+  header[0] = 0x49; header[1] = 0x44; header[2] = 0x33;  // "ID3"
+  header[3] = 0x03; header[4] = 0x00;                     // v2.3.0
+  header[5] = 0x00;                                       // flags
+  const ss = toSyncSafe(bodyLen);
+  header[6] = ss[0]; header[7] = ss[1]; header[8] = ss[2]; header[9] = ss[3];
+  const tag = new Uint8Array(10 + bodyLen);
+  tag.set(header, 0);
+  let offset = 10;
+  for(const f of frames){ tag.set(f, offset); offset += f.length; }
+  return tag;
+}
+
+function saveId3Tags(){
+  try{
+    const data = {
+      title: $('id3Title') ? $('id3Title').value : '',
+      artist: $('id3Artist') ? $('id3Artist').value : '',
+      album: $('id3Album') ? $('id3Album').value : '',
+      year: $('id3Year') ? $('id3Year').value : '',
+      genre: $('id3Genre') ? $('id3Genre').value : ''
+    };
+    localStorage.setItem(ID3_STORAGE_KEY, JSON.stringify(data));
+  }catch(e){ /* 隐私模式下存储不可用时静默跳过 */ }
+}
+
+function restoreId3Tags(){
+  try{
+    const raw = localStorage.getItem(ID3_STORAGE_KEY);
+    if(!raw) return;
+    const data = JSON.parse(raw);
+    if(data.title && $('id3Title')) $('id3Title').value = data.title;
+    if(data.artist && $('id3Artist')) $('id3Artist').value = data.artist;
+    if(data.album && $('id3Album')) $('id3Album').value = data.album;
+    if(data.year && $('id3Year')) $('id3Year').value = data.year;
+    if(data.genre && $('id3Genre')) $('id3Genre').value = data.genre;
+  }catch(e){ /* 数据损坏时按空标签处理 */ }
+}
+
+/* 非 MP3 格式时标签区置灰，避免误解 */
+function updateId3Availability(){
+  const row = $('id3Row');
+  if(!row) return;
+  if(exportFormat === 'mp3') row.classList.remove('disabled');
+  else row.classList.add('disabled');
+}
+
+['id3Title','id3Artist','id3Album','id3Year','id3Genre'].forEach(id=>{
+  const el = $(id);
+  if(el) el.addEventListener('change', saveId3Tags);
+});
+restoreId3Tags();
+
+/* STABLE 1.36：频谱图显示开关 */
+const spectroToggle = $('spectroToggle');
+const SPECTRO_VIS_KEY = 'bitSpectroVisible';
+function applySpectroVisibility(visible){
+  const canvas = $('spectrogram');
+  if(canvas) canvas.style.display = visible ? 'block' : 'none';
+  try{ localStorage.setItem(SPECTRO_VIS_KEY, visible ? '1' : '0'); }catch(e){}
+}
+if(spectroToggle){
+  let savedVisible = null;
+  try{ savedVisible = localStorage.getItem(SPECTRO_VIS_KEY); }catch(e){}
+  if(savedVisible === '0') spectroToggle.checked = false;
+  applySpectroVisibility(spectroToggle.checked);
+  spectroToggle.addEventListener('change', ()=> applySpectroVisibility(spectroToggle.checked));
+}
+
 /* ============ MP3 编码 (lamejs) ============ */
 async function encodeMp3(buffer){
   const ch = buffer.numberOfChannels;
@@ -3854,7 +3986,10 @@ async function encodeMp3(buffer){
   }
   const end = encoder.flush();
   if(end.length > 0) mp3Data.push(end);
-  return new Blob(mp3Data, {type:'audio/mpeg'});
+  const mp3Blob = new Blob(mp3Data, {type:'audio/mpeg'});
+  // STABLE 1.36：把 ID3v2.3 标签拼到 MP3 数据流最前面
+  const id3Tag = buildId3v2Tag(readId3Tags());
+  return id3Tag ? new Blob([id3Tag, mp3Blob], {type:'audio/mpeg'}) : mp3Blob;
 }
 
 /* ============ OGG 编码 (MediaRecorder 录制) ============ */
@@ -3997,11 +4132,13 @@ document.querySelectorAll('.dropdown-item[data-format]').forEach(item=>{
     item.classList.add('active');
     formatMenu.classList.add('hidden');
     updateMp3BitrateVisibility();
+    updateId3Availability();
     updateExportHint();
   });
 });
 // 初始化时调用一次
 updateMp3BitrateVisibility();
+updateId3Availability();
 document.addEventListener('click', ()=>{ formatMenu.classList.add('hidden'); sampleRateMenu.classList.add('hidden'); });
 
 /* ============ 采样率选择器 ============ */
@@ -4366,7 +4503,7 @@ function startSpectrum(){
     }
     // STABLE 1.35: 频谱图（Spectrogram）
     const spectroCanvas = $('spectrogram');
-    if(spectroCanvas){
+    if(spectroCanvas && spectroCanvas.style.display !== 'none'){
       const sctx = spectroCanvas.getContext('2d');
       const sw = spectroCanvas.clientWidth, sh = spectroCanvas.clientHeight;
       const dpr2 = window.devicePixelRatio || 1;
