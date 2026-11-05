@@ -1116,6 +1116,9 @@ async function loadFile(file){
   try{
     const ctx = ensureCtx();
     const ab = await file.arrayBuffer();
+    // 先把 MP3 自带标签读出来，等解码成功后回填
+    const embeddedTags = (/\.mp3$/i.test(file.name) || file.type === 'audio/mpeg')
+      ? readId3v2FromBuffer(ab) : null;
     if(loadCancelled) return;
     updateProgress(95);
     originalBuffer = await ctx.decodeAudioData(ab.slice(0));
@@ -1133,13 +1136,14 @@ async function loadFile(file){
       fmtTime(originalBuffer.duration) + ' · ' +
       (file.size/1024/1024).toFixed(2) + 'MB';
     computeAudioStats(originalBuffer);
+    if(embeddedTags) applyEmbeddedTags(embeddedTags);
     clearSelection();
     addToPlaylist(file.name, originalBuffer);
     showWorkspace();
     await processAudio();
     drawWaveform();
     hideProgress();
-    showToast('加载完成');
+    showToast(embeddedTags ? '加载完成 · 已读取 MP3 标签' : '加载完成');
   }catch(err){
     if(loadCancelled){ hideProgress(); return; }
     console.error(err);
@@ -1182,6 +1186,8 @@ async function loadFromUrl(url){
       let off = 0;
       for(const c of chunks){ ab.set(c, off); off += c.length; }
       if(loadCancelled) return;
+      // 先把 MP3 自带标签读出来
+      const embeddedTags = (/\.mp3(\?|$)/i.test(url.split('?')[0])) ? readId3v2FromBuffer(ab.buffer) : null;
       // 解码
       startFakeProgress('解码中…', true);
       const ctx = ensureCtx();
@@ -1199,13 +1205,14 @@ async function loadFromUrl(url){
         originalBuffer.sampleRate + 'Hz · ' +
         fmtTime(originalBuffer.duration) + ' · URL';
       computeAudioStats(originalBuffer);
+      if(embeddedTags) applyEmbeddedTags(embeddedTags);
       clearSelection();
       addToPlaylist(name, originalBuffer);
       showWorkspace();
       await processAudio();
       drawWaveform();
       hideProgress();
-      showToast('加载完成');
+      showToast(embeddedTags ? '加载完成 · 已读取 MP3 标签' : '加载完成');
       return;
     }catch(err){
       if(loadCancelled || err.name === 'AbortError'){ hideProgress(); return; }
@@ -3929,6 +3936,97 @@ function restoreId3Tags(){
     if(data.year && $('id3Year')) $('id3Year').value = data.year;
     if(data.genre && $('id3Genre')) $('id3Genre').value = data.genre;
   }catch(e){ /* 数据损坏时按空标签处理 */ }
+}
+
+/* STABLE 1.37：读取 MP3 内嵌的 ID3v2 标签 */
+function id3DecodeText(payload){
+  if(!payload || payload.length < 1) return '';
+  const enc = payload[0];
+  const body = payload.subarray(1);
+  if(enc === 0){
+    return new TextDecoder('iso-8859-1').decode(body).replace(/\0[\s\S]*$/, '').trim();
+  }
+  if(enc === 1 || enc === 2){
+    let s = '';
+    for(let i = 0; i + 1 < body.length; i += 2) s += String.fromCharCode(body[i] | (body[i+1] << 8));
+    return s.replace(/^\uFEFF/, '').replace(/\0[\s\S]*$/, '').trim();
+  }
+  return new TextDecoder('utf-8').decode(body).replace(/\0[\s\S]*$/, '').trim();
+}
+
+function readId3v2FromBuffer(buffer){
+  try{
+    const u = new Uint8Array(buffer);
+    if(u.length < 10 || u[0] !== 0x49 || u[1] !== 0x44 || u[2] !== 0x33) return null;
+    const major = u[3];
+    if(major < 2 || major > 4) return null;
+    const flags = u[5];
+    const size = ((u[6] & 0x7f) << 21) | ((u[7] & 0x7f) << 14) | ((u[8] & 0x7f) << 7) | (u[9] & 0x7f);
+    let body = u.subarray(10, Math.min(10 + size, u.length));
+    if(flags & 0x80){
+      const out = new Uint8Array(body.length);
+      let n = 0;
+      for(let i = 0; i < body.length; i++){
+        out[n++] = body[i];
+        if(body[i] === 0xFF && body[i+1] === 0x00) i++;
+      }
+      body = out.subarray(0, n);
+    }
+    let p = 0;
+    if((flags & 0x40) && major >= 3){
+      if(major === 4){
+        const ext = ((body[0] & 0x7f) << 21) | ((body[1] & 0x7f) << 14) | ((body[2] & 0x7f) << 7) | (body[3] & 0x7f);
+        p = ext > 0 ? ext : 6;
+      }else{
+        const ext = (body[0] << 24) | (body[1] << 16) | (body[2] << 8) | body[3];
+        p = ext + 4;
+      }
+    }
+    const found = { title:'', artist:'', album:'', year:'', genre:'' };
+    const idLen = major === 2 ? 3 : 4;
+    while(p + idLen + (major === 2 ? 3 : 6) <= body.length){
+      const id = String.fromCharCode.apply(null, body.subarray(p, p + idLen));
+      if(!/^[A-Z0-9]{3,4}$/.test(id)) break;
+      let fsize, hdr;
+      if(major === 2){
+        fsize = (body[p+3] << 16) | (body[p+4] << 8) | body[p+5];
+        hdr = 6;
+      }else if(major === 4){
+        fsize = ((body[p+4] & 0x7f) << 21) | ((body[p+5] & 0x7f) << 14) | ((body[p+6] & 0x7f) << 7) | (body[p+7] & 0x7f);
+        hdr = 10;
+      }else{
+        fsize = (body[p+4] << 24) | (body[p+5] << 16) | (body[p+6] << 8) | body[p+7];
+        hdr = 10;
+      }
+      if(fsize <= 0) break;
+      const payload = body.subarray(p + hdr, Math.min(p + hdr + fsize, body.length));
+      if(id === 'TIT2' || id === 'TT2') found.title = id3DecodeText(payload);
+      else if(id === 'TPE1' || id === 'TP1') found.artist = id3DecodeText(payload);
+      else if(id === 'TALB' || id === 'TAL') found.album = id3DecodeText(payload);
+      else if(id === 'TYER' || id === 'TYE') found.year = id3DecodeText(payload);
+      else if(id === 'TDRC') found.year = id3DecodeText(payload).slice(0, 4);
+      else if(id === 'TCON' || id === 'TCO') found.genre = id3DecodeText(payload);
+      p += hdr + fsize;
+    }
+    if(!found.title && !found.artist && !found.album && !found.year && !found.genre) return null;
+    if(!/^\d{4}$/.test(found.year)) found.year = '';
+    return found;
+  }catch(e){
+    return null;
+  }
+}
+
+/* 把读到的标签回填到导出面板，缺失字段一并清空，避免带上上一首歌的信息 */
+function applyEmbeddedTags(tags){
+  const map = [['id3Title','title'],['id3Artist','artist'],['id3Album','album'],['id3Year','year'],['id3Genre','genre']];
+  for(const [id, key] of map){
+    const el = $(id);
+    if(!el) continue;
+    let v = tags[key] || '';
+    if(v.length > el.maxLength) v = v.slice(0, el.maxLength);
+    el.value = v;
+  }
+  saveId3Tags();
 }
 
 /* 非 MP3 格式时标签区置灰，避免误解 */
