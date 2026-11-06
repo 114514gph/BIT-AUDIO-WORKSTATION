@@ -605,6 +605,7 @@ const selectionEl = $('selection');
 const cropBar = $('cropBar');
 const cropInfo = $('cropInfo');
 const cropKeepBtn = $('cropKeepBtn');
+const cropPartBtn = $('cropPartBtn');
 const cropDeleteBtn = $('cropDeleteBtn');
 const cropClearBtn = $('cropClearBtn');
 const progressModal = $('progressModal');
@@ -3406,8 +3407,9 @@ function clearSelection(){
   selectionEl.style.display = 'none';
   selectionEl.style.left = '0';
   selectionEl.style.width = '0';
-  cropInfo.textContent = '拖拽波形选择裁剪区域';
+  cropInfo.textContent = '拖拽波形选择区域';
   cropKeepBtn.disabled = true;
+  cropPartBtn.disabled = true;
   cropDeleteBtn.disabled = true;
   cropClearBtn.disabled = true;
   cropBar.classList.add('hidden');
@@ -3428,6 +3430,7 @@ function updateSelectionUI(){
   selectionEl.style.width = widthPct + '%';
   cropInfo.textContent = '选区: ' + fmtTime(s) + ' → ' + fmtTime(e) + '  (' + fmtTime(e - s) + ')';
   cropKeepBtn.disabled = false;
+  cropPartBtn.disabled = false;
   cropDeleteBtn.disabled = false;
   cropClearBtn.disabled = false;
   cropBar.classList.remove('hidden');
@@ -3601,6 +3604,13 @@ cropDeleteBtn.addEventListener('click', async ()=>{
 });
 
 cropClearBtn.addEventListener('click', clearSelection);
+
+/* STABLE 1.38：选区直接另存为片段，不改动原音频 */
+cropPartBtn.addEventListener('click', ()=>{
+  if(selStart < 0 || selEnd < 0){ showToast('请先在波形上拖选一段', true); return; }
+  stop();
+  doExportOriginal([selStart, selEnd]);
+});
 
 /* ============ WAVEFORM ============ */
 /* 波形峰值缓存：避免缩放/resize 时重复计算全量样本 */
@@ -4290,14 +4300,24 @@ recBtn.addEventListener('click', ()=>{
 
 /* ============ 导出按钮 ============ */
 /* 离线导出原曲 */
-async function doExportOriginal(){
+async function doExportOriginal(range){
   const suffix = bypassToggle.checked ? '_bypass' : '_' + Math.round(parseFloat(bitSlider.value)) + 'bit_' + downSlider.value + 'x';
+  const isPart = Array.isArray(range);
+  let partInfo = '';
   try{
-    showProgress('导出中…', 0);
+    showProgress(isPart ? '导出选区中…' : '导出中…', 0);
     const srcBuf = bypassToggle.checked ? originalBuffer : processedBuffer;
     if(!srcBuf) throw new Error('无处理后音频');
+    let exportSrc = srcBuf;
+    if(isPart){
+      const s = Math.max(0, Math.min(range[0], range[1]));
+      const e = Math.min(srcBuf.duration, Math.max(range[0], range[1]));
+      if(e - s < 0.05) throw new Error('选区太短，至少 0.05 秒');
+      exportSrc = sliceBuffer(srcBuf, s, e);
+      partInfo = ' ' + fmtTime(s) + ' → ' + fmtTime(e);
+    }
     updateProgress(20);
-    let finalBuf = await renderFullFX(srcBuf, exportSampleRate);
+    let finalBuf = await renderFullFX(exportSrc, exportSampleRate);
     updateProgress(50);
     // 音量归一化
     if(normalizeToggleEl && normalizeToggleEl.checked){
@@ -4313,10 +4333,10 @@ async function doExportOriginal(){
     a.href = url;
     const customName = $('exportFilename') ? $('exportFilename').value.trim() : '';
     const baseName = customName || sanitizeFilename(currentFileName);
-    a.download = baseName + suffix + '.' + result.ext;
+    a.download = baseName + suffix + (isPart ? '_part' : '') + '.' + result.ext;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(()=> URL.revokeObjectURL(url), 1000);
-    showToast('已导出 ' + (result.blob.size/1024/1024).toFixed(2) + 'MB (' + result.ext.toUpperCase() + ')');
+    showToast((isPart ? '已导出选区' + partInfo + ' · ' : '已导出 ') + (result.blob.size/1024/1024).toFixed(2) + 'MB (' + result.ext.toUpperCase() + ')');
   }catch(e){
     console.error(e);
     hideProgress();
