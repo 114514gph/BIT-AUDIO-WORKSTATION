@@ -595,6 +595,8 @@ const nextBtn = $('nextBtn');
 const reloadBtn = $('reloadBtn');
 const bypassToggle = $('bypassToggle');
 const normalizeToggleEl = $('normalizeToggle');
+const trimSilenceToggleEl = $('trimSilenceToggle');
+const tagNameToggleEl = $('tagNameToggle');
 const exportBtn = $('exportBtn');
 const exportHint = $('exportHint');
 const waveform = $('waveform');
@@ -4298,12 +4300,27 @@ recBtn.addEventListener('click', ()=>{
   updateExportHint();
 });
 
+/* ============ STABLE 1.39：导出开关持久化 ============ */
+if(trimSilenceToggleEl){
+  trimSilenceToggleEl.checked = localStorage.getItem('bitTrimSilenceExport') === '1';
+  trimSilenceToggleEl.addEventListener('change', ()=>{
+    localStorage.setItem('bitTrimSilenceExport', trimSilenceToggleEl.checked ? '1' : '0');
+  });
+}
+if(tagNameToggleEl){
+  tagNameToggleEl.checked = localStorage.getItem('bitTagNameExport') === '1';
+  tagNameToggleEl.addEventListener('change', ()=>{
+    localStorage.setItem('bitTagNameExport', tagNameToggleEl.checked ? '1' : '0');
+  });
+}
+
 /* ============ 导出按钮 ============ */
 /* 离线导出原曲 */
 async function doExportOriginal(range){
   const suffix = bypassToggle.checked ? '_bypass' : '_' + Math.round(parseFloat(bitSlider.value)) + 'bit_' + downSlider.value + 'x';
   const isPart = Array.isArray(range);
   let partInfo = '';
+  let silenceTrimmed = false;
   try{
     showProgress(isPart ? '导出选区中…' : '导出中…', 0);
     const srcBuf = bypassToggle.checked ? originalBuffer : processedBuffer;
@@ -4315,6 +4332,24 @@ async function doExportOriginal(range){
       if(e - s < 0.05) throw new Error('选区太短，至少 0.05 秒');
       exportSrc = sliceBuffer(srcBuf, s, e);
       partInfo = ' ' + fmtTime(s) + ' → ' + fmtTime(e);
+    }
+    // STABLE 1.39：可选裁掉片段头尾的静音
+    if(trimSilenceToggleEl && trimSilenceToggleEl.checked){
+      showProgress('去除首尾静音…', 5);
+      const th = parseFloat(silenceThreshold.value);
+      const md = parseFloat(silenceMinDur.value);
+      const stats = detectSilence(exportSrc, th, md);
+      if(stats.regions.length){
+        let trimS = 0, trimE = exportSrc.duration;
+        const first = stats.regions[0];
+        const last = stats.regions[stats.regions.length - 1];
+        if(first.start < 0.02) trimS = first.end;
+        if(exportSrc.duration - last.end < 0.02) trimE = last.start;
+        if(trimE - trimS >= 0.05 && (trimS > 0 || trimE < exportSrc.duration)){
+          exportSrc = sliceBuffer(exportSrc, trimS, trimE);
+          silenceTrimmed = true;
+        }
+      }
     }
     updateProgress(20);
     let finalBuf = await renderFullFX(exportSrc, exportSampleRate);
@@ -4332,11 +4367,17 @@ async function doExportOriginal(range){
     const a = document.createElement('a');
     a.href = url;
     const customName = $('exportFilename') ? $('exportFilename').value.trim() : '';
-    const baseName = customName || sanitizeFilename(currentFileName);
+    let baseName = customName || sanitizeFilename(currentFileName);
+    // STABLE 1.39：用 ID3 标签里的艺术家与标题拼文件名
+    if(tagNameToggleEl && tagNameToggleEl.checked){
+      const tTitle = $('id3Title') ? $('id3Title').value.trim() : '';
+      const tArtist = $('id3Artist') ? $('id3Artist').value.trim() : '';
+      if(tTitle) baseName = sanitizeFilename((tArtist ? tArtist + ' - ' : '') + tTitle);
+    }
     a.download = baseName + suffix + (isPart ? '_part' : '') + '.' + result.ext;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(()=> URL.revokeObjectURL(url), 1000);
-    showToast((isPart ? '已导出选区' + partInfo + ' · ' : '已导出 ') + (result.blob.size/1024/1024).toFixed(2) + 'MB (' + result.ext.toUpperCase() + ')');
+    showToast((isPart ? '已导出选区' + partInfo + ' · ' : '已导出 ') + (result.blob.size/1024/1024).toFixed(2) + 'MB (' + result.ext.toUpperCase() + ')' + (silenceTrimmed ? ' · 已去静音' : ''));
   }catch(e){
     console.error(e);
     hideProgress();
