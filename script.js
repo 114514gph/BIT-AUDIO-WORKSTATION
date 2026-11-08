@@ -997,6 +997,7 @@ function switchPlaylistItem(idx){
   stop();
   const item = playlist[idx];
   currentPlaylistIndex = idx;
+  clearEditHistory();
   originalBuffer = item.buffer;
   originalChannelBuffer = null;
   beatPositions = [];
@@ -1124,6 +1125,7 @@ async function loadFile(file){
       ? readId3v2FromBuffer(ab) : null;
     if(loadCancelled) return;
     updateProgress(95);
+    clearEditHistory();
     originalBuffer = await ctx.decodeAudioData(ab.slice(0));
     originalChannelBuffer = null;
     beatPositions = [];
@@ -1194,6 +1196,7 @@ async function loadFromUrl(url){
       // 解码
       startFakeProgress('解码中…', true);
       const ctx = ensureCtx();
+      clearEditHistory();
       originalBuffer = await ctx.decodeAudioData(ab.buffer);
       originalChannelBuffer = null;
       beatPositions = [];
@@ -1616,6 +1619,7 @@ demoBtn.addEventListener('click', ()=>{
   startFakeProgress('生成随机示例中…', true);
   setTimeout(async ()=>{
     try{
+      clearEditHistory();
       originalBuffer = await generateDemoAudio();
       originalChannelBuffer = null;
       beatPositions = [];
@@ -1707,6 +1711,7 @@ document.querySelectorAll('.dropdown-item[data-noise]').forEach(item=>{
           dur = parseInt(parts[1]);
         }
         const typeNames = {white:'白噪声', pink:'粉噪声', brown:'棕噪声'};
+        clearEditHistory();
         originalBuffer = generateNoise(type, dur);
         originalChannelBuffer = null;
         beatPositions = [];
@@ -1892,6 +1897,7 @@ document.querySelectorAll('.dropdown-item[data-silence]').forEach(item=>{
       setTimeout(()=>{
         try{
           stop();
+          pushEditHistory('去除静音');
           const newBuf = removeSilence(originalBuffer, silenceRegions);
           const oldDur = originalBuffer.duration;
           originalBuffer = newBuf;
@@ -2003,6 +2009,7 @@ document.querySelectorAll('.dropdown-item[data-channel]').forEach(item=>{
     if(mode === 'restore'){
       if(originalChannelBuffer){
         stop();
+        clearEditHistory();
         originalBuffer = originalChannelBuffer;
         originalChannelBuffer = null;
         beatPositions = [];
@@ -3399,6 +3406,54 @@ function tickPlayhead(){
   rafId = requestAnimationFrame(tickPlayhead);
 }
 
+/* ============ STABLE 1.40：单步撤销 ============ */
+let editHistory = null;
+const undoBtn = $('undoBtn');
+const UNDO_MAX_SAMPLES = 44100 * 300; // 超过约 5 分钟不记录，避免双份缓冲吃内存
+
+function pushEditHistory(label){
+  if(!originalBuffer) return;
+  if(originalBuffer.length > UNDO_MAX_SAMPLES) return;
+  editHistory = {
+    buffer: originalBuffer,
+    markers: markers.map(m => ({ time: m.time, name: m.name })),
+    label: label
+  };
+  if(undoBtn) undoBtn.disabled = false;
+}
+
+function clearEditHistory(){
+  editHistory = null;
+  if(undoBtn) undoBtn.disabled = true;
+}
+
+async function undoLastEdit(){
+  if(!editHistory){ showToast('没有可撤销的编辑', true); return; }
+  const snap = editHistory;
+  clearEditHistory();
+  stop();
+  originalBuffer = snap.buffer;
+  markers = snap.markers;
+  beatPositions = [];
+  beatBpm = 0;
+  clearSelection();
+  invalidateWaveformCache();
+  if(isReversed){
+    buildReversedBuffer();
+  }else{
+    reversedBuffer = null;
+  }
+  fileMetaEl.textContent =
+    originalBuffer.numberOfChannels + 'ch · ' +
+    originalBuffer.sampleRate + 'Hz · ' +
+    fmtTime(originalBuffer.duration) + ' · 已撤销';
+  renderMarkers();
+  computeAudioStats(originalBuffer);
+  await processAudio();
+  drawWaveform();
+  showToast('已撤销：' + snap.label);
+}
+
 /* ============ SELECTION & CROP ============ */
 function clearMarkers(){
   markers = [];
@@ -3582,6 +3637,7 @@ cropKeepBtn.addEventListener('click', async ()=>{
   stop();
   const s = Math.min(selStart, selEnd);
   const e = Math.max(selStart, selEnd);
+  pushEditHistory('裁剪保留');
   originalBuffer = sliceBuffer(originalBuffer, s, e);
   beatPositions = [];
   beatBpm = 0;
@@ -3595,6 +3651,7 @@ cropDeleteBtn.addEventListener('click', async ()=>{
   const e = Math.max(selStart, selEnd);
   const dur = originalBuffer.duration;
   if(e - s >= dur - 0.01){ showToast('不能删除全部音频', true); return; }
+  pushEditHistory('裁剪删除');
   let nb;
   if(s <= 0.001) nb = sliceBuffer(originalBuffer, e, dur);
   else if(e >= dur - 0.001) nb = sliceBuffer(originalBuffer, 0, s);
@@ -3606,6 +3663,7 @@ cropDeleteBtn.addEventListener('click', async ()=>{
 });
 
 cropClearBtn.addEventListener('click', clearSelection);
+if(undoBtn) undoBtn.addEventListener('click', undoLastEdit);
 
 /* STABLE 1.38：选区直接另存为片段，不改动原音频 */
 cropPartBtn.addEventListener('click', ()=>{
