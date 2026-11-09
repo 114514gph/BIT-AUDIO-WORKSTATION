@@ -3406,31 +3406,51 @@ function tickPlayhead(){
   rafId = requestAnimationFrame(tickPlayhead);
 }
 
-/* ============ STABLE 1.40：单步撤销 ============ */
-let editHistory = null;
+/* ============ STABLE 1.41：撤销栈与重做 ============ */
 const undoBtn = $('undoBtn');
-const UNDO_MAX_SAMPLES = 44100 * 300; // 超过约 5 分钟不记录，避免双份缓冲吃内存
+const redoBtn = $('redoBtn');
+const UNDO_MAX_SAMPLES = 44100 * 300;     // 单份快照上限，约 5 分钟
+const UNDO_BUDGET_SAMPLES = 44100 * 360;  // 栈内样本总预算，短音频可留三步
+let undoStack = [];
+let redoStack = [];
 
-function pushEditHistory(label){
-  if(!originalBuffer) return;
-  if(originalBuffer.length > UNDO_MAX_SAMPLES) return;
-  editHistory = {
+function updateUndoButtons(){
+  if(undoBtn) undoBtn.disabled = undoStack.length === 0;
+  if(redoBtn) redoBtn.disabled = redoStack.length === 0;
+}
+
+function snapshotState(label){
+  return {
     buffer: originalBuffer,
     markers: markers.map(m => ({ time: m.time, name: m.name })),
     label: label
   };
-  if(undoBtn) undoBtn.disabled = false;
+}
+
+function trimUndoStack(){
+  let total = undoStack.reduce((n, s) => n + s.buffer.length, 0);
+  while(undoStack.length > 1 && total > UNDO_BUDGET_SAMPLES){
+    total -= undoStack[0].buffer.length;
+    undoStack.shift();
+  }
+}
+
+function pushEditHistory(label){
+  if(!originalBuffer) return;
+  if(originalBuffer.length > UNDO_MAX_SAMPLES) return;
+  undoStack.push(snapshotState(label));
+  trimUndoStack();
+  redoStack = [];
+  updateUndoButtons();
 }
 
 function clearEditHistory(){
-  editHistory = null;
-  if(undoBtn) undoBtn.disabled = true;
+  undoStack = [];
+  redoStack = [];
+  updateUndoButtons();
 }
 
-async function undoLastEdit(){
-  if(!editHistory){ showToast('没有可撤销的编辑', true); return; }
-  const snap = editHistory;
-  clearEditHistory();
+async function restoreSnapshot(snap, metaTail){
   stop();
   originalBuffer = snap.buffer;
   markers = snap.markers;
@@ -3446,12 +3466,30 @@ async function undoLastEdit(){
   fileMetaEl.textContent =
     originalBuffer.numberOfChannels + 'ch · ' +
     originalBuffer.sampleRate + 'Hz · ' +
-    fmtTime(originalBuffer.duration) + ' · 已撤销';
+    fmtTime(originalBuffer.duration) + ' · ' + metaTail;
   renderMarkers();
   computeAudioStats(originalBuffer);
   await processAudio();
   drawWaveform();
+}
+
+async function undoLastEdit(){
+  if(undoStack.length === 0){ showToast('没有可撤销的编辑', true); return; }
+  const snap = undoStack.pop();
+  redoStack.push(snapshotState(snap.label));
+  await restoreSnapshot(snap, '已撤销');
+  updateUndoButtons();
   showToast('已撤销：' + snap.label);
+}
+
+async function redoLastEdit(){
+  if(redoStack.length === 0){ showToast('没有可重做的编辑', true); return; }
+  const snap = redoStack.pop();
+  undoStack.push(snapshotState(snap.label));
+  trimUndoStack();
+  await restoreSnapshot(snap, '已重做');
+  updateUndoButtons();
+  showToast('已重做：' + snap.label);
 }
 
 /* ============ SELECTION & CROP ============ */
@@ -3664,6 +3702,7 @@ cropDeleteBtn.addEventListener('click', async ()=>{
 
 cropClearBtn.addEventListener('click', clearSelection);
 if(undoBtn) undoBtn.addEventListener('click', undoLastEdit);
+if(redoBtn) redoBtn.addEventListener('click', redoLastEdit);
 
 /* STABLE 1.38：选区直接另存为片段，不改动原音频 */
 cropPartBtn.addEventListener('click', ()=>{

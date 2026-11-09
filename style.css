@@ -756,7 +756,7 @@ footer .footer-info{margin-top:6px;font-size:12px;opacity:0.7}
   .controls{grid-template-columns:1fr}
   .waveform-wrap{height:120px}
   .btn{padding:12px 16px;font-size:10px;min-height:44px}
-  .transport{gap:8px}
+  .transport{gap:8px;flex-wrap:wrap}
   .toggle{margin-left:0;width:auto;justify-content:center;min-height:44px;align-items:center}
   .file-info{flex-direction:column;align-items:flex-start}
   .file-info #fileMeta{font-size:14px}
