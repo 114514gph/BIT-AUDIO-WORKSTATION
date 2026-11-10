@@ -1262,6 +1262,10 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
         <div class="dropdown-menu hidden" id="markerMenu">
           <div class="dropdown-item" data-marker="export">导出标记点 (CSV)</div>
           <div class="dropdown-item" data-marker="import">导入标记点 (CSV)</div>
+          <div class="dropdown-item" data-marker="splitzip">按标记切段导出 (ZIP)</div>
+          <div class="dropdown-item" data-marker="addhere">在播放头打标记</div>
+          <div class="dropdown-item" data-marker="prevmarker">跳到上一标记</div>
+          <div class="dropdown-item" data-marker="nextmarker">跳到下一标记</div>
           <div class="dropdown-divider"></div>
           <div class="dropdown-item" data-marker="clear">清除全部标记</div>
           <div class="dropdown-divider"></div>
@@ -1646,7 +1650,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.41 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.42 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -3665,6 +3669,33 @@ if(markerBtn && markerMenu){
     else if(action === 'import'){
       markerFileInput.click();
     }
+    else if(action === 'splitzip'){
+      exportSegmentsByMarkers();
+    }
+    else if(action === 'addhere'){
+      if(!originalBuffer){ showToast('请先载入音频', true); return; }
+      const t = currentPlayPos();
+      if(t >= originalBuffer.duration){ showToast('播放头已在末尾', true); return; }
+      if(markers.some(m => Math.abs(m.time - t) < 0.01)){ showToast('这个位置已经有标记了', true); return; }
+      const m = addMarker(t, 'M' + (markers.length + 1));
+      updateMarkerCount();
+      showToast('已在 ' + fmtTime(t) + ' 打点：' + m.name);
+    }
+    else if(action === 'prevmarker' || action === 'nextmarker'){
+      const pos = currentPlayPos();
+      const sorted = markers.slice().sort((a,b)=>a.time - b.time);
+      if(sorted.length === 0){ showToast('没有标记点', true); return; }
+      let target = null;
+      if(action === 'prevmarker'){
+        for(let i = sorted.length - 1; i >= 0; i--){ if(sorted[i].time < pos - 0.02){ target = sorted[i]; break; } }
+        if(!target) target = sorted[sorted.length - 1]; // 环绕到末尾
+      }else{
+        for(let i = 0; i < sorted.length; i++){ if(sorted[i].time > pos + 0.02){ target = sorted[i]; break; } }
+        if(!target) target = sorted[0]; // 环绕回首
+      }
+      jumpToTime(target.time);
+      showToast('跳到标记：' + target.name + ' (' + fmtTime(target.time) + ')');
+    }
     else if(action === 'clear'){
       if(markers.length === 0){ showToast('没有标记点', true); return; }
       clearMarkers();
@@ -3704,6 +3735,174 @@ if(markerFileInput){
     reader.readAsText(file);
     markerFileInput.value = '';
   });
+}
+
+/* ============ STABLE 1.42：标记切段导出 / 播放头打点 ============ */
+// 当前播放头位置（播放中按 ctx 时间换算，暂停时用 pausedAt）
+function currentPlayPos(){
+  if(!originalBuffer) return 0;
+  const dur = originalBuffer.duration;
+  if(isPlaying && audioCtx && startTime){
+    const spd = Math.max(0.25, parseFloat(speedSlider.value) || 1);
+    return Math.min(dur, Math.max(0, (audioCtx.currentTime - startTime) * spd));
+  }
+  return Math.min(dur, Math.max(0, pausedAt || 0));
+}
+
+// 跳到指定时间（与点标记点的行为一致，缩放时按可见区间换算）
+function jumpToTime(t){
+  if(!originalBuffer) return;
+  const dur = originalBuffer.duration;
+  t = Math.max(0, Math.min(dur, t));
+  if(isPlaying) stop(true);
+  pausedAt = t;
+  playhead.style.display = 'block';
+  let playPct = (t / dur) * 100;
+  if(waveZoom > 1){
+    const vs = waveOffset * 100;
+    playPct = (playPct - vs) * waveZoom;
+  }
+  playhead.style.left = playPct + '%';
+}
+
+// 最小 ZIP 打包器（仅存储不压缩，够放几段 WAV）
+const ZIP_CRC_TABLE = (()=>{
+  const t = new Uint32Array(256);
+  for(let n = 0; n < 256; n++){
+    let val = n;
+    for(let k = 0; k < 8; k++) val = (val & 1) ? (0xEDB88320 ^ (val >>> 1)) : (val >>> 1);
+    t[n] = val >>> 0;
+  }
+  return t;
+})();
+
+function zipCrc32(bytes){
+  let crc = 0xFFFFFFFF;
+  for(let i = 0; i < bytes.length; i++){
+    crc = ZIP_CRC_TABLE[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+function buildStoreZip(files){
+  const enc = new TextEncoder();
+  const now = new Date();
+  const dosTime = ((now.getHours() & 31) << 11) | ((now.getMinutes() & 63) << 5) | ((now.getSeconds() / 2) & 31);
+  const dosDate = (((now.getFullYear() - 1980) & 127) << 9) | (((now.getMonth() + 1) & 15) << 5) | (now.getDate() & 31);
+
+  const prepared = files.map(f => ({
+    nameBytes: enc.encode(f.name),
+    data: f.data,
+    crc: zipCrc32(f.data)
+  }));
+
+  let total = 22;
+  for(const f of prepared){
+    total += 30 + f.nameBytes.length + f.data.length;   // 本地头
+    total += 46 + f.nameBytes.length;                    // 中央目录项
+  }
+
+  const buf = new Uint8Array(total);
+  const dv = new DataView(buf.buffer);
+  let off = 0;
+  const central = [];
+
+  for(const f of prepared){
+    const localOffset = off;
+    dv.setUint32(off, 0x04034b50, true); off += 4;
+    dv.setUint16(off, 20, true); off += 2;
+    dv.setUint16(off, 0x0800, true); off += 2;   // UTF-8 文件名
+    dv.setUint16(off, 0, true); off += 2;        // 存储
+    dv.setUint16(off, dosTime, true); off += 2;
+    dv.setUint16(off, dosDate, true); off += 2;
+    dv.setUint32(off, f.crc, true); off += 4;
+    dv.setUint32(off, f.data.length, true); off += 4;
+    dv.setUint32(off, f.data.length, true); off += 4;
+    dv.setUint16(off, f.nameBytes.length, true); off += 2;
+    dv.setUint16(off, 0, true); off += 2;
+    buf.set(f.nameBytes, off); off += f.nameBytes.length;
+    buf.set(f.data, off); off += f.data.length;
+    central.push({f, localOffset});
+  }
+
+  const cdStart = off;
+  for(const {f, localOffset} of central){
+    dv.setUint32(off, 0x02014b50, true); off += 4;
+    dv.setUint16(off, 20, true); off += 2;
+    dv.setUint16(off, 20, true); off += 2;
+    dv.setUint16(off, 0x0800, true); off += 2;
+    dv.setUint16(off, 0, true); off += 2;
+    dv.setUint16(off, dosTime, true); off += 2;
+    dv.setUint16(off, dosDate, true); off += 2;
+    dv.setUint32(off, f.crc, true); off += 4;
+    dv.setUint32(off, f.data.length, true); off += 4;
+    dv.setUint32(off, f.data.length, true); off += 4;
+    dv.setUint16(off, f.nameBytes.length, true); off += 2;
+    dv.setUint16(off, 0, true); off += 2;
+    dv.setUint16(off, 0, true); off += 2;
+    dv.setUint16(off, 0, true); off += 2;
+    dv.setUint16(off, 0, true); off += 2;
+    dv.setUint32(off, 0, true); off += 4;
+    dv.setUint32(off, localOffset, true); off += 4;
+    buf.set(f.nameBytes, off); off += f.nameBytes.length;
+  }
+  const cdSize = off - cdStart;
+
+  dv.setUint32(off, 0x06054b50, true); off += 4;
+  dv.setUint16(off, 0, true); off += 2;
+  dv.setUint16(off, 0, true); off += 2;
+  dv.setUint16(off, prepared.length, true); off += 2;
+  dv.setUint16(off, prepared.length, true); off += 2;
+  dv.setUint32(off, cdSize, true); off += 4;
+  dv.setUint32(off, cdStart, true); off += 4;
+  dv.setUint16(off, 0, true); off += 2;
+
+  return new Blob([buf], {type: 'application/zip'});
+}
+
+// 按标记点把当前音频切成若干段，每段一个 WAV，打成一个 ZIP 下载
+async function exportSegmentsByMarkers(){
+  if(!originalBuffer){ showToast('请先载入音频', true); return; }
+  if(!markers || markers.length === 0){ showToast('没有标记点，先双击波形打个点', true); return; }
+  const dur = originalBuffer.duration;
+  if(dur > 1800){ showToast('音频太长，切段打包容易吃满内存，建议先裁剪到 30 分钟内', true); return; }
+  const MIN_SEG = 0.1;  // 短于 0.1 秒的碎片没有意义，直接并入相邻段
+  const cuts = [0];
+  for(const m of markers.slice().sort((a,b)=>a.time - b.time)){
+    const t = Math.max(0, Math.min(dur, m.time));
+    if(t > MIN_SEG && t < dur - MIN_SEG && t - cuts[cuts.length - 1] > MIN_SEG) cuts.push(t);
+  }
+  cuts.push(dur);
+
+  const segs = [];
+  for(let i = 0; i < cuts.length - 1; i++){
+    if(cuts[i+1] - cuts[i] >= MIN_SEG) segs.push({start: cuts[i], end: cuts[i+1]});
+  }
+  if(segs.length < 2){ showToast('相邻标记太近或没有有效切点', true); return; }
+
+  const base = (currentFileName || 'audio').replace(/\.[^.]+$/, '');
+  const files = [];
+  try{
+    for(let i = 0; i < segs.length; i++){
+      const seg = segs[i];
+      const part = sliceBuffer(originalBuffer, seg.start, seg.end);
+      const blob = encodeWav(part);
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      const idx = String(i + 1).padStart(2, '0');
+      files.push({name: idx + '_' + base + '_' + seg.start.toFixed(2) + '-' + seg.end.toFixed(2) + '.wav', data: bytes});
+    }
+  }catch(err){
+    showToast('切段失败：' + (err && err.message ? err.message : '内存不足'), true);
+    return;
+  }
+
+  const zipBlob = buildStoreZip(files);
+  const link = document.createElement('a');
+  link.download = base + '_segments.zip';
+  link.href = URL.createObjectURL(zipBlob);
+  link.click();
+  setTimeout(()=>URL.revokeObjectURL(link.href), 2000);
+  showToast('已切成 ' + files.length + ' 段，打包为 ZIP');
 }
 
 // 点击页面其他地方关闭菜单
