@@ -212,6 +212,9 @@
           <button id="reverseBtn" class="btn">&#8646; REV</button>
           <button id="undoBtn" class="btn" disabled title="撤销上一次裁剪或去除静音">&#8630; UNDO</button>
           <button id="redoBtn" class="btn" disabled title="重做被撤销的编辑">&#8631; REDO</button>
+          <button id="insSilBtn" class="btn" title="在播放头处插入静音段">&#9201; INS SIL</button>
+          <button id="appendBtn" class="btn" title="把另一段音频追加到末尾">&#10133; APPEND</button>
+          <input type="file" id="appendFileInput" accept="audio/*" hidden>
           <div class="clipper"><span class="clip-led" id="clipLed"></span><span class="clip-label">CLIP</span><canvas id="peakMeter" width="80" height="14" title="输出电平"></canvas></div>
         </div>
         <div class="export-bar">
@@ -511,7 +514,7 @@
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.42 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.43 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 

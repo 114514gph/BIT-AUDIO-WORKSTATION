@@ -3906,6 +3906,112 @@ cropPartBtn.addEventListener('click', ()=>{
   doExportOriginal([selStart, selEnd]);
 });
 
+/* ============ STABLE 1.43：插入静音 / 追加音频 ============ */
+const insSilBtn = $('insSilBtn');
+const appendBtn = $('appendBtn');
+const appendFileInput = $('appendFileInput');
+
+function createSilenceBuffer(ch, sr, sec){
+  const ctx = ensureCtx();
+  return ctx.createBuffer(ch, Math.max(1, Math.round(sec * sr)), sr);
+}
+
+// 线性插值重采样到目标采样率
+function resampleBuffer(buf, targetSr){
+  if(buf.sampleRate === targetSr) return buf;
+  const ratio = targetSr / buf.sampleRate;
+  const newLen = Math.max(1, Math.round(buf.length * ratio));
+  const ctx = ensureCtx();
+  const nb = ctx.createBuffer(buf.numberOfChannels, newLen, targetSr);
+  for(let c = 0; c < buf.numberOfChannels; c++){
+    const src = buf.getChannelData(c), dst = nb.getChannelData(c);
+    for(let i = 0; i < newLen; i++){
+      const x = i / ratio;
+      const i0 = Math.floor(x);
+      const i1 = Math.min(src.length - 1, i0 + 1);
+      const f = x - i0;
+      dst[i] = src[i0] * (1 - f) + src[i1] * f;
+    }
+  }
+  return nb;
+}
+
+// 声道对齐：单声道复制成双声道，双声道缩混成单声道
+function matchChannels(buf, targetCh){
+  if(buf.numberOfChannels === targetCh) return buf;
+  const ctx = ensureCtx();
+  const nb = ctx.createBuffer(targetCh, buf.length, buf.sampleRate);
+  if(targetCh === 1){
+    const l = buf.getChannelData(0);
+    const r = buf.numberOfChannels > 1 ? buf.getChannelData(1) : l;
+    const d = nb.getChannelData(0);
+    for(let i = 0; i < buf.length; i++) d[i] = (l[i] + r[i]) * 0.5;
+  }else{
+    const l = buf.getChannelData(0);
+    const r = buf.numberOfChannels > 1 ? buf.getChannelData(1) : l;
+    nb.getChannelData(0).set(l);
+    nb.getChannelData(1).set(r);
+  }
+  return nb;
+}
+
+insSilBtn.addEventListener('click', async ()=>{
+  if(!originalBuffer){ showToast('请先载入音频', true); return; }
+  const raw = prompt('在播放头后插入几秒静音？', '1');
+  if(raw === null) return;
+  const sec = parseFloat(raw);
+  if(isNaN(sec) || sec <= 0){ showToast('时长无效', true); return; }
+  const clamped = Math.min(60, Math.max(0.1, sec));
+  stop();
+  const pos = Math.min(currentPlayPos(), originalBuffer.duration);
+  pushEditHistory('插入静音 ' + clamped.toFixed(1) + 's');
+  const sr = originalBuffer.sampleRate;
+  const ch = originalBuffer.numberOfChannels;
+  const sil = createSilenceBuffer(ch, sr, clamped);
+  let nb;
+  if(pos <= 0.001) nb = concatBuffers(sil, originalBuffer);
+  else if(pos >= originalBuffer.duration - 0.001) nb = concatBuffers(originalBuffer, sil);
+  else nb = concatBuffers(concatBuffers(sliceBuffer(originalBuffer, 0, pos), sil),
+                          sliceBuffer(originalBuffer, pos, originalBuffer.duration));
+  originalBuffer = nb;
+  beatPositions = [];
+  beatBpm = 0;
+  await afterCrop();
+  showToast('已在 ' + fmtTime(pos) + ' 插入 ' + clamped.toFixed(1) + 's 静音');
+});
+
+appendBtn.addEventListener('click', ()=>{
+  if(!originalBuffer){ showToast('请先载入音频', true); return; }
+  appendFileInput.click();
+});
+
+appendFileInput.addEventListener('change', async e=>{
+  const file = e.target.files[0];
+  appendFileInput.value = '';
+  if(!file) return;
+  if(!file.type.startsWith('audio/') && !/\.(mp3|wav|ogg|m4a|flac|aac|webm)$/i.test(file.name)){
+    showToast('不支持的文件格式', true); return;
+  }
+  stop();
+  try{
+    const ctx = ensureCtx();
+    const ab = await file.arrayBuffer();
+    const extra = await ctx.decodeAudioData(ab.slice(0));
+    const matched = matchChannels(resampleBuffer(extra, originalBuffer.sampleRate),
+                                  originalBuffer.numberOfChannels);
+    pushEditHistory('追加 ' + (file.name.replace(/\.[^.]+$/, '') || '音频'));
+    originalBuffer = concatBuffers(originalBuffer, matched);
+    beatPositions = [];
+    beatBpm = 0;
+    await afterCrop();
+    showToast('已追加到末尾：' + file.name);
+  }catch(err){
+    console.error(err);
+    showToast('解码失败：' + (err.message || '未知错误'), true);
+  }
+});
+
+
 /* ============ WAVEFORM ============ */
 /* 波形峰值缓存：避免缩放/resize 时重复计算全量样本 */
 let _wfCacheBuf = null, _wfCacheMixed = null, _wfCachePeaks = null;
