@@ -4011,6 +4011,65 @@ appendFileInput.addEventListener('change', async e=>{
   }
 });
 
+/* ============ STABLE 1.44：叠加混音 ============ */
+const mixBtn = $('mixBtn');
+const mixFileInput = $('mixFileInput');
+
+// 把 extra 按 offsetSec 叠加到 base 上，level 为 0~1，结果限幅到 [-1, 1]
+function mixOverlay(base, extra, offsetSec, level){
+  const ctx = ensureCtx();
+  const sr = base.sampleRate, ch = base.numberOfChannels;
+  const off = Math.max(0, Math.round(offsetSec * sr));
+  const total = Math.max(base.length, off + extra.length);
+  const nb = ctx.createBuffer(ch, total, sr);
+  for(let c = 0; c < ch; c++){
+    const d = nb.getChannelData(c), b = base.getChannelData(c), x = extra.getChannelData(c);
+    d.set(b, 0);
+    for(let i = 0; i < x.length; i++){
+      const idx = off + i;
+      if(idx < total) d[idx] = Math.max(-1, Math.min(1, d[idx] + x[i] * level));
+    }
+  }
+  return nb;
+}
+
+mixBtn.addEventListener('click', ()=>{
+  if(!originalBuffer){ showToast('请先载入音频', true); return; }
+  mixFileInput.click();
+});
+
+mixFileInput.addEventListener('change', async e=>{
+  const file = e.target.files[0];
+  mixFileInput.value = '';
+  if(!file) return;
+  if(!file.type.startsWith('audio/') && /\.(mp3|wav|ogg|m4a|flac|aac|webm)$/i.test(file.name) === false){
+    showToast('不支持的文件格式', true); return;
+  }
+  const raw = prompt('叠加音量（0~100%）', '100');
+  if(raw === null) return;
+  let level = parseFloat(raw) / 100;
+  if(isNaN(level)){ showToast('音量无效', true); return; }
+  level = Math.min(1, Math.max(0, level));
+  stop();
+  try{
+    const ctx = ensureCtx();
+    const ab = await file.arrayBuffer();
+    const extra = await ctx.decodeAudioData(ab.slice(0));
+    const matched = matchChannels(resampleBuffer(extra, originalBuffer.sampleRate),
+                                  originalBuffer.numberOfChannels);
+    const pos = Math.min(currentPlayPos(), originalBuffer.duration);
+    pushEditHistory('叠加 ' + (file.name.replace(/\.[^.]+$/, '') || '音频'));
+    originalBuffer = mixOverlay(originalBuffer, matched, pos, level);
+    beatPositions = [];
+    beatBpm = 0;
+    await afterCrop();
+    showToast('已在 ' + fmtTime(pos) + ' 叠加 ' + file.name);
+  }catch(err){
+    console.error(err);
+    showToast('解码失败：' + (err.message || '未知错误'), true);
+  }
+});
+
 
 /* ============ WAVEFORM ============ */
 /* 波形峰值缓存：避免缩放/resize 时重复计算全量样本 */
