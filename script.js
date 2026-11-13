@@ -609,6 +609,8 @@ const cropInfo = $('cropInfo');
 const cropKeepBtn = $('cropKeepBtn');
 const cropPartBtn = $('cropPartBtn');
 const cropDeleteBtn = $('cropDeleteBtn');
+const cropDupBtn = $('cropDupBtn');
+const cropMuteBtn = $('cropMuteBtn');
 const cropClearBtn = $('cropClearBtn');
 const progressModal = $('progressModal');
 const progressTitle = $('progressTitle');
@@ -3701,6 +3703,8 @@ function clearSelection(){
   cropKeepBtn.disabled = true;
   cropPartBtn.disabled = true;
   cropDeleteBtn.disabled = true;
+  cropDupBtn.disabled = true;
+  cropMuteBtn.disabled = true;
   cropClearBtn.disabled = true;
   cropBar.classList.add('hidden');
 }
@@ -3722,6 +3726,8 @@ function updateSelectionUI(){
   cropKeepBtn.disabled = false;
   cropPartBtn.disabled = false;
   cropDeleteBtn.disabled = false;
+  cropDupBtn.disabled = false;
+  cropMuteBtn.disabled = false;
   cropClearBtn.disabled = false;
   cropBar.classList.remove('hidden');
 }
@@ -3904,6 +3910,50 @@ cropPartBtn.addEventListener('click', ()=>{
   if(selStart < 0 || selEnd < 0){ showToast('请先在波形上拖选一段', true); return; }
   stop();
   doExportOriginal([selStart, selEnd]);
+});
+
+/* ============ STABLE 1.45：选区复制 / 选区静音 ============ */
+cropDupBtn.addEventListener('click', async ()=>{
+  if(selStart < 0) return;
+  stop();
+  const s = Math.min(selStart, selEnd);
+  const e = Math.max(selStart, selEnd);
+  const dur = originalBuffer.duration;
+  if(e - s <= 0.001){ showToast('选区为空', true); return; }
+  const region = sliceBuffer(originalBuffer, s, e);
+  pushEditHistory('复制选区 ' + fmtTime(e - s));
+  let nb = concatBuffers(sliceBuffer(originalBuffer, 0, s), region);
+  nb = concatBuffers(nb, region);
+  if(e < dur - 0.001) nb = concatBuffers(nb, sliceBuffer(originalBuffer, e, dur));
+  originalBuffer = nb;
+  beatPositions = [];
+  beatBpm = 0;
+  await afterCrop();
+  showToast('已在选区后复制一份');
+});
+
+cropMuteBtn.addEventListener('click', async ()=>{
+  if(selStart < 0) return;
+  stop();
+  const s = Math.min(selStart, selEnd);
+  const e = Math.max(selStart, selEnd);
+  const ctx = ensureCtx();
+  const sr = originalBuffer.sampleRate, ch = originalBuffer.numberOfChannels;
+  const a = Math.max(0, Math.floor(s * sr));
+  const b = Math.min(originalBuffer.length, Math.floor(e * sr));
+  if(b - a <= 0){ showToast('选区为空', true); return; }
+  pushEditHistory('选区静音 ' + fmtTime(e - s));
+  const nb = ctx.createBuffer(ch, originalBuffer.length, sr);
+  for(let c = 0; c < ch; c++){
+    const d = nb.getChannelData(c), src = originalBuffer.getChannelData(c);
+    d.set(src);
+    d.fill(0, a, b);
+  }
+  originalBuffer = nb;
+  beatPositions = [];
+  beatBpm = 0;
+  await afterCrop();
+  showToast('已将选区静音');
 });
 
 /* ============ STABLE 1.43：插入静音 / 追加音频 ============ */
