@@ -611,6 +611,7 @@ const cropPartBtn = $('cropPartBtn');
 const cropDeleteBtn = $('cropDeleteBtn');
 const cropDupBtn = $('cropDupBtn');
 const cropMuteBtn = $('cropMuteBtn');
+const cropRevBtn = $('cropRevBtn');
 const cropClearBtn = $('cropClearBtn');
 const progressModal = $('progressModal');
 const progressTitle = $('progressTitle');
@@ -3705,6 +3706,7 @@ function clearSelection(){
   cropDeleteBtn.disabled = true;
   cropDupBtn.disabled = true;
   cropMuteBtn.disabled = true;
+  cropRevBtn.disabled = true;
   cropClearBtn.disabled = true;
   cropBar.classList.add('hidden');
 }
@@ -3728,6 +3730,7 @@ function updateSelectionUI(){
   cropDeleteBtn.disabled = false;
   cropDupBtn.disabled = false;
   cropMuteBtn.disabled = false;
+  cropRevBtn.disabled = false;
   cropClearBtn.disabled = false;
   cropBar.classList.remove('hidden');
 }
@@ -3954,6 +3957,31 @@ cropMuteBtn.addEventListener('click', async ()=>{
   beatBpm = 0;
   await afterCrop();
   showToast('已将选区静音');
+});
+
+/* ============ STABLE 1.46：选区原位反向 ============ */
+cropRevBtn.addEventListener('click', async ()=>{
+  if(selStart < 0) return;
+  stop();
+  const s = Math.min(selStart, selEnd);
+  const e = Math.max(selStart, selEnd);
+  const ctx = ensureCtx();
+  const sr = originalBuffer.sampleRate, ch = originalBuffer.numberOfChannels;
+  const a = Math.max(0, Math.floor(s * sr));
+  const b = Math.min(originalBuffer.length, Math.floor(e * sr));
+  if(b - a <= 1){ showToast('选区为空', true); return; }
+  pushEditHistory('选区反向 ' + fmtTime(e - s));
+  const nb = ctx.createBuffer(ch, originalBuffer.length, sr);
+  for(let c = 0; c < ch; c++){
+    const src = originalBuffer.getChannelData(c), d = nb.getChannelData(c);
+    d.set(src);
+    for(let i = a; i < b; i++) d[i] = src[a + b - 1 - i];
+  }
+  originalBuffer = nb;
+  beatPositions = [];
+  beatBpm = 0;
+  await afterCrop();
+  showToast('已反向选区');
 });
 
 /* ============ STABLE 1.43：插入静音 / 追加音频 ============ */
