@@ -1396,6 +1396,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
           <div class="gain-control">
             <span class="gain-label">GAIN <span id="gainVal">0.0</span>dB</span>
             <input type="range" id="gainSlider" min="-12" max="12" step="0.5" value="0">
+            <button class="btn crop-btn" id="applyGainBtn" title="把当前增益烘焙到音频">&#9889; APPLY</button>
           </div>
           <div class="mp3-bitrate-select hidden" id="mp3BitrateSelect">
             <span class="br-label">KBPS</span>
@@ -1658,7 +1659,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.46 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.47 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -4031,7 +4032,7 @@ if(dcBtn && dcMenu){
     dcMenu.classList.toggle('hidden');
   });
 
-  dcMenu.addEventListener('click', (e)=>{
+  dcMenu.addEventListener('click', async (e)=>{
     e.stopPropagation();
     const item = e.target.closest('.dropdown-item');
     if(!item) return;
@@ -4039,8 +4040,8 @@ if(dcBtn && dcMenu){
     dcMenu.classList.add('hidden');
 
     if(action === 'detect'){
-      if(!audioBuffer){ showToast('请先加载音频', true); return; }
-      dcOffsetValue = detectDCOffset(audioBuffer);
+      if(!originalBuffer){ showToast('请先加载音频', true); return; }
+      dcOffsetValue = detectDCOffset(originalBuffer);
       const dbValue = 20 * Math.log10(Math.abs(dcOffsetValue) + 0.0001);
       dcOffsetVal.textContent = dcOffsetValue.toFixed(4) + ' (' + dbValue.toFixed(1) + 'dB)';
       if(Math.abs(dcOffsetValue) > 0.001){
@@ -4050,34 +4051,33 @@ if(dcBtn && dcMenu){
       }
     }
     else if(action === 'correct'){
-      if(!audioBuffer){ showToast('请先加载音频', true); return; }
-      const offset = detectDCOffset(audioBuffer);
+      if(!originalBuffer){ showToast('请先加载音频', true); return; }
+      const offset = detectDCOffset(originalBuffer);
       if(Math.abs(offset) < 0.0001){
         showToast('无需校正：偏移量极小', true);
         return;
       }
+      stop();
+      pushEditHistory('校正直流偏移');
       // 创建新 buffer 并减去偏移
       const newBuffer = audioCtx.createBuffer(
-        audioBuffer.numberOfChannels,
-        audioBuffer.length,
-        audioBuffer.sampleRate
+        originalBuffer.numberOfChannels,
+        originalBuffer.length,
+        originalBuffer.sampleRate
       );
-      for(let ch = 0; ch < audioBuffer.numberOfChannels; ch++){
-        const oldData = audioBuffer.getChannelData(ch);
+      for(let ch = 0; ch < originalBuffer.numberOfChannels; ch++){
+        const oldData = originalBuffer.getChannelData(ch);
         const newData = newBuffer.getChannelData(ch);
         for(let i = 0; i < oldData.length; i++){
           newData[i] = oldData[i] - offset;
         }
       }
-      audioBuffer = newBuffer;
+      originalBuffer = newBuffer;
+      beatPositions = [];
+      beatBpm = 0;
       dcOffsetValue = 0;
       dcOffsetVal.textContent = '--';
-      // 重置播放状态
-      stopPlayback();
-      currentTime = 0;
-      playheadOffset = 0;
-      renderWaveform();
-      invalidateWaveformCache();
+      await afterCrop();
       showToast('直流偏移已校正: ' + offset.toFixed(4));
     }
   });
@@ -4096,27 +4096,27 @@ const infoPeak = $('infoPeak');
 let currentFileSize = 0;
 
 function updateAudioInfo(){
-  if(!audioBuffer) return;
+  if(!originalBuffer) return;
   infoFileName.textContent = currentFileName || '(示例音频)';
-  const dur = audioBuffer.duration;
+  const dur = originalBuffer.duration;
   const min = Math.floor(dur / 60);
   const sec = (dur % 60).toFixed(1);
   infoDuration.textContent = min + ':' + sec.padStart(4, '0');
-  infoSampleRate.textContent = audioBuffer.sampleRate + ' Hz';
-  infoChannels.textContent = audioBuffer.numberOfChannels === 1 ? '单声道' : '立体声';
+  infoSampleRate.textContent = originalBuffer.sampleRate + ' Hz';
+  infoChannels.textContent = originalBuffer.numberOfChannels === 1 ? '单声道' : '立体声';
   if(currentFileSize > 0){
     const sizeKB = currentFileSize / 1024;
     const sizeMB = sizeKB / 1024;
     infoFileSize.textContent = sizeMB >= 1 ? sizeMB.toFixed(2) + ' MB' : sizeKB.toFixed(1) + ' KB';
   } else {
     // 估算 PCM 大小
-    const pcmBytes = audioBuffer.length * audioBuffer.numberOfChannels * 4;
+    const pcmBytes = originalBuffer.length * originalBuffer.numberOfChannels * 4;
     infoFileSize.textContent = '~' + (pcmBytes / 1024 / 1024).toFixed(2) + ' MB (PCM)';
   }
   // 计算峰值
   let peak = 0;
-  for(let ch = 0; ch < audioBuffer.numberOfChannels; ch++){
-    const data = audioBuffer.getChannelData(ch);
+  for(let ch = 0; ch < originalBuffer.numberOfChannels; ch++){
+    const data = originalBuffer.getChannelData(ch);
     for(let i = 0; i < data.length; i++){
       const abs = Math.abs(data[i]);
       if(abs > peak) peak = abs;
@@ -4709,10 +4709,48 @@ autosaveToggle.addEventListener('change', ()=>{
 
 // STABLE 1.17 新增：输入增益调节
 const gainSlider = $('gainSlider'), gainVal = $('gainVal');
+const applyGainBtn = $('applyGainBtn');
 gainSlider.addEventListener('input', ()=>{
   gainVal.textContent = parseFloat(gainSlider.value).toFixed(1);
   if(inputGainNode){
     inputGainNode.gain.value = Math.pow(10, parseFloat(gainSlider.value) / 20);
+  }
+});
+
+/* ============ STABLE 1.47：烘焙增益 ============ */
+applyGainBtn.addEventListener('click', async ()=>{
+  if(!originalBuffer){ showToast('请先加载音频', true); return; }
+  const db = parseFloat(gainSlider.value);
+  if(Math.abs(db) < 0.05){ showToast('增益为 0，无需烘焙', true); return; }
+  stop();
+  const factor = Math.pow(10, db / 20);
+  pushEditHistory('烘焙增益 ' + db.toFixed(1) + 'dB');
+  const nb = ensureCtx().createBuffer(
+    originalBuffer.numberOfChannels,
+    originalBuffer.length,
+    originalBuffer.sampleRate
+  );
+  let clipped = 0;
+  for(let ch = 0; ch < originalBuffer.numberOfChannels; ch++){
+    const src = originalBuffer.getChannelData(ch), d = nb.getChannelData(ch);
+    for(let i = 0; i < src.length; i++){
+      let v = src[i] * factor;
+      if(v > 1){ v = 1; clipped++; }
+      else if(v < -1){ v = -1; clipped++; }
+      d[i] = v;
+    }
+  }
+  originalBuffer = nb;
+  beatPositions = [];
+  beatBpm = 0;
+  // 电平已写入缓冲，播放增益回到 0
+  gainSlider.value = 0;
+  gainSlider.dispatchEvent(new Event('input'));
+  await afterCrop();
+  if(clipped > 0){
+    showToast(`已烘焙 ${db.toFixed(1)}dB，${clipped} 个样本超出峰值被削波`);
+  }else{
+    showToast(`已烘焙 ${db.toFixed(1)}dB`);
   }
 });
 
