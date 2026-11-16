@@ -612,6 +612,7 @@ const cropDeleteBtn = $('cropDeleteBtn');
 const cropDupBtn = $('cropDupBtn');
 const cropMuteBtn = $('cropMuteBtn');
 const cropRevBtn = $('cropRevBtn');
+const cropGainBtn = $('cropGainBtn');
 const cropClearBtn = $('cropClearBtn');
 const progressModal = $('progressModal');
 const progressTitle = $('progressTitle');
@@ -3744,6 +3745,7 @@ function clearSelection(){
   cropDupBtn.disabled = true;
   cropMuteBtn.disabled = true;
   cropRevBtn.disabled = true;
+  cropGainBtn.disabled = true;
   cropClearBtn.disabled = true;
   cropBar.classList.add('hidden');
 }
@@ -3768,6 +3770,7 @@ function updateSelectionUI(){
   cropDupBtn.disabled = false;
   cropMuteBtn.disabled = false;
   cropRevBtn.disabled = false;
+  cropGainBtn.disabled = false;
   cropClearBtn.disabled = false;
   cropBar.classList.remove('hidden');
 }
@@ -4019,6 +4022,44 @@ cropRevBtn.addEventListener('click', async ()=>{
   beatBpm = 0;
   await afterCrop();
   showToast('已反向选区');
+});
+
+/* ============ STABLE 1.48：选区增益 ============ */
+cropGainBtn.addEventListener('click', async ()=>{
+  if(selStart < 0) return;
+  const db = parseFloat(gainSlider.value);
+  if(Math.abs(db) < 0.05){ showToast('增益为 0，无需调整', true); return; }
+  stop();
+  const s = Math.min(selStart, selEnd);
+  const e = Math.max(selStart, selEnd);
+  const ctx = ensureCtx();
+  const sr = originalBuffer.sampleRate, ch = originalBuffer.numberOfChannels;
+  const a = Math.max(0, Math.floor(s * sr));
+  const b = Math.min(originalBuffer.length, Math.floor(e * sr));
+  if(b - a <= 1){ showToast('选区为空', true); return; }
+  const factor = Math.pow(10, db / 20);
+  pushEditHistory('选区增益 ' + db.toFixed(1) + 'dB ' + fmtTime(e - s));
+  const nb = ctx.createBuffer(ch, originalBuffer.length, sr);
+  let clipped = 0;
+  for(let c = 0; c < ch; c++){
+    const src = originalBuffer.getChannelData(c), d = nb.getChannelData(c);
+    d.set(src);
+    for(let i = a; i < b; i++){
+      let v = src[i] * factor;
+      if(v > 1){ v = 1; clipped++; }
+      else if(v < -1){ v = -1; clipped++; }
+      d[i] = v;
+    }
+  }
+  originalBuffer = nb;
+  beatPositions = [];
+  beatBpm = 0;
+  await afterCrop();
+  if(clipped > 0){
+    showToast(`选区已调整 ${db.toFixed(1)}dB，${clipped} 个样本超出峰值被削波`);
+  }else{
+    showToast(`选区已调整 ${db.toFixed(1)}dB`);
+  }
 });
 
 /* ============ STABLE 1.43：插入静音 / 追加音频 ============ */
