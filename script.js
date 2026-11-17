@@ -2444,12 +2444,7 @@ function jumpToTime(t){
   if(isPlaying) stop(true);
   pausedAt = t;
   playhead.style.display = 'block';
-  let playPct = (t / dur) * 100;
-  if(waveZoom > 1){
-    const vs = waveOffset * 100;
-    playPct = (playPct - vs) * waveZoom;
-  }
-  playhead.style.left = playPct + '%';
+  playhead.style.left = timeToViewPct(t) + '%';
 }
 
 // 最小 ZIP 打包器（仅存储不压缩，够放几段 WAV）
@@ -3826,6 +3821,8 @@ let downX = 0, downTime = 0, moved = false;
 
 waveformWrap.addEventListener('mousedown', e=>{
   if(!originalBuffer) return;
+  // 缩放状态下 Shift / 中键拖拽是平移视图，不建立选区
+  if(waveZoom > 1 && (e.button === 1 || e.shiftKey)) return;
   const t = posToTime(e.clientX);
   downX = e.clientX;
   downTime = t;
@@ -4413,13 +4410,7 @@ function renderMarkers(){
       if(isPlaying){ stop(true); }
       pausedAt = m.time;
       playhead.style.display = 'block';
-      // 缩放状态下播放头也要用可见区域相对百分比
-      let playPct = (m.time / dur) * 100;
-      if(waveZoom > 1){
-        const vs = waveOffset * 100;
-        playPct = (playPct - vs) * waveZoom;
-      }
-      playhead.style.left = playPct + '%';
+      playhead.style.left = timeToViewPct(m.time) + '%';
       showToast('跳转到标记: ' + m.name);
     });
     el.addEventListener('contextmenu', e=>{

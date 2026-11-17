@@ -1660,7 +1660,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.48.3 (Bugfix) <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.48.4 (Bugfix) <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -3771,12 +3771,7 @@ function jumpToTime(t){
   if(isPlaying) stop(true);
   pausedAt = t;
   playhead.style.display = 'block';
-  let playPct = (t / dur) * 100;
-  if(waveZoom > 1){
-    const vs = waveOffset * 100;
-    playPct = (playPct - vs) * waveZoom;
-  }
-  playhead.style.left = playPct + '%';
+  playhead.style.left = timeToViewPct(t) + '%';
 }
 
 // 最小 ZIP 打包器（仅存储不压缩，够放几段 WAV）
@@ -5153,6 +5148,8 @@ let downX = 0, downTime = 0, moved = false;
 
 waveformWrap.addEventListener('mousedown', e=>{
   if(!originalBuffer) return;
+  // 缩放状态下 Shift / 中键拖拽是平移视图，不建立选区
+  if(waveZoom > 1 && (e.button === 1 || e.shiftKey)) return;
   const t = posToTime(e.clientX);
   downX = e.clientX;
   downTime = t;
@@ -5740,13 +5737,7 @@ function renderMarkers(){
       if(isPlaying){ stop(true); }
       pausedAt = m.time;
       playhead.style.display = 'block';
-      // 缩放状态下播放头也要用可见区域相对百分比
-      let playPct = (m.time / dur) * 100;
-      if(waveZoom > 1){
-        const vs = waveOffset * 100;
-        playPct = (playPct - vs) * waveZoom;
-      }
-      playhead.style.left = playPct + '%';
+      playhead.style.left = timeToViewPct(m.time) + '%';
       showToast('跳转到标记: ' + m.name);
     });
     el.addEventListener('contextmenu', e=>{

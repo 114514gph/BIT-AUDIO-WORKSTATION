@@ -203,7 +203,16 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details open>
-<summary><b>STABLE 1.48.3 (Bugfix)</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.48.4 (Bugfix)</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.48.4 (Bugfix)
+- 修复缩放状态下按住 Shift（或中键）拖动平移视图时，会顺手新建一个选区的问题；平移和选区的鼠标操作现在互不干扰
+- 跳转到指定时间与点击标记跳转改用同一套视图换算，缩放后播放头不会再落到错误位置
+
+</details>
+
+<details>
+<summary><b>STABLE 1.48.3 (Bugfix)</b></summary>
 
 ### STABLE 1.48.3 (Bugfix)
 - 修复缩放状态下点击与拖选错位的问题：波形放大后画布只显示一段窗口，点击坐标却仍按整段音频换算，选到的位置和看到的位置对不上；现在按可见窗口换算，点哪儿就是哪儿
