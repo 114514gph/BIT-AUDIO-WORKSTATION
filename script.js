@@ -3624,7 +3624,7 @@ playBtn.addEventListener('click', ()=>{
     isPlaying = false;
     playBtn.innerHTML = '&#9654; PLAY';
     // 显式更新进度条位置并确保可见
-    const pct = (pausedAt / originalBuffer.duration) * 100;
+    const pct = timeToViewPct(pausedAt);
     playhead.style.left = pct + '%';
     playhead.style.display = 'block';
   }else{
@@ -3780,8 +3780,13 @@ function updateSelectionUI(){
   const dur = originalBuffer.duration;
   const s = Math.min(selStart, selEnd);
   const e = Math.max(selStart, selEnd);
-  const leftPct = (s / dur) * 100;
-  const widthPct = ((e - s) / dur) * 100;
+  let leftPct = (s / dur) * 100;
+  let widthPct = ((e - s) / dur) * 100;
+  // 缩放状态下按可见窗口换算，选区框才会落在波形对应位置
+  if(waveZoom > 1){
+    leftPct = (leftPct - waveOffset * 100) * waveZoom;
+    widthPct = widthPct * waveZoom;
+  }
   selectionEl.style.display = 'block';
   selectionEl.style.left = leftPct + '%';
   selectionEl.style.width = widthPct + '%';
@@ -3797,10 +3802,24 @@ function updateSelectionUI(){
   cropBar.classList.remove('hidden');
 }
 
+/* ============ STABLE 1.48.3：缩放视图坐标统一 ============ */
+function timeToViewPct(t){
+  if(!originalBuffer) return 0;
+  const dur = originalBuffer.duration;
+  let pct = (t / dur) * 100;
+  if(waveZoom > 1) pct = (pct - waveOffset * 100) * waveZoom;
+  return pct;
+}
 function posToTime(clientX){
   const rect = waveformWrap.getBoundingClientRect();
   const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-  return ratio * originalBuffer.duration;
+  const dur = originalBuffer.duration;
+  // 缩放后画布只显示一个窗口，点击位置要换算回整段音频的时间
+  if(waveZoom > 1){
+    const span = dur / waveZoom;
+    return Math.min(dur, waveOffset * dur + ratio * span);
+  }
+  return ratio * dur;
 }
 
 let downX = 0, downTime = 0, moved = false;
@@ -3813,7 +3832,7 @@ waveformWrap.addEventListener('mousedown', e=>{
   moved = false;
   // 检查是否点击在选区边缘（拖拽边缘）
   const dur = originalBuffer.duration;
-  const pxPerSec = waveformWrap.clientWidth / dur;
+  const pxPerSec = waveformWrap.clientWidth / (dur / waveZoom);
   if(selStart >= 0){
     const s = Math.min(selStart, selEnd);
     const en = Math.max(selStart, selEnd);
@@ -3855,7 +3874,7 @@ window.addEventListener('mouseup', e=>{
     }else{
       pausedAt = t;
       playhead.style.display = 'block';
-      playhead.style.left = (t / originalBuffer.duration * 100) + '%';
+      playhead.style.left = timeToViewPct(t) + '%';
     }
   }else if(selStart === selEnd){
     clearSelection();
@@ -3886,7 +3905,7 @@ window.addEventListener('touchend', ()=>{
     clearSelection();
     const t = downTime;
     if(isPlaying){ stop(true,false); pausedAt=t; play(); }
-    else{ pausedAt=t; playhead.style.display='block'; playhead.style.left=(t/originalBuffer.duration*100)+'%'; }
+    else{ pausedAt=t; playhead.style.display='block'; playhead.style.left=timeToViewPct(t)+'%'; }
   }else if(selStart===selEnd) clearSelection();
 });
 
@@ -4440,6 +4459,10 @@ const _origUpdateZoom = updateZoom;
 updateZoom = function(){
   _origUpdateZoom();
   renderMarkers();
+  if(selStart >= 0 && selEnd >= 0) updateSelectionUI();
+  if(originalBuffer && !isPlaying && playhead.style.display === 'block'){
+    playhead.style.left = timeToViewPct(pausedAt) + '%';
+  }
 };
 
 /* ============ EXPORT WAV ============ */
