@@ -2676,14 +2676,14 @@ const dcMenu = $('dcMenu');
 const dcOffsetVal = $('dcOffsetVal');
 let dcOffsetValue = 0;
 
-function detectDCOffset(buffer){
-  if(!buffer) return 0;
-  let sum = 0;
-  let count = 0;
-  // 分块计算平均值
+function detectDCOffsets(buffer){
+  if(!buffer) return [0];
+  const out = [];
   const chunkSize = 256000;
   for(let ch = 0; ch < buffer.numberOfChannels; ch++){
     const data = buffer.getChannelData(ch);
+    let sum = 0;
+    let count = 0;
     for(let i = 0; i < data.length; i += chunkSize){
       const end = Math.min(i + chunkSize, data.length);
       for(let j = i; j < end; j++){
@@ -2691,8 +2691,16 @@ function detectDCOffset(buffer){
         count++;
       }
     }
+    out.push(count > 0 ? sum / count : 0);
   }
-  return count > 0 ? sum / count : 0;
+  return out.length ? out : [0];
+}
+
+function detectDCOffset(buffer){
+  const list = detectDCOffsets(buffer);
+  let sum = 0;
+  for(const v of list) sum += v;
+  return sum / list.length;
 }
 
 if(dcBtn && dcMenu){
@@ -2716,31 +2724,43 @@ if(dcBtn && dcMenu){
 
     if(action === 'detect'){
       if(!originalBuffer){ showToast('请先加载音频', true); return; }
-      dcOffsetValue = detectDCOffset(originalBuffer);
-      const dbValue = 20 * Math.log10(Math.abs(dcOffsetValue) + 0.0001);
-      dcOffsetVal.textContent = dcOffsetValue.toFixed(4) + ' (' + dbValue.toFixed(1) + 'dB)';
-      if(Math.abs(dcOffsetValue) > 0.001){
-        showToast('检测到直流偏移: ' + dcOffsetValue.toFixed(4));
+      const offsets = detectDCOffsets(originalBuffer);
+      const maxAbs = Math.max(...offsets.map(v => Math.abs(v)));
+      dcOffsetValue = maxAbs;
+      const dbValue = 20 * Math.log10(maxAbs + 0.0001);
+      if(offsets.length === 1){
+        dcOffsetVal.textContent = offsets[0].toFixed(4) + ' (' + dbValue.toFixed(1) + 'dB)';
+      } else {
+        const peak = offsets.reduce((a, b) => Math.abs(b) > Math.abs(a) ? b : a);
+        dcOffsetVal.textContent = '最大 ' + (peak >= 0 ? '+' : '') + peak.toFixed(4) + ' (' + dbValue.toFixed(1) + 'dB)';
+      }
+      if(maxAbs > 0.001){
+        const detail = offsets.length === 1
+          ? offsets[0].toFixed(4)
+          : offsets.map((v, i) => (offsets.length === 2 ? (i === 0 ? 'L' : 'R') : 'CH' + (i + 1)) + ' ' + (v >= 0 ? '+' : '') + v.toFixed(4)).join(' / ');
+        showToast('检测到直流偏移: ' + detail);
       } else {
         showToast('未检测到明显直流偏移');
       }
     }
     else if(action === 'correct'){
       if(!originalBuffer){ showToast('请先加载音频', true); return; }
-      const offset = detectDCOffset(originalBuffer);
-      if(Math.abs(offset) < 0.0001){
+      const offsets = detectDCOffsets(originalBuffer);
+      const maxAbs = Math.max(...offsets.map(v => Math.abs(v)));
+      if(maxAbs < 0.0001){
         showToast('无需校正：偏移量极小', true);
         return;
       }
       stop();
       pushEditHistory('校正直流偏移');
-      // 创建新 buffer 并减去偏移
-      const newBuffer = audioCtx.createBuffer(
+      // 逐声道减去各自均值：双声道偏移相反时不会互相抵消
+      const newBuffer = ensureCtx().createBuffer(
         originalBuffer.numberOfChannels,
         originalBuffer.length,
         originalBuffer.sampleRate
       );
       for(let ch = 0; ch < originalBuffer.numberOfChannels; ch++){
+        const offset = offsets[ch] || 0;
         const oldData = originalBuffer.getChannelData(ch);
         const newData = newBuffer.getChannelData(ch);
         for(let i = 0; i < oldData.length; i++){
@@ -2753,7 +2773,9 @@ if(dcBtn && dcMenu){
       dcOffsetValue = 0;
       dcOffsetVal.textContent = '--';
       await afterCrop();
-      showToast('直流偏移已校正: ' + offset.toFixed(4));
+      showToast(offsets.length === 1
+        ? '直流偏移已校正: ' + offsets[0].toFixed(4)
+        : '已逐声道校正直流偏移');
     }
   });
 }
@@ -4026,7 +4048,7 @@ cropRevBtn.addEventListener('click', async ()=>{
 
 /* ============ STABLE 1.48：选区增益 ============ */
 cropGainBtn.addEventListener('click', async ()=>{
-  if(selStart < 0) return;
+  if(!originalBuffer || selStart < 0) return;
   const db = parseFloat(gainSlider.value);
   if(Math.abs(db) < 0.05){ showToast('增益为 0，无需调整', true); return; }
   stop();
@@ -4054,6 +4076,9 @@ cropGainBtn.addEventListener('click', async ()=>{
   originalBuffer = nb;
   beatPositions = [];
   beatBpm = 0;
+  // 电平已写入缓冲，播放增益回到 0，避免播放与导出重复叠加
+  gainSlider.value = 0;
+  gainSlider.dispatchEvent(new Event('input'));
   await afterCrop();
   if(clipped > 0){
     showToast(`选区已调整 ${db.toFixed(1)}dB，${clipped} 个样本超出峰值被削波`);
