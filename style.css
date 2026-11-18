@@ -246,6 +246,8 @@ header .blink{
   transform:translateX(-50%);
 }
 .marker:hover{border-top-color:var(--green)}
+.marker{touch-action:none}
+.marker::before{content:'';position:absolute;left:-9px;top:-6px;width:18px;height:34px}
 .marker-label{
   position:absolute;top:9px;left:50%;transform:translateX(-50%);
   font-family:var(--pixel);font-size:8px;color:var(--yellow,#ffcc00);

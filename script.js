@@ -425,6 +425,8 @@ let currentTheme = localStorage.getItem('theme') || 'default';
 let abLoopMode = false;
 let waveZoom = 1;
 let waveOffset = 0;
+let followPlayhead = true;   // 缩放播放时自动跟随播放头
+let markerDragGuard = 0;
 let markers = [];
 // 播放列表
 let playlist = [];
@@ -3520,6 +3522,7 @@ function onSourceEnded(){
 
 async function play(){
   if(!originalBuffer){ showToast('请先加载音频', true); return; }
+  followPlayhead = true;
   try{
     const ctx = ensureCtx();
     if(ctx.state === 'suspended'){ try{ await ctx.resume(); }catch(e){ console.warn('resume failed', e); } }
@@ -3648,15 +3651,25 @@ function tickPlayhead(){
       return;
     }
   }
-  let pct = (t / dur) * 100;
-  // 缩放状态下播放头用可见区域相对百分比
-  if(waveZoom > 1){
-    const vs = waveOffset * 100;
-    pct = (pct - vs) * waveZoom;
-  }
+  let pct = timeToViewPct(t);
+  if(ensureFollowView(t)) pct = timeToViewPct(t);
   playhead.style.left = pct + '%';
   if(t >= dur){ return; }
   rafId = requestAnimationFrame(tickPlayhead);
+}
+
+/* ============ STABLE 1.49：缩放播放跟随 ============ */
+function ensureFollowView(t){
+  if(waveZoom <= 1 || !followPlayhead || !originalBuffer) return false;
+  const dur = originalBuffer.duration;
+  const pct = timeToViewPct(t);
+  if(pct <= 94 && pct >= 6) return false;
+  const span = 1 / waveZoom;
+  const next = Math.max(0, Math.min(1 - span, (t / dur) - span * 0.5));
+  if(Math.abs(next - waveOffset) < 1e-9) return false;   // 已经贴边，不再重复重绘
+  waveOffset = next;
+  updateZoom();
+  return true;
 }
 
 /* ============ STABLE 1.41：撤销栈与重做 ============ */
@@ -4404,14 +4417,44 @@ function renderMarkers(){
     const el = document.createElement('div');
     el.className = 'marker';
     el.style.left = pct + '%';
-    el.title = m.name + ' (' + fmtTime(m.time) + ') - 点击跳转，右键删除';
+    el.title = m.name + ' (' + fmtTime(m.time) + ') - 拖动调整位置，点击跳转，右键删除';
     el.addEventListener('click', e=>{
       e.stopPropagation();
+      if(Date.now() - markerDragGuard < 300) return;   // 刚拖动过，不触发跳转
       if(isPlaying){ stop(true); }
       pausedAt = m.time;
       playhead.style.display = 'block';
       playhead.style.left = timeToViewPct(m.time) + '%';
       showToast('跳转到标记: ' + m.name);
+    });
+    el.addEventListener('pointerdown', e=>{
+      if(e.pointerType === 'mouse' && e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const startX = e.clientX;
+      let dragging = false;
+      try{ el.setPointerCapture(e.pointerId); }catch(err){}
+      const onMove = ev=>{
+        if(!dragging && Math.abs(ev.clientX - startX) < 4) return;
+        dragging = true;
+        m.time = Math.max(0, Math.min(dur, posToTime(ev.clientX)));
+        // 拖动过程中只挪箭头，避免整块重建导致触屏丢失指针
+        el.style.left = Math.max(-2, Math.min(102, timeToViewPct(m.time))) + '%';
+      };
+      const onUp = ()=>{
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        window.removeEventListener('pointercancel', onUp);
+        if(dragging){
+          markerDragGuard = Date.now();
+          markers.sort((a,b)=>a.time - b.time);
+          renderMarkers();
+          showToast('标记已移动到 ' + fmtTime(m.time));
+        }
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
     });
     el.addEventListener('contextmenu', e=>{
       e.preventDefault();
@@ -5153,6 +5196,7 @@ let isDraggingWave = false, dragStartX = 0, dragStartOffset = 0;
 waveformWrap.addEventListener('mousedown', e=>{
   if(waveZoom > 1 && (e.button === 1 || e.shiftKey)){
     isDraggingWave = true;
+    followPlayhead = false;   // 手动拖动视图后先不抢镜头
     dragStartX = e.clientX;
     dragStartOffset = waveOffset;
     e.preventDefault();
