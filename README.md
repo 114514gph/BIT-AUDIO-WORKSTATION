@@ -204,7 +204,16 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details open>
-<summary><b>STABLE 1.49</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.49.1 (Bugfix)</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.49.1 (Bugfix)
+- 修复拖动标记点时会顺带在波形上拉出一个选区、播放头也跟着乱跳的问题；现在拖标记就只是拖标记
+- 触摸拖动标记时同时阻断底层的选区和滚动手势，手机上操作更稳
+
+</details>
+
+<details>
+<summary><b>STABLE 1.49</b></summary>
 
 ### STABLE 1.49
 - 新增播放跟随：波形放大后播放时，视口会跟着播放头走，到窗口边缘自动翻到下一屏；手动拖动过视图后本轮先不跟随，重新按下播放即恢复

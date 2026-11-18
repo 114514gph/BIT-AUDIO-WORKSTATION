@@ -4427,9 +4427,10 @@ function renderMarkers(){
       playhead.style.left = timeToViewPct(m.time) + '%';
       showToast('跳转到标记: ' + m.name);
     });
+    el.addEventListener('mousedown', e=>{ e.stopPropagation(); });
+    el.addEventListener('touchstart', e=>{ e.stopPropagation(); }, {passive:true});
     el.addEventListener('pointerdown', e=>{
       if(e.pointerType === 'mouse' && e.button !== 0) return;
-      e.preventDefault();
       e.stopPropagation();
       const startX = e.clientX;
       let dragging = false;

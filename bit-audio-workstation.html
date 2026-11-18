@@ -253,7 +253,7 @@ header .blink{
   transform:translateX(-50%);
 }
 .marker:hover{border-top-color:var(--green)}
-.marker{touch-action:none}
+.marker{touch-action:none;-webkit-user-select:none;user-select:none}
 .marker::before{content:'';position:absolute;left:-9px;top:-6px;width:18px;height:34px}
 .marker-label{
   position:absolute;top:9px;left:50%;transform:translateX(-50%);
@@ -1662,7 +1662,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.49 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.49.1 (Bugfix) <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -5756,9 +5756,10 @@ function renderMarkers(){
       playhead.style.left = timeToViewPct(m.time) + '%';
       showToast('跳转到标记: ' + m.name);
     });
+    el.addEventListener('mousedown', e=>{ e.stopPropagation(); });
+    el.addEventListener('touchstart', e=>{ e.stopPropagation(); }, {passive:true});
     el.addEventListener('pointerdown', e=>{
       if(e.pointerType === 'mouse' && e.button !== 0) return;
-      e.preventDefault();
       e.stopPropagation();
       const startX = e.clientX;
       let dragging = false;
