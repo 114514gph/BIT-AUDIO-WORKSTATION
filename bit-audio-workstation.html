@@ -1664,7 +1664,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.50 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.50.1 (Bugfix) <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -3676,7 +3676,7 @@ if(markerBtn && markerMenu){
       if(!markers || markers.length === 0){ showToast('没有标记点可导出', true); return; }
       let csv = 'time_seconds,name\n';
       for(const m of markers){
-        csv += m.time.toFixed(3) + ',' + (m.name || '') + '\n';
+        csv += m.time.toFixed(3) + ',' + csvEscape(m.name || '') + '\n';
       }
       const blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
       const link = document.createElement('a');
@@ -3738,11 +3738,12 @@ if(markerFileInput){
         for(let i = 0; i < lines.length; i++){
           // 跳过表头
           if(i === 0 && lines[i].toLowerCase().includes('time')) continue;
-          const parts = lines[i].split(',');
+          const parts = parseCsvLine(lines[i]);
           const time = parseFloat(parts[0]);
           if(!isNaN(time) && time >= 0){
-            const name = parts[1] ? parts[1].trim() : ('M' + (markers.length + 1));
-            addMarker(time, name, !!parts[1]);
+            const rawName = parts[1] ? parts[1].trim() : '';
+            const name = rawName || ('M' + (markers.length + 1));
+            addMarker(time, name, !!rawName && !/^M\d+$/.test(rawName));
             imported++;
           }
         }
@@ -5821,6 +5822,26 @@ function renderMarkers(){
     markerContainer.appendChild(el);
   });
 }
+function csvEscape(v){
+  const s = String(v == null ? '' : v);
+  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function parseCsvLine(line){
+  const out = []; let cur = '', quoted = false;
+  for(let i = 0; i < line.length; i++){
+    const ch = line[i];
+    if(quoted){
+      if(ch === '"'){
+        if(line[i + 1] === '"'){ cur += '"'; i++; }
+        else quoted = false;
+      }else cur += ch;
+    }else if(ch === '"'){ quoted = true; }
+    else if(ch === ','){ out.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
 function addMarker(time, name, customName){
   const m = {time: time, name: name || ('M' + (markers.length + 1)), customName: !!customName};
   markers.push(m);
@@ -5832,10 +5853,11 @@ function addMarker(time, name, customName){
 waveformWrap.addEventListener('dblclick', e=>{
   if(!originalBuffer) return;
   const t = posToTime(e.clientX);
-  const name = prompt('标记点名称（留空自动命名）:', 'M' + (markers.length + 1));
+  const autoName = 'M' + (markers.length + 1);
+  const name = prompt('标记点名称（留空自动命名）:', autoName);
   if(name === null) return;
   const trimmed = (name || '').trim().slice(0, 24);
-  const newMarker = addMarker(t, trimmed || ('M' + (markers.length + 1)), !!trimmed);
+  const newMarker = addMarker(t, trimmed || autoName, !!trimmed && trimmed !== autoName);
   showToast('已添加标记: ' + newMarker.name);
 });
 // 缩放后重新渲染标记

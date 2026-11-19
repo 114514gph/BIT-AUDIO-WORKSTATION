@@ -2345,7 +2345,7 @@ if(markerBtn && markerMenu){
       if(!markers || markers.length === 0){ showToast('没有标记点可导出', true); return; }
       let csv = 'time_seconds,name\n';
       for(const m of markers){
-        csv += m.time.toFixed(3) + ',' + (m.name || '') + '\n';
+        csv += m.time.toFixed(3) + ',' + csvEscape(m.name || '') + '\n';
       }
       const blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
       const link = document.createElement('a');
@@ -2407,11 +2407,12 @@ if(markerFileInput){
         for(let i = 0; i < lines.length; i++){
           // 跳过表头
           if(i === 0 && lines[i].toLowerCase().includes('time')) continue;
-          const parts = lines[i].split(',');
+          const parts = parseCsvLine(lines[i]);
           const time = parseFloat(parts[0]);
           if(!isNaN(time) && time >= 0){
-            const name = parts[1] ? parts[1].trim() : ('M' + (markers.length + 1));
-            addMarker(time, name, !!parts[1]);
+            const rawName = parts[1] ? parts[1].trim() : '';
+            const name = rawName || ('M' + (markers.length + 1));
+            addMarker(time, name, !!rawName && !/^M\d+$/.test(rawName));
             imported++;
           }
         }
@@ -4490,6 +4491,26 @@ function renderMarkers(){
     markerContainer.appendChild(el);
   });
 }
+function csvEscape(v){
+  const s = String(v == null ? '' : v);
+  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function parseCsvLine(line){
+  const out = []; let cur = '', quoted = false;
+  for(let i = 0; i < line.length; i++){
+    const ch = line[i];
+    if(quoted){
+      if(ch === '"'){
+        if(line[i + 1] === '"'){ cur += '"'; i++; }
+        else quoted = false;
+      }else cur += ch;
+    }else if(ch === '"'){ quoted = true; }
+    else if(ch === ','){ out.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
 function addMarker(time, name, customName){
   const m = {time: time, name: name || ('M' + (markers.length + 1)), customName: !!customName};
   markers.push(m);
@@ -4501,10 +4522,11 @@ function addMarker(time, name, customName){
 waveformWrap.addEventListener('dblclick', e=>{
   if(!originalBuffer) return;
   const t = posToTime(e.clientX);
-  const name = prompt('标记点名称（留空自动命名）:', 'M' + (markers.length + 1));
+  const autoName = 'M' + (markers.length + 1);
+  const name = prompt('标记点名称（留空自动命名）:', autoName);
   if(name === null) return;
   const trimmed = (name || '').trim().slice(0, 24);
-  const newMarker = addMarker(t, trimmed || ('M' + (markers.length + 1)), !!trimmed);
+  const newMarker = addMarker(t, trimmed || autoName, !!trimmed && trimmed !== autoName);
   showToast('已添加标记: ' + newMarker.name);
 });
 // 缩放后重新渲染标记

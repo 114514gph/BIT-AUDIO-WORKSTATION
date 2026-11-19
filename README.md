@@ -204,7 +204,16 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details open>
-<summary><b>STABLE 1.50</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.50.1 (Bugfix)</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.50.1 (Bugfix)
+- 修复标记名里带逗号或引号时，CSV 导出后再导入名字会被截断的问题；导出按标准 CSV 规则转义，导入也能正确还原
+- 自动命名的标记（M1、M2……）在 CSV 往返后不再被当成自定义名称，分轨文件名保持干净
+
+</details>
+
+<details>
+<summary><b>STABLE 1.50</b></summary>
 
 ### STABLE 1.50
 - 标记点支持双击重命名，名字会显示在波形上，导出/导入 CSV 时一并保留
