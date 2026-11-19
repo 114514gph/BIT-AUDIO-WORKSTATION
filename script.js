@@ -2411,7 +2411,7 @@ if(markerFileInput){
           const time = parseFloat(parts[0]);
           if(!isNaN(time) && time >= 0){
             const name = parts[1] ? parts[1].trim() : ('M' + (markers.length + 1));
-            addMarker(time, name);
+            addMarker(time, name, !!parts[1]);
             imported++;
           }
         }
@@ -2552,9 +2552,13 @@ async function exportSegmentsByMarkers(){
   if(dur > 1800){ showToast('音频太长，切段打包容易吃满内存，建议先裁剪到 30 分钟内', true); return; }
   const MIN_SEG = 0.1;  // 短于 0.1 秒的碎片没有意义，直接并入相邻段
   const cuts = [0];
+  const cutNames = [''];   // 与 cuts 对齐，记录切点对应的自定义标记名
   for(const m of markers.slice().sort((a,b)=>a.time - b.time)){
     const t = Math.max(0, Math.min(dur, m.time));
-    if(t > MIN_SEG && t < dur - MIN_SEG && t - cuts[cuts.length - 1] > MIN_SEG) cuts.push(t);
+    if(t > MIN_SEG && t < dur - MIN_SEG && t - cuts[cuts.length - 1] > MIN_SEG){
+      cuts.push(t);
+      cutNames.push(m.customName ? m.name : '');
+    }
   }
   cuts.push(dur);
 
@@ -2573,7 +2577,9 @@ async function exportSegmentsByMarkers(){
       const blob = encodeWav(part);
       const bytes = new Uint8Array(await blob.arrayBuffer());
       const idx = String(i + 1).padStart(2, '0');
-      files.push({name: idx + '_' + base + '_' + seg.start.toFixed(2) + '-' + seg.end.toFixed(2) + '.wav', data: bytes});
+      const label = (cutNames[i] || '').replace(/[\\/:*?"<>|]/g, '_').slice(0, 24);
+      const namePart = label ? idx + '_' + label + '_' + base : idx + '_' + base + '_' + seg.start.toFixed(2) + '-' + seg.end.toFixed(2);
+      files.push({name: namePart + '.wav', data: bytes});
     }
   }catch(err){
     showToast('切段失败：' + (err && err.message ? err.message : '内存不足'), true);
@@ -4417,7 +4423,7 @@ function renderMarkers(){
     const el = document.createElement('div');
     el.className = 'marker';
     el.style.left = pct + '%';
-    el.title = m.name + ' (' + fmtTime(m.time) + ') - 拖动调整位置，点击跳转，右键删除';
+    el.title = m.name + ' (' + fmtTime(m.time) + ') - 双击重命名，拖动调整位置，点击跳转，右键删除';
     el.addEventListener('click', e=>{
       e.stopPropagation();
       if(Date.now() - markerDragGuard < 300) return;   // 刚拖动过，不触发跳转
@@ -4426,6 +4432,17 @@ function renderMarkers(){
       playhead.style.display = 'block';
       playhead.style.left = timeToViewPct(m.time) + '%';
       showToast('跳转到标记: ' + m.name);
+    });
+    el.addEventListener('dblclick', e=>{
+      e.stopPropagation();
+      const nn = prompt('标记名称', m.name);
+      if(nn === null) return;
+      const trimmed = nn.trim().slice(0, 24);
+      if(!trimmed){ showToast('名称不能为空', true); return; }
+      m.name = trimmed;
+      m.customName = true;
+      renderMarkers();
+      showToast('标记已重命名: ' + trimmed);
     });
     el.addEventListener('mousedown', e=>{ e.stopPropagation(); });
     el.addEventListener('touchstart', e=>{ e.stopPropagation(); }, {passive:true});
@@ -4473,8 +4490,8 @@ function renderMarkers(){
     markerContainer.appendChild(el);
   });
 }
-function addMarker(time, name){
-  const m = {time: time, name: name || ('M' + (markers.length + 1))};
+function addMarker(time, name, customName){
+  const m = {time: time, name: name || ('M' + (markers.length + 1)), customName: !!customName};
   markers.push(m);
   markers.sort((a,b)=>a.time - b.time);
   renderMarkers();
@@ -4486,7 +4503,8 @@ waveformWrap.addEventListener('dblclick', e=>{
   const t = posToTime(e.clientX);
   const name = prompt('标记点名称（留空自动命名）:', 'M' + (markers.length + 1));
   if(name === null) return;
-  const newMarker = addMarker(t, name || ('M' + (markers.length + 1)));
+  const trimmed = (name || '').trim().slice(0, 24);
+  const newMarker = addMarker(t, trimmed || ('M' + (markers.length + 1)), !!trimmed);
   showToast('已添加标记: ' + newMarker.name);
 });
 // 缩放后重新渲染标记

@@ -250,6 +250,7 @@ header .blink{
 .marker::before{content:'';position:absolute;left:-9px;top:-6px;width:18px;height:34px}
 .marker-label{
   position:absolute;top:9px;left:50%;transform:translateX(-50%);
+  max-width:88px;overflow:hidden;text-overflow:ellipsis;
   font-family:var(--pixel);font-size:8px;color:var(--yellow,#ffcc00);
   white-space:nowrap;background:var(--bg);padding:1px 3px;
   pointer-events:none;
@@ -768,8 +769,9 @@ footer .footer-info{margin-top:6px;font-size:12px;opacity:0.7}
   .eq-col input[type=range]{height:110px}
   .demo-bar{justify-content:center}
   .crop-bar{flex-direction:column;align-items:stretch}
-  .crop-btns{justify-content:center}
-  .crop-info{text-align:center;min-width:auto}
+  .crop-btns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%}
+  .crop-btn{padding:9px 6px}
+  .crop-info{text-align:center;min-width:auto;width:100%}
   .progress-window{min-width:260px;padding:20px}
   .export-bar{justify-content:center;gap:6px;flex-wrap:nowrap}
   .transport-export .btn{padding:8px 10px;font-size:9px;min-height:36px;border-width:2px}
