@@ -411,6 +411,7 @@ let currentFileName = 'audio';
 let isProcessing = false;
 // 选区状态
 let selStart = -1, selEnd = -1;  // 秒
+let selStatsTimer = null, selStatsToken = 0;
 let isDragging = false;
 let dragMode = null;  // 'new' | 'move-start' | 'move-end'
 let progressTimer = null;
@@ -608,6 +609,7 @@ const waveformWrap = $('waveformWrap');
 const selectionEl = $('selection');
 const cropBar = $('cropBar');
 const cropInfo = $('cropInfo');
+const cropStats = $('cropStats');
 const cropKeepBtn = $('cropKeepBtn');
 const cropPartBtn = $('cropPartBtn');
 const cropDeleteBtn = $('cropDeleteBtn');
@@ -2317,10 +2319,106 @@ const markerBtn = $('markerBtn');
 const markerMenu = $('markerMenu');
 const markerFileInput = $('markerFileInput');
 const markerCountVal = $('markerCountVal');
+const markerListModal = $('markerListModal');
+const markerListBody = $('markerListBody');
+const markerListTitle = $('markerListTitle');
+const markerListClose = $('markerListClose');
 
 function updateMarkerCount(){
   if(markerCountVal) markerCountVal.textContent = markers ? markers.length : 0;
 }
+
+/* ============ STABLE 1.51：标记列表 ============ */
+function closeMarkerList(){
+  if(markerListModal) markerListModal.classList.add('hidden');
+}
+
+function openMarkerList(){
+  if(!markerListModal) return;
+  renderMarkerList();
+  markerListModal.classList.remove('hidden');
+}
+
+function renderMarkerList(){
+  if(!markerListBody) return;
+  const sorted = (markers || []).slice().sort((a,b)=>a.time - b.time);
+  if(markerListTitle) markerListTitle.textContent = '标记列表 (' + sorted.length + ')';
+  markerListBody.innerHTML = '';
+  if(sorted.length === 0){
+    const empty = document.createElement('div');
+    empty.className = 'marker-empty';
+    empty.textContent = '还没有标记点。双击波形，或在 MARKER 菜单里选择“在播放头打标记”。';
+    markerListBody.appendChild(empty);
+    return;
+  }
+  sorted.forEach((m, i)=>{
+    const row = document.createElement('div');
+    row.className = 'marker-row';
+    const jump = ()=>{
+      jumpToTime(m.time);
+      closeMarkerList();
+      showToast('跳转到标记: ' + m.name);
+    };
+    row.addEventListener('click', jump);
+
+    const time = document.createElement('span');
+    time.className = 'marker-time';
+    time.textContent = fmtTime(m.time);
+    time.title = '点击跳转';
+    row.appendChild(time);
+
+    const name = document.createElement('span');
+    name.className = 'marker-name';
+    name.textContent = m.name;
+    name.title = m.name + ' · 点击跳转';
+    row.appendChild(name);
+
+    const delta = document.createElement('span');
+    delta.className = 'marker-delta';
+    delta.textContent = i > 0 ? '+' + (m.time - sorted[i-1].time).toFixed(1) + 's' : '';
+    row.appendChild(delta);
+
+    const rename = document.createElement('button');
+    rename.className = 'marker-row-btn';
+    rename.textContent = '改名';
+    rename.addEventListener('click', e=>{
+      e.stopPropagation();
+      const nn = prompt('标记名称', m.name);
+      if(nn === null) return;
+      const trimmed = nn.trim().slice(0, 24);
+      if(!trimmed){ showToast('名称不能为空', true); return; }
+      m.name = trimmed;
+      m.customName = true;
+      renderMarkers();
+      renderMarkerList();
+      updateMarkerCount();
+      showToast('标记已重命名: ' + trimmed);
+    });
+    row.appendChild(rename);
+
+    const del = document.createElement('button');
+    del.className = 'marker-row-btn del';
+    del.textContent = '删除';
+    del.addEventListener('click', e=>{
+      e.stopPropagation();
+      if(!confirm('删除标记 "' + m.name + '" ?')) return;
+      const idx = markers.indexOf(m);
+      if(idx >= 0) markers.splice(idx, 1);
+      renderMarkers();
+      renderMarkerList();
+      updateMarkerCount();
+      showToast('标记已删除');
+    });
+    row.appendChild(del);
+
+    markerListBody.appendChild(row);
+  });
+}
+
+if(markerListClose) markerListClose.addEventListener('click', closeMarkerList);
+if(markerListModal) markerListModal.addEventListener('click', e=>{
+  if(e.target === markerListModal) closeMarkerList();
+});
 
 if(markerBtn && markerMenu){
   markerBtn.addEventListener('click', (e)=>{
@@ -2360,6 +2458,9 @@ if(markerBtn && markerMenu){
     }
     else if(action === 'splitzip'){
       exportSegmentsByMarkers();
+    }
+    else if(action === 'list'){
+      openMarkerList();
     }
     else if(action === 'addhere'){
       if(!originalBuffer){ showToast('请先载入音频', true); return; }
@@ -2446,6 +2547,19 @@ function jumpToTime(t){
   t = Math.max(0, Math.min(dur, t));
   if(isPlaying) stop(true);
   pausedAt = t;
+  // 缩放状态下跳到视口外的标记时，自动把视图移过去
+  if(waveZoom > 1){
+    const span = 1 / waveZoom;
+    const viewStart = waveOffset * dur;
+    const viewEnd = viewStart + span * dur;
+    if(t < viewStart || t > viewEnd){
+      const next = Math.max(0, Math.min(1 - span, t / dur - span / 2));
+      if(Math.abs(next - waveOffset) > 1e-9){
+        waveOffset = next;
+        updateZoom();
+      }
+    }
+  }
   playhead.style.display = 'block';
   playhead.style.left = timeToViewPct(t) + '%';
 }
@@ -3776,6 +3890,7 @@ function clearSelection(){
   selectionEl.style.left = '0';
   selectionEl.style.width = '0';
   cropInfo.textContent = '拖拽波形选择区域';
+  clearSelectionStats();
   cropKeepBtn.disabled = true;
   cropPartBtn.disabled = true;
   cropDeleteBtn.disabled = true;
@@ -3806,6 +3921,7 @@ function updateSelectionUI(){
   selectionEl.style.left = leftPct + '%';
   selectionEl.style.width = widthPct + '%';
   cropInfo.textContent = '选区: ' + fmtTime(s) + ' → ' + fmtTime(e) + '  (' + fmtTime(e - s) + ')';
+  scheduleSelectionStats(s, e);
   cropKeepBtn.disabled = false;
   cropPartBtn.disabled = false;
   cropDeleteBtn.disabled = false;
@@ -3815,6 +3931,58 @@ function updateSelectionUI(){
   cropGainBtn.disabled = false;
   cropClearBtn.disabled = false;
   cropBar.classList.remove('hidden');
+}
+
+/* ============ STABLE 1.51：选区峰值 / RMS 统计 ============ */
+function clearSelectionStats(){
+  selStatsToken++;
+  if(selStatsTimer){ clearTimeout(selStatsTimer); selStatsTimer = null; }
+  if(cropStats) cropStats.textContent = '';
+}
+
+function scheduleSelectionStats(s, e){
+  if(!cropStats || !originalBuffer || selStart < 0 || selEnd < 0) return;
+  const token = ++selStatsToken;
+  if(selStatsTimer) clearTimeout(selStatsTimer);
+  cropStats.textContent = '统计中…';
+  selStatsTimer = setTimeout(()=>{
+    selStatsTimer = null;
+    computeSelectionStats(s, e, token);
+  }, 300);
+}
+
+async function computeSelectionStats(s, e, token){
+  const buf = bypassToggle.checked ? originalBuffer : (processedBuffer || originalBuffer);
+  if(!buf) return;
+  const sr = buf.sampleRate;
+  const start = Math.max(0, Math.floor(Math.min(s, e) * sr));
+  const end = Math.min(buf.length, Math.ceil(Math.max(s, e) * sr));
+  if(end <= start){
+    if(token === selStatsToken && cropStats) cropStats.textContent = '选区太短';
+    return;
+  }
+  let peak = 0, sumSq = 0, total = 0;
+  const CHUNK = 262144;
+  for(let c = 0; c < buf.numberOfChannels; c++){
+    const data = buf.getChannelData(c);
+    for(let i = start; i < end; i += CHUNK){
+      const stop = Math.min(end, i + CHUNK);
+      for(let j = i; j < stop; j++){
+        const v = data[j];
+        const a = v < 0 ? -v : v;
+        if(a > peak) peak = a;
+        sumSq += v * v;
+      }
+      total += stop - i;
+      await new Promise(r => setTimeout(r, 0));
+      if(token !== selStatsToken) return;
+    }
+  }
+  if(token !== selStatsToken) return;
+  const peakDb = peak > 0 ? 20 * Math.log10(peak) : -Infinity;
+  const rmsDb = (total > 0 && sumSq > 0) ? 20 * Math.log10(Math.sqrt(sumSq / total)) : -Infinity;
+  const fmtDb = v => isFinite(v) ? v.toFixed(1) + ' dB' : '-∞';
+  if(cropStats) cropStats.textContent = '峰值 ' + fmtDb(peakDb) + ' · RMS ' + fmtDb(rmsDb);
 }
 
 /* ============ STABLE 1.48.3：缩放视图坐标统一 ============ */
@@ -4402,6 +4570,9 @@ function drawWaveform(){
     const y1 = mid + min * mid * 0.88;
     const y2 = mid + max * mid * 0.88;
     ctx2d.fillRect(x, y1, barW, Math.max(1, y2 - y1));
+  }
+  if(selStart >= 0 && selEnd >= 0){
+    scheduleSelectionStats(Math.min(selStart, selEnd), Math.max(selStart, selEnd));
   }
 }
 window.addEventListener('resize', ()=>{ if(originalBuffer) drawWaveform(); });

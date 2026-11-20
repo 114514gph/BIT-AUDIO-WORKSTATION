@@ -279,13 +279,49 @@ header .blink{
   background:var(--panel);border:2px solid var(--border);
   padding:10px 14px;
 }
+.crop-readout{display:flex;flex-direction:column;gap:2px;min-width:200px}
 .crop-info{
   font-family:var(--mono);font-size:16px;color:var(--cyan);
-  min-width:180px;
+}
+.crop-stats{
+  font-family:var(--mono);font-size:12px;color:var(--muted);
+  min-height:15px;white-space:nowrap;
 }
 .crop-btns{display:flex;gap:8px;flex-wrap:wrap}
 .crop-btn{padding:8px 14px;font-size:10px}
 .crop-btn:disabled{opacity:0.35;cursor:not-allowed}
+
+/* ============ MARKER LIST ============ */
+#markerListModal{z-index:900}   /* 低于 toast，改名/删除的提示不会被遮罩挡住 */
+.marker-list-window{
+  background:var(--panel);border:2px solid var(--border);
+  padding:16px;width:min(560px,92vw);max-height:78vh;
+  display:flex;flex-direction:column;gap:12px;
+  box-shadow:0 12px 40px rgba(0,0,0,0.55);
+}
+.marker-list-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.marker-list-title{font-family:var(--mono);font-size:16px;color:var(--amber);letter-spacing:1px}
+.marker-list-body{
+  overflow-y:auto;border:1px solid var(--border);background:var(--bg);
+  min-height:76px;max-height:52vh;
+}
+.marker-row{
+  display:flex;align-items:center;gap:8px;padding:7px 9px;
+  border-bottom:1px solid var(--border);font-family:var(--mono);font-size:13px;
+  cursor:pointer;
+}
+.marker-row:last-child{border-bottom:none}
+.marker-row:hover{background:var(--panel2)}
+.marker-time{color:var(--cyan);min-width:64px;cursor:pointer}
+.marker-name{flex:1;min-width:0;color:var(--text);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.marker-delta{color:var(--muted);font-size:11px;min-width:56px;text-align:right}
+.marker-row-btn{
+  padding:3px 7px;font-size:10px;font-family:var(--mono);
+  background:var(--bg);border:1px solid var(--border);color:var(--muted);cursor:pointer;
+}
+.marker-row-btn:hover{border-color:var(--amber);color:var(--amber)}
+.marker-row-btn.del:hover{border-color:var(--pink);color:var(--pink)}
+.marker-empty{padding:20px 12px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.6}
 
 /* ============ DEMO BAR ============ */
 .demo-bar{
@@ -778,7 +814,14 @@ footer .footer-info{margin-top:6px;font-size:12px;opacity:0.7}
   .crop-bar{flex-direction:column;align-items:stretch}
   .crop-btns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%}
   .crop-btn{padding:9px 6px}
-  .crop-info{text-align:center;min-width:auto;width:100%}
+  .crop-readout{width:100%;min-width:0}
+  .crop-info{text-align:center;width:100%}
+  .crop-stats{text-align:center;white-space:normal;line-height:1.4}
+  .marker-list-window{width:94vw;padding:12px;max-height:80vh}
+  .marker-row{gap:6px;padding:8px 6px}
+  .marker-time{min-width:54px}
+  .marker-delta{display:none}
+  .marker-row-btn{padding:4px 6px}
   .progress-window{min-width:260px;padding:20px}
   .export-bar{justify-content:center;gap:6px;flex-wrap:nowrap}
   .transport-export .btn{padding:8px 10px;font-size:9px;min-height:36px;border-width:2px}
@@ -1268,6 +1311,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
           <div class="dropdown-item" data-marker="import">导入标记点 (CSV)</div>
           <div class="dropdown-item" data-marker="splitzip">按标记切段导出 (ZIP)</div>
           <div class="dropdown-item" data-marker="addhere">在播放头打标记</div>
+          <div class="dropdown-item" data-marker="list">标记列表</div>
           <div class="dropdown-item" data-marker="prevmarker">跳到上一标记</div>
           <div class="dropdown-item" data-marker="nextmarker">跳到下一标记</div>
           <div class="dropdown-divider"></div>
@@ -1335,7 +1379,10 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
       <!-- 裁剪控制栏（有选区时显示） -->
       <div class="crop-bar hidden" id="cropBar">
-        <span class="crop-info" id="cropInfo">拖拽波形选择区域</span>
+        <div class="crop-readout">
+          <span class="crop-info" id="cropInfo">拖拽波形选择区域</span>
+          <span class="crop-stats" id="cropStats" title="按当前显示的波形计算"></span>
+        </div>
         <div class="crop-btns">
           <button class="btn crop-btn" id="cropKeepBtn" disabled>&#10003; KEEP 保留</button>
           <button class="btn crop-btn" id="cropPartBtn" disabled>&#8681; PART 导出选区</button>
@@ -1664,7 +1711,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.50.1 (Bugfix) <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.51 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -1679,6 +1726,17 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
     </div>
     <div class="progress-pct" id="progressPct">0%</div>
     <button class="cancel-btn hidden" id="cancelLoadBtn">取消加载</button>
+  </div>
+</div>
+
+<!-- 标记列表弹窗 -->
+<div class="modal-overlay hidden" id="markerListModal">
+  <div class="marker-list-window">
+    <div class="marker-list-head">
+      <span class="marker-list-title" id="markerListTitle">标记列表</span>
+      <button class="btn crop-btn" id="markerListClose">关闭</button>
+    </div>
+    <div class="marker-list-body" id="markerListBody"></div>
   </div>
 </div>
 
@@ -1742,6 +1800,7 @@ let currentFileName = 'audio';
 let isProcessing = false;
 // 选区状态
 let selStart = -1, selEnd = -1;  // 秒
+let selStatsTimer = null, selStatsToken = 0;
 let isDragging = false;
 let dragMode = null;  // 'new' | 'move-start' | 'move-end'
 let progressTimer = null;
@@ -1939,6 +1998,7 @@ const waveformWrap = $('waveformWrap');
 const selectionEl = $('selection');
 const cropBar = $('cropBar');
 const cropInfo = $('cropInfo');
+const cropStats = $('cropStats');
 const cropKeepBtn = $('cropKeepBtn');
 const cropPartBtn = $('cropPartBtn');
 const cropDeleteBtn = $('cropDeleteBtn');
@@ -3648,10 +3708,106 @@ const markerBtn = $('markerBtn');
 const markerMenu = $('markerMenu');
 const markerFileInput = $('markerFileInput');
 const markerCountVal = $('markerCountVal');
+const markerListModal = $('markerListModal');
+const markerListBody = $('markerListBody');
+const markerListTitle = $('markerListTitle');
+const markerListClose = $('markerListClose');
 
 function updateMarkerCount(){
   if(markerCountVal) markerCountVal.textContent = markers ? markers.length : 0;
 }
+
+/* ============ STABLE 1.51：标记列表 ============ */
+function closeMarkerList(){
+  if(markerListModal) markerListModal.classList.add('hidden');
+}
+
+function openMarkerList(){
+  if(!markerListModal) return;
+  renderMarkerList();
+  markerListModal.classList.remove('hidden');
+}
+
+function renderMarkerList(){
+  if(!markerListBody) return;
+  const sorted = (markers || []).slice().sort((a,b)=>a.time - b.time);
+  if(markerListTitle) markerListTitle.textContent = '标记列表 (' + sorted.length + ')';
+  markerListBody.innerHTML = '';
+  if(sorted.length === 0){
+    const empty = document.createElement('div');
+    empty.className = 'marker-empty';
+    empty.textContent = '还没有标记点。双击波形，或在 MARKER 菜单里选择“在播放头打标记”。';
+    markerListBody.appendChild(empty);
+    return;
+  }
+  sorted.forEach((m, i)=>{
+    const row = document.createElement('div');
+    row.className = 'marker-row';
+    const jump = ()=>{
+      jumpToTime(m.time);
+      closeMarkerList();
+      showToast('跳转到标记: ' + m.name);
+    };
+    row.addEventListener('click', jump);
+
+    const time = document.createElement('span');
+    time.className = 'marker-time';
+    time.textContent = fmtTime(m.time);
+    time.title = '点击跳转';
+    row.appendChild(time);
+
+    const name = document.createElement('span');
+    name.className = 'marker-name';
+    name.textContent = m.name;
+    name.title = m.name + ' · 点击跳转';
+    row.appendChild(name);
+
+    const delta = document.createElement('span');
+    delta.className = 'marker-delta';
+    delta.textContent = i > 0 ? '+' + (m.time - sorted[i-1].time).toFixed(1) + 's' : '';
+    row.appendChild(delta);
+
+    const rename = document.createElement('button');
+    rename.className = 'marker-row-btn';
+    rename.textContent = '改名';
+    rename.addEventListener('click', e=>{
+      e.stopPropagation();
+      const nn = prompt('标记名称', m.name);
+      if(nn === null) return;
+      const trimmed = nn.trim().slice(0, 24);
+      if(!trimmed){ showToast('名称不能为空', true); return; }
+      m.name = trimmed;
+      m.customName = true;
+      renderMarkers();
+      renderMarkerList();
+      updateMarkerCount();
+      showToast('标记已重命名: ' + trimmed);
+    });
+    row.appendChild(rename);
+
+    const del = document.createElement('button');
+    del.className = 'marker-row-btn del';
+    del.textContent = '删除';
+    del.addEventListener('click', e=>{
+      e.stopPropagation();
+      if(!confirm('删除标记 "' + m.name + '" ?')) return;
+      const idx = markers.indexOf(m);
+      if(idx >= 0) markers.splice(idx, 1);
+      renderMarkers();
+      renderMarkerList();
+      updateMarkerCount();
+      showToast('标记已删除');
+    });
+    row.appendChild(del);
+
+    markerListBody.appendChild(row);
+  });
+}
+
+if(markerListClose) markerListClose.addEventListener('click', closeMarkerList);
+if(markerListModal) markerListModal.addEventListener('click', e=>{
+  if(e.target === markerListModal) closeMarkerList();
+});
 
 if(markerBtn && markerMenu){
   markerBtn.addEventListener('click', (e)=>{
@@ -3691,6 +3847,9 @@ if(markerBtn && markerMenu){
     }
     else if(action === 'splitzip'){
       exportSegmentsByMarkers();
+    }
+    else if(action === 'list'){
+      openMarkerList();
     }
     else if(action === 'addhere'){
       if(!originalBuffer){ showToast('请先载入音频', true); return; }
@@ -3777,6 +3936,19 @@ function jumpToTime(t){
   t = Math.max(0, Math.min(dur, t));
   if(isPlaying) stop(true);
   pausedAt = t;
+  // 缩放状态下跳到视口外的标记时，自动把视图移过去
+  if(waveZoom > 1){
+    const span = 1 / waveZoom;
+    const viewStart = waveOffset * dur;
+    const viewEnd = viewStart + span * dur;
+    if(t < viewStart || t > viewEnd){
+      const next = Math.max(0, Math.min(1 - span, t / dur - span / 2));
+      if(Math.abs(next - waveOffset) > 1e-9){
+        waveOffset = next;
+        updateZoom();
+      }
+    }
+  }
   playhead.style.display = 'block';
   playhead.style.left = timeToViewPct(t) + '%';
 }
@@ -5107,6 +5279,7 @@ function clearSelection(){
   selectionEl.style.left = '0';
   selectionEl.style.width = '0';
   cropInfo.textContent = '拖拽波形选择区域';
+  clearSelectionStats();
   cropKeepBtn.disabled = true;
   cropPartBtn.disabled = true;
   cropDeleteBtn.disabled = true;
@@ -5137,6 +5310,7 @@ function updateSelectionUI(){
   selectionEl.style.left = leftPct + '%';
   selectionEl.style.width = widthPct + '%';
   cropInfo.textContent = '选区: ' + fmtTime(s) + ' → ' + fmtTime(e) + '  (' + fmtTime(e - s) + ')';
+  scheduleSelectionStats(s, e);
   cropKeepBtn.disabled = false;
   cropPartBtn.disabled = false;
   cropDeleteBtn.disabled = false;
@@ -5146,6 +5320,58 @@ function updateSelectionUI(){
   cropGainBtn.disabled = false;
   cropClearBtn.disabled = false;
   cropBar.classList.remove('hidden');
+}
+
+/* ============ STABLE 1.51：选区峰值 / RMS 统计 ============ */
+function clearSelectionStats(){
+  selStatsToken++;
+  if(selStatsTimer){ clearTimeout(selStatsTimer); selStatsTimer = null; }
+  if(cropStats) cropStats.textContent = '';
+}
+
+function scheduleSelectionStats(s, e){
+  if(!cropStats || !originalBuffer || selStart < 0 || selEnd < 0) return;
+  const token = ++selStatsToken;
+  if(selStatsTimer) clearTimeout(selStatsTimer);
+  cropStats.textContent = '统计中…';
+  selStatsTimer = setTimeout(()=>{
+    selStatsTimer = null;
+    computeSelectionStats(s, e, token);
+  }, 300);
+}
+
+async function computeSelectionStats(s, e, token){
+  const buf = bypassToggle.checked ? originalBuffer : (processedBuffer || originalBuffer);
+  if(!buf) return;
+  const sr = buf.sampleRate;
+  const start = Math.max(0, Math.floor(Math.min(s, e) * sr));
+  const end = Math.min(buf.length, Math.ceil(Math.max(s, e) * sr));
+  if(end <= start){
+    if(token === selStatsToken && cropStats) cropStats.textContent = '选区太短';
+    return;
+  }
+  let peak = 0, sumSq = 0, total = 0;
+  const CHUNK = 262144;
+  for(let c = 0; c < buf.numberOfChannels; c++){
+    const data = buf.getChannelData(c);
+    for(let i = start; i < end; i += CHUNK){
+      const stop = Math.min(end, i + CHUNK);
+      for(let j = i; j < stop; j++){
+        const v = data[j];
+        const a = v < 0 ? -v : v;
+        if(a > peak) peak = a;
+        sumSq += v * v;
+      }
+      total += stop - i;
+      await new Promise(r => setTimeout(r, 0));
+      if(token !== selStatsToken) return;
+    }
+  }
+  if(token !== selStatsToken) return;
+  const peakDb = peak > 0 ? 20 * Math.log10(peak) : -Infinity;
+  const rmsDb = (total > 0 && sumSq > 0) ? 20 * Math.log10(Math.sqrt(sumSq / total)) : -Infinity;
+  const fmtDb = v => isFinite(v) ? v.toFixed(1) + ' dB' : '-∞';
+  if(cropStats) cropStats.textContent = '峰值 ' + fmtDb(peakDb) + ' · RMS ' + fmtDb(rmsDb);
 }
 
 /* ============ STABLE 1.48.3：缩放视图坐标统一 ============ */
@@ -5733,6 +5959,9 @@ function drawWaveform(){
     const y1 = mid + min * mid * 0.88;
     const y2 = mid + max * mid * 0.88;
     ctx2d.fillRect(x, y1, barW, Math.max(1, y2 - y1));
+  }
+  if(selStart >= 0 && selEnd >= 0){
+    scheduleSelectionStats(Math.min(selStart, selEnd), Math.max(selStart, selEnd));
   }
 }
 window.addEventListener('resize', ()=>{ if(originalBuffer) drawWaveform(); });

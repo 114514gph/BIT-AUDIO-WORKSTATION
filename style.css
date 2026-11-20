@@ -272,13 +272,49 @@ header .blink{
   background:var(--panel);border:2px solid var(--border);
   padding:10px 14px;
 }
+.crop-readout{display:flex;flex-direction:column;gap:2px;min-width:200px}
 .crop-info{
   font-family:var(--mono);font-size:16px;color:var(--cyan);
-  min-width:180px;
+}
+.crop-stats{
+  font-family:var(--mono);font-size:12px;color:var(--muted);
+  min-height:15px;white-space:nowrap;
 }
 .crop-btns{display:flex;gap:8px;flex-wrap:wrap}
 .crop-btn{padding:8px 14px;font-size:10px}
 .crop-btn:disabled{opacity:0.35;cursor:not-allowed}
+
+/* ============ MARKER LIST ============ */
+#markerListModal{z-index:900}   /* 低于 toast，改名/删除的提示不会被遮罩挡住 */
+.marker-list-window{
+  background:var(--panel);border:2px solid var(--border);
+  padding:16px;width:min(560px,92vw);max-height:78vh;
+  display:flex;flex-direction:column;gap:12px;
+  box-shadow:0 12px 40px rgba(0,0,0,0.55);
+}
+.marker-list-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.marker-list-title{font-family:var(--mono);font-size:16px;color:var(--amber);letter-spacing:1px}
+.marker-list-body{
+  overflow-y:auto;border:1px solid var(--border);background:var(--bg);
+  min-height:76px;max-height:52vh;
+}
+.marker-row{
+  display:flex;align-items:center;gap:8px;padding:7px 9px;
+  border-bottom:1px solid var(--border);font-family:var(--mono);font-size:13px;
+  cursor:pointer;
+}
+.marker-row:last-child{border-bottom:none}
+.marker-row:hover{background:var(--panel2)}
+.marker-time{color:var(--cyan);min-width:64px;cursor:pointer}
+.marker-name{flex:1;min-width:0;color:var(--text);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.marker-delta{color:var(--muted);font-size:11px;min-width:56px;text-align:right}
+.marker-row-btn{
+  padding:3px 7px;font-size:10px;font-family:var(--mono);
+  background:var(--bg);border:1px solid var(--border);color:var(--muted);cursor:pointer;
+}
+.marker-row-btn:hover{border-color:var(--amber);color:var(--amber)}
+.marker-row-btn.del:hover{border-color:var(--pink);color:var(--pink)}
+.marker-empty{padding:20px 12px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.6}
 
 /* ============ DEMO BAR ============ */
 .demo-bar{
@@ -771,7 +807,14 @@ footer .footer-info{margin-top:6px;font-size:12px;opacity:0.7}
   .crop-bar{flex-direction:column;align-items:stretch}
   .crop-btns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%}
   .crop-btn{padding:9px 6px}
-  .crop-info{text-align:center;min-width:auto;width:100%}
+  .crop-readout{width:100%;min-width:0}
+  .crop-info{text-align:center;width:100%}
+  .crop-stats{text-align:center;white-space:normal;line-height:1.4}
+  .marker-list-window{width:94vw;padding:12px;max-height:80vh}
+  .marker-row{gap:6px;padding:8px 6px}
+  .marker-time{min-width:54px}
+  .marker-delta{display:none}
+  .marker-row-btn{padding:4px 6px}
   .progress-window{min-width:260px;padding:20px}
   .export-bar{justify-content:center;gap:6px;flex-wrap:nowrap}
   .transport-export .btn{padding:8px 10px;font-size:9px;min-height:36px;border-width:2px}
