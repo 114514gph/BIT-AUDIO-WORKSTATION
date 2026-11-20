@@ -5039,8 +5039,25 @@ async function encodeOgg(buffer){
 
 /* ============ FLAC 编码 (libflacjs) ============ */
 async function encodeFlac(buffer){
-  const FlacObj = window.Flac || window.libflac;
-  if(!FlacObj) throw new Error('FLAC 编码器未就绪');
+  const FlacObj = window.Flac;
+  if(!FlacObj || typeof FlacObj.create_libflac_encoder !== 'function') throw new Error('FLAC 编码器未就绪');
+  if(!FlacObj.isReady()){
+    await new Promise((resolve, reject) => {
+      let done = false;
+      const timer = setTimeout(() => {
+        if(done) return;
+        done = true;
+        reject(new Error('FLAC 编码器加载超时'));
+      }, 15000);
+      FlacObj.onready = () => {
+        if(done) return;
+        done = true;
+        clearTimeout(timer);
+        FlacObj.onready = null;
+        resolve();
+      };
+    });
+  }
   const ch = buffer.numberOfChannels;
   const sr = buffer.sampleRate;
   const len = buffer.length;
@@ -5051,12 +5068,31 @@ async function encodeFlac(buffer){
       interleaved[i*ch+c] = Math.max(-32768, Math.min(32767, Math.round(d[i]*32767)));
     }
   }
-  const encoder = FlacObj.createEncoder();
-  FlacObj.init_encoder_stream(encoder, ch, sr, 16, 5);
-  FlacObj.encode(encoder, interleaved);
-  const data = FlacObj.getEncodedData(encoder);
-  FlacObj.FLAC__stream_encoder_finish(encoder);
-  FlacObj.destroyEncoder(encoder);
+  const encoder = FlacObj.create_libflac_encoder(sr, ch, 16, 5, len, 0, 0);
+  if(!encoder) throw new Error('FLAC 编码器初始化失败');
+  const chunks = [];
+  try {
+    const initStatus = FlacObj.init_encoder_stream(encoder, data => {
+      chunks.push(new Uint8Array(data));
+    });
+    if(initStatus !== 0) throw new Error('FLAC 编码流初始化失败 (' + initStatus + ')');
+    const framesPerBlock = 8192;
+    for(let off = 0; off < len; off += framesPerBlock){
+      const n = Math.min(framesPerBlock, len - off);
+      const ok = FlacObj.FLAC__stream_encoder_process_interleaved(
+        encoder, interleaved.subarray(off * ch, (off + n) * ch), n
+      );
+      if(!ok) throw new Error('FLAC 编码失败');
+    }
+    if(!FlacObj.FLAC__stream_encoder_finish(encoder)) throw new Error('FLAC 编码收尾失败');
+  } finally {
+    try { FlacObj.FLAC__stream_encoder_delete(encoder); } catch(e){}
+  }
+  let total = 0;
+  for(const c of chunks) total += c.length;
+  const data = new Uint8Array(total);
+  let pos = 0;
+  for(const c of chunks){ data.set(c, pos); pos += c.length; }
   return new Blob([data], {type:'audio/flac'});
 }
 

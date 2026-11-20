@@ -205,7 +205,17 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details open>
-<summary><b>STABLE 1.51</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.51.1 (Bugfix)</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.51.1 (Bugfix)
+- 修复 GitHub 仓库拆分版 index.html 把合并后的 script.js 重复加载四次的问题：四段内联代码现在只加载一次，拆分版可以正常启动
+- 修复 FLAC 导出调用错误编码器接口、导致导出失败的问题；WAV / MP3 / OGG 导出不受影响
+- 单文件版与在线版的音频处理、选区统计、标记列表都不受影响，版本号按 Bugfix 规则递增
+
+</details>
+
+<details>
+<summary><b>STABLE 1.51</b></summary>
 
 ### STABLE 1.51
 - 拖选一段音频后，裁剪栏会显示这段的峰值和 RMS 电平；按当前波形计算，旁通和处理后的结果都能看
