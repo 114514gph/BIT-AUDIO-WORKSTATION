@@ -222,6 +222,22 @@ header .blink{
 }
 #exportWaveBtn{border-color:var(--amber);color:var(--amber)}
 #exportWaveBtn:hover{background:linear-gradient(rgba(255,170,0,0.28),rgba(255,170,0,0.28)),var(--bg)}
+/* STABLE 1.52：波形时间刻度 */
+.wave-time-ruler{
+  position:relative;height:22px;margin:0 2px;
+  background:var(--panel);border:1px solid var(--border);border-top:none;
+  overflow:hidden;cursor:crosshair;touch-action:none;user-select:none;
+}
+.wave-time-ruler .ruler-tick{position:absolute;top:0;height:7px;border-left:1px solid rgba(0,255,136,0.30);pointer-events:none}
+.wave-time-ruler .ruler-tick.major{height:11px;border-left-color:rgba(0,255,136,0.62)}
+.wave-time-ruler .ruler-label{
+  position:absolute;top:8px;font-family:var(--mono);font-size:12px;
+  line-height:1;color:var(--muted);white-space:nowrap;transform:translateX(-50%);
+  pointer-events:none;
+}
+.wave-time-ruler .ruler-label.edge-left{transform:none}
+.wave-time-ruler .ruler-label.edge-right{transform:translateX(-100%)}
+.wave-time-ruler .ruler-empty{position:absolute;left:8px;top:3px;font-family:var(--mono);font-size:12px;color:var(--muted)}
 .waveform-wrap{
   position:relative;
   background:var(--panel);
@@ -283,6 +299,20 @@ header .blink{
 .crop-btns{display:flex;gap:8px;flex-wrap:wrap}
 .crop-btn{padding:8px 14px;font-size:10px}
 .crop-btn:disabled{opacity:0.35;cursor:not-allowed}
+/* STABLE 1.52：选区边界精调 */
+.crop-adjust{
+  display:flex;align-items:center;gap:5px;flex-wrap:wrap;flex-basis:100%;width:100%;
+  padding-top:8px;border-top:1px dashed rgba(0,229,255,0.24);
+}
+.crop-adjust .adj-label{font-family:var(--pixel);font-size:8px;color:var(--muted);letter-spacing:1px;min-width:26px}
+.nudge-btn{
+  font-family:var(--pixel);font-size:8px;color:var(--cyan);
+  background:var(--panel2);border:1px solid rgba(0,229,255,0.45);
+  padding:4px 7px;cursor:pointer;letter-spacing:0.5px;transition:all 0.15s;
+}
+.nudge-btn:hover{border-color:var(--cyan);color:var(--text);background:rgba(0,229,255,0.18)}
+.nudge-btn.snap{color:var(--amber);border-color:rgba(255,170,0,0.55)}
+.nudge-btn.snap:hover{border-color:var(--amber);color:var(--text);background:rgba(255,170,0,0.18)}
 
 /* ============ MARKER LIST ============ */
 #markerListModal{z-index:900}   /* 低于 toast，改名/删除的提示不会被遮罩挡住 */
@@ -807,6 +837,8 @@ footer .footer-info{margin-top:6px;font-size:12px;opacity:0.7}
   .crop-bar{flex-direction:column;align-items:stretch}
   .crop-btns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%}
   .crop-btn{padding:9px 6px}
+  .crop-adjust{justify-content:center}
+  .nudge-btn{padding:7px 8px;min-height:32px}
   .crop-readout{width:100%;min-width:0}
   .crop-info{text-align:center;width:100%}
   .crop-stats{text-align:center;white-space:normal;line-height:1.4}

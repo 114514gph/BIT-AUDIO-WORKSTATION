@@ -229,6 +229,22 @@ header .blink{
 }
 #exportWaveBtn{border-color:var(--amber);color:var(--amber)}
 #exportWaveBtn:hover{background:linear-gradient(rgba(255,170,0,0.28),rgba(255,170,0,0.28)),var(--bg)}
+/* STABLE 1.52：波形时间刻度 */
+.wave-time-ruler{
+  position:relative;height:22px;margin:0 2px;
+  background:var(--panel);border:1px solid var(--border);border-top:none;
+  overflow:hidden;cursor:crosshair;touch-action:none;user-select:none;
+}
+.wave-time-ruler .ruler-tick{position:absolute;top:0;height:7px;border-left:1px solid rgba(0,255,136,0.30);pointer-events:none}
+.wave-time-ruler .ruler-tick.major{height:11px;border-left-color:rgba(0,255,136,0.62)}
+.wave-time-ruler .ruler-label{
+  position:absolute;top:8px;font-family:var(--mono);font-size:12px;
+  line-height:1;color:var(--muted);white-space:nowrap;transform:translateX(-50%);
+  pointer-events:none;
+}
+.wave-time-ruler .ruler-label.edge-left{transform:none}
+.wave-time-ruler .ruler-label.edge-right{transform:translateX(-100%)}
+.wave-time-ruler .ruler-empty{position:absolute;left:8px;top:3px;font-family:var(--mono);font-size:12px;color:var(--muted)}
 .waveform-wrap{
   position:relative;
   background:var(--panel);
@@ -290,6 +306,20 @@ header .blink{
 .crop-btns{display:flex;gap:8px;flex-wrap:wrap}
 .crop-btn{padding:8px 14px;font-size:10px}
 .crop-btn:disabled{opacity:0.35;cursor:not-allowed}
+/* STABLE 1.52：选区边界精调 */
+.crop-adjust{
+  display:flex;align-items:center;gap:5px;flex-wrap:wrap;flex-basis:100%;width:100%;
+  padding-top:8px;border-top:1px dashed rgba(0,229,255,0.24);
+}
+.crop-adjust .adj-label{font-family:var(--pixel);font-size:8px;color:var(--muted);letter-spacing:1px;min-width:26px}
+.nudge-btn{
+  font-family:var(--pixel);font-size:8px;color:var(--cyan);
+  background:var(--panel2);border:1px solid rgba(0,229,255,0.45);
+  padding:4px 7px;cursor:pointer;letter-spacing:0.5px;transition:all 0.15s;
+}
+.nudge-btn:hover{border-color:var(--cyan);color:var(--text);background:rgba(0,229,255,0.18)}
+.nudge-btn.snap{color:var(--amber);border-color:rgba(255,170,0,0.55)}
+.nudge-btn.snap:hover{border-color:var(--amber);color:var(--text);background:rgba(255,170,0,0.18)}
 
 /* ============ MARKER LIST ============ */
 #markerListModal{z-index:900}   /* 低于 toast，改名/删除的提示不会被遮罩挡住 */
@@ -814,6 +844,8 @@ footer .footer-info{margin-top:6px;font-size:12px;opacity:0.7}
   .crop-bar{flex-direction:column;align-items:stretch}
   .crop-btns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%}
   .crop-btn{padding:9px 6px}
+  .crop-adjust{justify-content:center}
+  .nudge-btn{padding:7px 8px;min-height:32px}
   .crop-readout{width:100%;min-width:0}
   .crop-info{text-align:center;width:100%}
   .crop-stats{text-align:center;white-space:normal;line-height:1.4}
@@ -1375,6 +1407,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
           <div class="playhead" id="playhead"></div>
           <div class="marker-container" id="markerContainer"></div>
         </div>
+        <div class="wave-time-ruler" id="timeRuler" title="点击或拖动定位播放头"></div>
       </div>
 
       <!-- 裁剪控制栏（有选区时显示） -->
@@ -1392,6 +1425,15 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
           <button class="btn crop-btn" id="cropRevBtn" disabled>&#8646; REV 选区反向</button>
           <button class="btn crop-btn" id="cropGainBtn" disabled>&#128266; GAIN 选区增益</button>
           <button class="btn crop-btn" id="cropClearBtn" disabled>&#8634; CLEAR</button>
+        </div>
+        <div class="crop-adjust" id="cropAdjust">
+          <span class="adj-label">IN</span>
+          <button class="nudge-btn" data-nudge="start-down" title="选区起点提前 10ms">−10ms</button>
+          <button class="nudge-btn" data-nudge="start-up" title="选区起点延后 10ms">+10ms</button>
+          <span class="adj-label">OUT</span>
+          <button class="nudge-btn" data-nudge="end-down" title="选区终点提前 10ms">−10ms</button>
+          <button class="nudge-btn" data-nudge="end-up" title="选区终点延后 10ms">+10ms</button>
+          <button class="nudge-btn snap" data-nudge="snap" title="选区起止吸附到最近的零交叉">ZERO 吸附</button>
         </div>
       </div>
 
@@ -1711,7 +1753,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.51.1 (Bugfix) <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.52 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -1992,6 +2034,8 @@ const tagNameToggleEl = $('tagNameToggle');
 const exportBtn = $('exportBtn');
 const exportHint = $('exportHint');
 const waveform = $('waveform');
+const timeRuler = $('timeRuler');
+const cropAdjust = $('cropAdjust');
 const playhead = $('playhead');
 const toast = $('toast');
 const waveformWrap = $('waveformWrap');
@@ -2261,8 +2305,72 @@ function sanitizeFilename(name){
   return name.replace(/[\\/:*?"<>|]/g, '_').replace(/\.\.+/g, '.').substring(0, 200) || 'audio';
 }
 function fmtTime(s){
-  const m = Math.floor(s/60), sec = (s%60).toFixed(1);
-  return m + ':' + (sec<10?'0':'') + sec;
+  s = Math.max(0, Number(s) || 0);
+  let m = Math.floor(s/60), sec = s - m*60;
+  if(sec >= 59.95){ m += 1; sec = 0; }
+  return m + ':' + (sec<10?'0':'') + sec.toFixed(1);
+}
+function fmtTimePrecise(s){
+  s = Math.max(0, Number(s) || 0);
+  let m = Math.floor(s/60), sec = s - m*60;
+  if(sec >= 59.995){ m += 1; sec = 0; }
+  return m + ':' + (sec<10?'0':'') + sec.toFixed(2);
+}
+
+/* ============ STABLE 1.52：波形时间刻度 ============ */
+function fmtRulerTime(t, step){
+  t = Math.max(0, Number(t) || 0);
+  const h = Math.floor(t / 3600);
+  const m = Math.floor((t % 3600) / 60);
+  const pad = n => String(n).padStart(2, '0');
+  if(h > 0){
+    const sec = Math.floor(t % 60);
+    return h + ':' + pad(m) + ':' + pad(sec);
+  }
+  if(step < 0.1) return fmtTimePrecise(t);
+  if(step < 1) return fmtTime(t);
+  const total = Math.round(t);
+  return Math.floor(total / 60) + ':' + pad(total % 60);
+}
+
+function niceRulerStep(span, maxTicks){
+  const target = span / Math.max(1, maxTicks);
+  const steps = [0.005,0.01,0.02,0.05,0.1,0.2,0.5,1,2,5,10,15,30,60,120,300,600,900,1800,3600,7200];
+  for(const s of steps){ if(s >= target) return s; }
+  return 14400;
+}
+
+function renderTimeRuler(){
+  if(!timeRuler) return;
+  if(!originalBuffer){
+    timeRuler.innerHTML = '<span class="ruler-empty">—</span>';
+    return;
+  }
+  const dur = originalBuffer.duration || 0;
+  const w = timeRuler.clientWidth || waveformWrap.clientWidth || 0;
+  if(!dur || !w){ timeRuler.innerHTML = ''; return; }
+  const span = dur / waveZoom;
+  const start = Math.max(0, Math.min(dur - span, waveOffset * dur));
+  const end = Math.min(dur, start + span);
+  const maxTicks = Math.max(2, Math.floor(w / 72));
+  const step = niceRulerStep(span, maxTicks);
+  const frag = document.createDocumentFragment();
+  let first = Math.ceil((start - 1e-9) / step) * step;
+  for(let t = first; t <= end + 1e-6; t += step){
+    const left = ((t - start) / span) * 100;
+    if(left < -0.01 || left > 100.01) continue;
+    const tick = document.createElement('div');
+    tick.className = 'ruler-tick major';
+    tick.style.left = left + '%';
+    frag.appendChild(tick);
+    const label = document.createElement('span');
+    label.className = 'ruler-label' + (left < 6 ? ' edge-left' : left > 94 ? ' edge-right' : '');
+    label.style.left = left + '%';
+    label.textContent = fmtRulerTime(t, step);
+    frag.appendChild(label);
+  }
+  timeRuler.innerHTML = '';
+  timeRuler.appendChild(frag);
 }
 
 /* 计算音频统计信息用于详情面板（分块异步，避免大音频卡顿） */
@@ -2328,6 +2436,7 @@ function showWorkspace(){
 function hideWorkspace(){
   stop();
   originalBuffer = null; processedBuffer = null;
+  if(timeRuler) timeRuler.innerHTML = '<span class="ruler-empty">—</span>';
   workspace.classList.add('hidden');
   dropzone.classList.remove('hidden');
   fileInput.value = '';
@@ -5309,7 +5418,7 @@ function updateSelectionUI(){
   selectionEl.style.display = 'block';
   selectionEl.style.left = leftPct + '%';
   selectionEl.style.width = widthPct + '%';
-  cropInfo.textContent = '选区: ' + fmtTime(s) + ' → ' + fmtTime(e) + '  (' + fmtTime(e - s) + ')';
+  cropInfo.textContent = '选区: ' + fmtTimePrecise(s) + ' → ' + fmtTimePrecise(e) + '  (' + fmtTimePrecise(e - s) + ')';
   scheduleSelectionStats(s, e);
   cropKeepBtn.disabled = false;
   cropPartBtn.disabled = false;
@@ -5320,6 +5429,57 @@ function updateSelectionUI(){
   cropGainBtn.disabled = false;
   cropClearBtn.disabled = false;
   cropBar.classList.remove('hidden');
+}
+
+/* ============ STABLE 1.52：选区边界精调 ============ */
+function nearestZeroCrossingTime(t){
+  if(!originalBuffer) return null;
+  const data = originalBuffer.getChannelData(0);
+  const sr = originalBuffer.sampleRate;
+  const center = Math.round(t * sr);
+  const radius = Math.max(1, Math.round(0.03 * sr));
+  let best = -1, bestDist = Infinity;
+  const from = Math.max(1, center - radius);
+  const to = Math.min(data.length - 1, center + radius);
+  for(let i = from; i <= to; i++){
+    const a = data[i-1], b = data[i];
+    if((a <= 0 && b >= 0) || (a >= 0 && b <= 0)){
+      const d = Math.abs(i - center);
+      if(d < bestDist){ bestDist = d; best = i; }
+    }
+  }
+  if(best < 0) return null;
+  const a = data[best-1], b = data[best];
+  const denom = b - a;
+  const frac = Math.abs(denom) > 1e-12 ? (-a / denom) : 0;
+  return Math.max(0, Math.min(originalBuffer.duration, (best - 1 + frac) / sr));
+}
+
+function nudgeSelection(which, delta){
+  if(!originalBuffer || selStart < 0 || selEnd < 0) return;
+  const dur = originalBuffer.duration;
+  let s = Math.min(selStart, selEnd), e = Math.max(selStart, selEnd);
+  const MIN = 0.02;
+  if(which === 'start') s = Math.max(0, Math.min(e - MIN, s + delta));
+  else e = Math.min(dur, Math.max(s + MIN, e + delta));
+  if(e - s < MIN) return;
+  selStart = s; selEnd = e;
+  updateSelectionUI();
+}
+
+function snapSelectionToZero(){
+  if(!originalBuffer || selStart < 0 || selEnd < 0) return;
+  const dur = originalBuffer.duration;
+  let s = Math.min(selStart, selEnd), e = Math.max(selStart, selEnd);
+  const ns = (s <= 0.001 || s >= dur - 0.001) ? s : nearestZeroCrossingTime(s);
+  const ne = (e <= 0.001 || e >= dur - 0.001) ? e : nearestZeroCrossingTime(e);
+  if(ns === null && ne === null){ showToast('选区边界附近没有零交叉，可以手动微调', true); return; }
+  const newS = ns === null ? s : ns;
+  const newE = ne === null ? e : ne;
+  if(newE - newS < 0.02){ showToast('零交叉太近，选区会短于 20ms', true); return; }
+  selStart = newS; selEnd = newE;
+  updateSelectionUI();
+  showToast('选区已吸附到零交叉');
 }
 
 /* ============ STABLE 1.51：选区峰值 / RMS 统计 ============ */
@@ -5560,6 +5720,18 @@ cropDeleteBtn.addEventListener('click', async ()=>{
 });
 
 cropClearBtn.addEventListener('click', clearSelection);
+if(cropAdjust){
+  cropAdjust.addEventListener('click', e=>{
+    const btn = e.target.closest('[data-nudge]');
+    if(!btn) return;
+    const action = btn.dataset.nudge;
+    if(action === 'start-down') nudgeSelection('start', -0.01);
+    else if(action === 'start-up') nudgeSelection('start', 0.01);
+    else if(action === 'end-down') nudgeSelection('end', -0.01);
+    else if(action === 'end-up') nudgeSelection('end', 0.01);
+    else if(action === 'snap') snapSelectionToZero();
+  });
+}
 if(undoBtn) undoBtn.addEventListener('click', undoLastEdit);
 if(redoBtn) redoBtn.addEventListener('click', redoLastEdit);
 
@@ -5963,6 +6135,7 @@ function drawWaveform(){
   if(selStart >= 0 && selEnd >= 0){
     scheduleSelectionStats(Math.min(selStart, selEnd), Math.max(selStart, selEnd));
   }
+  renderTimeRuler();
 }
 window.addEventListener('resize', ()=>{ if(originalBuffer) drawWaveform(); });
 
@@ -6099,6 +6272,41 @@ updateZoom = function(){
     playhead.style.left = timeToViewPct(pausedAt) + '%';
   }
 };
+
+/* ============ STABLE 1.52：时间刻度定位 ============ */
+let rulerScrubbing = false, rulerScrubWasPlaying = false;
+function setPlayheadTime(t){
+  if(!originalBuffer) return;
+  const dur = originalBuffer.duration;
+  pausedAt = Math.max(0, Math.min(dur, t));
+  playhead.style.display = 'block';
+  playhead.style.left = timeToViewPct(pausedAt) + '%';
+}
+function endRulerScrub(resume){
+  if(!rulerScrubbing) return;
+  rulerScrubbing = false;
+  const was = rulerScrubWasPlaying;
+  rulerScrubWasPlaying = false;
+  if(resume && was) play();
+}
+if(timeRuler){
+  timeRuler.addEventListener('pointerdown', e=>{
+    if(!originalBuffer) return;
+    if(isRecording){ showToast('录制中不能拖动时间刻度', true); return; }
+    e.preventDefault();
+    rulerScrubbing = true;
+    rulerScrubWasPlaying = isPlaying;
+    if(isPlaying) stop(true, false);
+    try{ timeRuler.setPointerCapture(e.pointerId); }catch(err){}
+    setPlayheadTime(posToTime(e.clientX));
+  });
+  timeRuler.addEventListener('pointermove', e=>{
+    if(!rulerScrubbing) return;
+    setPlayheadTime(posToTime(e.clientX));
+  });
+  timeRuler.addEventListener('pointerup', ()=> endRulerScrub(true));
+  timeRuler.addEventListener('pointercancel', ()=> endRulerScrub(false));
+}
 
 /* ============ EXPORT WAV ============ */
 function writeStr(view, offset, str){

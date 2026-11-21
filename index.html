@@ -189,6 +189,7 @@
           <div class="playhead" id="playhead"></div>
           <div class="marker-container" id="markerContainer"></div>
         </div>
+        <div class="wave-time-ruler" id="timeRuler" title="点击或拖动定位播放头"></div>
       </div>
 
       <!-- 裁剪控制栏（有选区时显示） -->
@@ -206,6 +207,15 @@
           <button class="btn crop-btn" id="cropRevBtn" disabled>&#8646; REV 选区反向</button>
           <button class="btn crop-btn" id="cropGainBtn" disabled>&#128266; GAIN 选区增益</button>
           <button class="btn crop-btn" id="cropClearBtn" disabled>&#8634; CLEAR</button>
+        </div>
+        <div class="crop-adjust" id="cropAdjust">
+          <span class="adj-label">IN</span>
+          <button class="nudge-btn" data-nudge="start-down" title="选区起点提前 10ms">−10ms</button>
+          <button class="nudge-btn" data-nudge="start-up" title="选区起点延后 10ms">+10ms</button>
+          <span class="adj-label">OUT</span>
+          <button class="nudge-btn" data-nudge="end-down" title="选区终点提前 10ms">−10ms</button>
+          <button class="nudge-btn" data-nudge="end-up" title="选区终点延后 10ms">+10ms</button>
+          <button class="nudge-btn snap" data-nudge="snap" title="选区起止吸附到最近的零交叉">ZERO 吸附</button>
         </div>
       </div>
 
@@ -525,7 +535,7 @@
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.51.1 (Bugfix) <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.52 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -568,7 +578,7 @@
 </div>
 
 
-<!-- 内置编码库与主程序已合并到 script.js -->
-<script src="script.js"></script>
+  <!-- 内置编码库与主程序已合并到 script.js -->
+  <script src="script.js"></script>
 </body>
 </html>

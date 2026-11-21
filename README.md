@@ -14,6 +14,7 @@
 <!-- 徽章区域 -->
 <p align="center">
   <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases"><img src="https://img.shields.io/github/v/release/114514gph/BIT-AUDIO-WORKSTATION?style=flat-square&logo=github" alt="Release"></a>
+  <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases/tag/v1.52"><img src="https://img.shields.io/badge/STABLE-1.52-00ff88?style=flat-square" alt="Version STABLE 1.52"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-ff0066?style=flat-square" alt="License"></a>
   <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome"></a>
   <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API"><img src="https://img.shields.io/badge/Web%20Audio%20API-00aaff?style=flat-square&logo=webaudio" alt="Web Audio API"></a>
@@ -89,6 +90,8 @@ python3 -m http.server 8080
 |:----:|------|
 | 音频裁剪 | 波形拖拽选区，支持多段反复裁剪，选区也可直接另存为片段 |
 | 选区分析 | 拖选后在裁剪栏显示选区长度、峰值与 RMS 电平，按当前显示的波形计算 |
+| 时间刻度 | 波形下方自适应时间刻度尺，缩放时自动换档；点击或拖动刻度尺可直接定位播放头 |
+| 选区精调 | 选区起止可按 10ms 微调，ZERO 按钮把边界吸附到最近的零交叉，切点更干净 |
 | 反向播放 | 一键反转音频方向 |
 | 倍速播放 | 0.25~5x 实时变速不变调 |
 | 音量归一化 | 自动最大化音量而不削波 |
@@ -205,7 +208,17 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details open>
-<summary><b>STABLE 1.51.1 (Bugfix)</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.52</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.52
+- 波形下方新增自适应时间刻度尺，缩放时自动换档；点击或拖动刻度尺可以直接定位播放头，拖动时暂时停住，松手后从新位置继续播放
+- 选区起止新增 10ms 微调，裁剪前可以把边界吸附到最近的零交叉，减少切点爆音；选区读数精确到 10ms
+- 1.51.1 的 FLAC 导出与拆分版修复继续保持，WAV / MP3 / OGG / FLAC 回归测试通过
+
+</details>
+
+<details>
+<summary><b>STABLE 1.51.1 (Bugfix)</b></summary>
 
 ### STABLE 1.51.1 (Bugfix)
 - 修复 GitHub 仓库拆分版 index.html 把合并后的 script.js 重复加载四次的问题：四段内联代码现在只加载一次，拆分版可以正常启动
@@ -461,7 +474,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.34.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.34.x</b></summary>
 
 ### STABLE 1.34
 - 新增自动保存工作状态功能
@@ -472,7 +485,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.33.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.33.x</b></summary>
 
 ### STABLE 1.33
 - 新增节拍器功能
@@ -483,7 +496,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.32.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.32.x</b></summary>
 
 ### STABLE 1.32
 - 新增预设导出/导入功能
@@ -494,7 +507,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.31.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.31.x</b></summary>
 
 ### STABLE 1.31
 - 新增导出文件名自定义功能
@@ -504,7 +517,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.30.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.30.x</b></summary>
 
 ### STABLE 1.30
 - 新增音频信息面板（INFO）
@@ -515,7 +528,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.29.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.29.x</b></summary>
 
 ### STABLE 1.29
 - 新增人声消除（Vocal Remove）功能
@@ -527,7 +540,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.28.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.28.x</b></summary>
 
 ### STABLE 1.28
 - 新增实时峰值电平表（Peak Meter）
@@ -539,7 +552,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.27.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.27.x</b></summary>
 
 ### STABLE 1.27
 - 新增声道交换（Swap L/R）按钮：一键交换左右声道
@@ -552,7 +565,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.26.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.26.x</b></summary>
 
 ### STABLE 1.26
 - 新增立体声宽度调节（Stereo Width）
@@ -564,7 +577,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.25.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.25.x</b></summary>
 
 ### STABLE 1.25
 - 新增效果器预设系统（FX Presets）
@@ -577,7 +590,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.24.1 (Bugfix)</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.24.1 (Bugfix)</b></summary>
 
 ### STABLE 1.24.1 (Bugfix)
 - 修复 VT323 字体损坏导致的加载失败（OTS parsing error）
@@ -588,7 +601,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.24.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.24.x</b></summary>
 
 ### STABLE 1.24
 - 新增直流偏移校正功能（DC Offset Correction）
@@ -600,7 +613,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.23.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.23.x</b></summary>
 
 ### STABLE 1.23
 - 新增频谱导出为图片功能（Spectrum Export）
@@ -612,7 +625,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.22.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.22.x</b></summary>
 
 ### STABLE 1.22
 - 新增标记点导出/导入功能（Marker Import/Export）
@@ -625,7 +638,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.21.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.21.x</b></summary>
 
 ### STABLE 1.21
 - 新增波形导出为图片功能（Waveform Export）
@@ -637,7 +650,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.20.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.20.x</b></summary>
 
 ### STABLE 1.20.1 (Bugfix)
 - 修复节拍标记在音频内容改变后未重置的问题（文件上传、URL加载、示例音乐、噪声生成器、播放列表切换、去除静音、声道处理、裁剪等10处）
@@ -653,7 +666,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.19.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.19.x</b></summary>
 
 ### STABLE 1.19.1 (Bugfix)
 - 修复 NOISE/SILENCE/CHANNEL 按钮在主屏幕错误显示的问题
@@ -671,7 +684,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.18.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.18.x</b></summary>
 
 ### STABLE 1.18
 - 新增静音检测与去除功能（Silence Detection & Removal）
@@ -684,7 +697,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.17.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.17.x</b></summary>
 
 ### STABLE 1.17
 - 新增输入增益调节功能（Gain/Trim）
@@ -695,7 +708,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.16.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.16.x</b></summary>
 
 ### STABLE 1.16.1 (Bugfix)
 - 修复淡入淡出曲线选择功能中淡出曲线公式错误的问题
@@ -711,7 +724,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.15.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.15.x</b></summary>
 
 ### STABLE 1.16
 - 新增淡入淡出曲线选择功能
@@ -722,7 +735,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.15.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.15.x</b></summary>
 
 ### STABLE 1.15
 - 新增均衡器预设功能（EQ Presets）
@@ -733,7 +746,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.14.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.14.x</b></summary>
 
 ### STABLE 1.14
 - 新增频谱峰值保持功能（Peak Hold）
@@ -744,7 +757,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.13.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.13.x</b></summary>
 
 ### STABLE 1.13
 - 新增播放列表随机播放模式
@@ -755,7 +768,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.12.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.12.x</b></summary>
 
 ### STABLE 1.12
 - 新增噪声生成器：白噪声 / 粉噪声 / 棕色噪声
@@ -766,7 +779,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.11.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.11.x</b></summary>
 
 ### STABLE 1.11
 - 新增主题切换功能：5 种配色方案（经典绿 / 品红粉 / 电蓝 / 琥珀橙 / 紫电）
@@ -776,7 +789,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.10.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.10.x</b></summary>
 
 ### STABLE 1.10
 - 新增导出采样率选择：8000 / 16000 / 22050 / 32000 / 44100 / 48000 Hz
@@ -786,7 +799,7 @@ BIT-AUDIO-WORKSTATION/
 </details>
 
 <details>
-<summary><b>STABLE 1.9.x</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.9.x</b></summary>
 
 ### STABLE 1.9
 - 新增播放列表上一曲/下一曲快捷按钮（PREV / NEXT）
