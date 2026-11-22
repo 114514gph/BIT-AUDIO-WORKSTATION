@@ -313,6 +313,8 @@ header .blink{
 .nudge-btn:hover{border-color:var(--cyan);color:var(--text);background:rgba(0,229,255,0.18)}
 .nudge-btn.snap{color:var(--amber);border-color:rgba(255,170,0,0.55)}
 .nudge-btn.snap:hover{border-color:var(--amber);color:var(--text);background:rgba(255,170,0,0.18)}
+.nudge-btn.beat{color:var(--green);border-color:rgba(0,255,136,0.5)}
+.nudge-btn.beat:hover{border-color:var(--green);color:var(--text);background:rgba(0,255,136,0.16)}
 
 /* ============ MARKER LIST ============ */
 #markerListModal{z-index:900}   /* 低于 toast，改名/删除的提示不会被遮罩挡住 */
@@ -657,6 +659,13 @@ input[type=range]::-moz-range-thumb{
 .rec-btn.on{background:linear-gradient(rgba(255,45,149,0.40),rgba(255,45,149,0.40)),var(--panel2);animation:recPulse 1.2s ease-in-out infinite}
 @keyframes recPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,45,149,0.4)}50%{box-shadow:0 0 0 6px rgba(255,45,149,0)}}
 
+/* STABLE 1.53：麦克风录音 */
+.mic-btn{border-color:var(--cyan);color:var(--cyan);background:linear-gradient(rgba(0,229,255,0.14),rgba(0,229,255,0.14)),var(--panel2);padding:12px 14px}
+.mic-btn:hover{background:linear-gradient(rgba(0,229,255,0.28),rgba(0,229,255,0.28)),var(--panel2)}
+.mic-btn.on{border-color:var(--pink);color:var(--pink);background:linear-gradient(rgba(255,45,149,0.34),rgba(255,45,149,0.34)),var(--panel2);animation:micPulse 1s ease-in-out infinite}
+.mic-btn:disabled{opacity:0.45;cursor:not-allowed;animation:none}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(0,229,255,0.35)}50%{box-shadow:0 0 0 6px rgba(0,229,255,0)}}
+
 /* ============ FOOTER ============ */
 /* ============ 削波指示 ============ */
 .clipper{display:flex;align-items:center;gap:6px;margin-left:4px}
@@ -852,6 +861,7 @@ footer .footer-info{margin-top:6px;font-size:12px;opacity:0.7}
   .transport-export .btn{padding:8px 10px;font-size:9px;min-height:36px;border-width:2px}
   .transport-export .format-btn{padding:8px 8px}
   .transport-export .rec-btn{padding:8px 10px}
+  .transport-export .mic-btn{padding:8px 10px}
   .transport-export .hint{display:block;width:100%;text-align:center;font-size:11px;margin-top:4px}
   .transport-export .toggle{min-height:36px}
   .dropdown-menu{right:50%;transform:translateX(50%)}

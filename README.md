@@ -14,7 +14,7 @@
 <!-- 徽章区域 -->
 <p align="center">
   <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases"><img src="https://img.shields.io/github/v/release/114514gph/BIT-AUDIO-WORKSTATION?style=flat-square&logo=github" alt="Release"></a>
-  <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases/tag/v1.52"><img src="https://img.shields.io/badge/STABLE-1.52-00ff88?style=flat-square" alt="Version STABLE 1.52"></a>
+  <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases/tag/v1.53"><img src="https://img.shields.io/badge/STABLE-1.53-00ff88?style=flat-square" alt="Version STABLE 1.53"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-ff0066?style=flat-square" alt="License"></a>
   <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome"></a>
   <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API"><img src="https://img.shields.io/badge/Web%20Audio%20API-00aaff?style=flat-square&logo=webaudio" alt="Web Audio API"></a>
@@ -61,7 +61,7 @@ python3 -m http.server 8080
 
 ### 基本使用
 
-1. 拖拽音频文件到页面，或点击上传区域选择文件
+1. 拖拽音频文件到页面，或点击上传区域选择文件；也可以直接点 MIC 录一段人声或乐器
 2. 调整 bit depth / downsample / EQ / 效果器参数
 3. 点击 PLAY 实时试听效果
 4. 满意后点击 EXPORT 选择格式导出
@@ -92,6 +92,7 @@ python3 -m http.server 8080
 | 选区分析 | 拖选后在裁剪栏显示选区长度、峰值与 RMS 电平，按当前显示的波形计算 |
 | 时间刻度 | 波形下方自适应时间刻度尺，缩放时自动换档；点击或拖动刻度尺可直接定位播放头 |
 | 选区精调 | 选区起止可按 10ms 微调，ZERO 按钮把边界吸附到最近的零交叉，切点更干净 |
+| 节拍吸附 | 先检测节拍，再把选区起止吸附到最近的节拍点，按拍裁切和做循环时不用靠耳朵找位置 |
 | 反向播放 | 一键反转音频方向 |
 | 倍速播放 | 0.25~5x 实时变速不变调 |
 | 音量归一化 | 自动最大化音量而不削波 |
@@ -115,6 +116,7 @@ python3 -m http.server 8080
 
 | 功能 | 说明 |
 |:----:|------|
+| 麦克风录音 | 上传区或播放控制栏的 MIC 按钮可直接录人声、乐器，结束后作为新曲目进入播放列表；最长 10 分钟，录音只在本地解码，不上传（浏览器需 HTTPS 或 localhost 授权） |
 | DJ 实时录制 | 播放时的调音一并录制，暂停可继续录制 |
 | 多格式导出 | WAV / MP3（64~320kbps 可调）/ OGG / FLAC |
 | 导出选择 | 导出原曲或录制版；选区可单独导出为片段，不改动原音频 |
@@ -208,7 +210,18 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details open>
-<summary><b>STABLE 1.52</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.53</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.53
+- 新增麦克风录音：上传区的 MIC 录音按钮不用先加载文件，播放控制栏里也有一个；录完会自动解码成新曲目放进播放列表，最长 10 分钟
+- 新增选区节拍吸附：BEAT 菜单检测完节拍后，BEAT 吸附会把选区起止拉到 300ms 内最近的节拍点，按拍裁切和做循环更顺手
+- 修复点击 GEN. DEMO 时还会同时弹出文件选择器的问题；上传区里的按钮点击不再穿透到底层的文件输入
+- 1.52 的时间刻度、选区 10ms 微调和 ZERO 吸附保持原样，WAV / MP3 / OGG / FLAC 导出回归通过
+
+</details>
+
+<details>
+<summary><b>STABLE 1.52</b></summary>
 
 ### STABLE 1.52
 - 波形下方新增自适应时间刻度尺，缩放时自动换档；点击或拖动刻度尺可以直接定位播放头，拖动时暂时停住，松手后从新位置继续播放

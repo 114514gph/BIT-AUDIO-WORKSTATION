@@ -438,6 +438,17 @@ let repeatMode = localStorage.getItem('repeatMode') || 'all'; // none / one / al
 let loadAbortController = null;
 let loadCancelled = false;
 let cancelShowTimer = null;
+// STABLE 1.53：麦克风录音
+let micRecorder = null;
+let micStream = null;
+let micChunks = [];
+let micRecording = false;
+let micDecoding = false;
+let micStartedAt = 0;
+let micTimer = null;
+let micElapsed = 0;
+let micSessionToken = 0;
+const MIC_MAX_SECONDS = 600;
 
 /* 示例音频由 Web Audio API 动态生成 */
 
@@ -627,6 +638,8 @@ const progressPct = $('progressPct');
 const formatBtn = $('formatBtn');
 const formatMenu = $('formatMenu');
 const recBtn = $('recBtn');
+const micRecBtn = $('micRecBtn');
+const micDropBtn = $('micDropBtn');
 const cancelLoadBtn = $('cancelLoadBtn');
 const exportModal = $('exportModal');
 const exportOriginalBtn = $('exportOriginalBtn');
@@ -986,7 +999,10 @@ async function computeAudioStats(buffer){
 }
 
 /* ============ FILE LOAD ============ */
-dropzone.addEventListener('click', ()=> fileInput.click());
+dropzone.addEventListener('click', e=>{
+  if(e.target.closest('button, input, .url-bar')) return;
+  fileInput.click();
+});
 fileInput.addEventListener('change', e => { if(e.target.files[0]) loadFile(e.target.files[0]); });
 ['dragover','dragenter'].forEach(ev=> dropzone.addEventListener(ev, e=>{
   e.preventDefault(); dropzone.classList.add('drag');
@@ -1003,6 +1019,7 @@ function showWorkspace(){
   workspace.classList.remove('hidden');
 }
 function hideWorkspace(){
+  if(micRecording || micRecorder || micStream) cancelMicRecording();
   stop();
   originalBuffer = null; processedBuffer = null;
   if(timeRuler) timeRuler.innerHTML = '<span class="ruler-empty">—</span>';
@@ -1014,7 +1031,7 @@ function hideWorkspace(){
 
 /* ============ 播放列表 ============ */
 const PLAYLIST_MAX = 20; // 播放列表最大项数，防止内存累积
-function addToPlaylist(name, buffer){
+function addToPlaylist(name, buffer, meta){
   if(!buffer) return;
   // 检查是否已存在同名同时长的项
   const exists = playlist.findIndex(p => p.name === name && Math.abs(p.buffer.duration - buffer.duration) < 0.1);
@@ -1032,7 +1049,7 @@ function addToPlaylist(name, buffer){
       showToast('播放列表已满，已移除最旧项');
     }
   }
-  playlist.push({name, buffer});
+  playlist.push({name, buffer, meta: meta || ''});
   currentPlaylistIndex = playlist.length - 1;
   renderPlaylist();
 }
@@ -1068,6 +1085,7 @@ function renderPlaylist(){
 
 function switchPlaylistItem(idx){
   if(idx < 0 || idx >= playlist.length) return;
+  if(micRecording){ showToast('请先结束麦克风录音', true); return; }
   if(idx === currentPlaylistIndex) return;
   stop();
   const item = playlist[idx];
@@ -1082,7 +1100,7 @@ function switchPlaylistItem(idx){
   fileMetaEl.textContent =
     originalBuffer.numberOfChannels + 'ch · ' +
     originalBuffer.sampleRate + 'Hz · ' +
-    fmtTime(originalBuffer.duration) + ' · 播放列表';
+    fmtTime(originalBuffer.duration) + ' · ' + (item.meta || '播放列表');
   clearMarkers();
   clearSelection();
   computeAudioStats(originalBuffer);
@@ -1312,6 +1330,181 @@ async function loadFromUrl(url){
     }
   }
 }
+
+/* ============ STABLE 1.53：麦克风录音 ============ */
+function fmtMicClock(seconds){
+  const total = Math.max(0, Math.floor(seconds));
+  const m = Math.floor(total / 60);
+  const sec = total % 60;
+  return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+}
+function updateMicButton(){
+  const buttons = [micRecBtn, micDropBtn].filter(Boolean);
+  for(const btn of buttons){
+    btn.classList.toggle('on', micRecording);
+    btn.disabled = micDecoding;
+    btn.textContent = micDecoding ? '… MIC' : (micRecording ? '■ MIC ' + fmtMicClock(micElapsed) : (btn === micDropBtn ? '● MIC 录音' : '● MIC'));
+    btn.title = micRecording ? '再次点击结束录音' : '录制麦克风，结束后作为新曲目载入';
+  }
+}
+function releaseMicStream(){
+  if(micStream){
+    micStream.getTracks().forEach(track => { try{ track.stop(); }catch(e){} });
+    micStream = null;
+  }
+}
+function stopMicTimer(){
+  if(micTimer){ clearInterval(micTimer); micTimer = null; }
+}
+function cancelMicRecording(){
+  micSessionToken++;
+  micRecording = false;
+  micDecoding = false;
+  stopMicTimer();
+  if(micRecorder){
+    micRecorder.onstop = null;
+    try{ if(micRecorder.state !== 'inactive') micRecorder.stop(); }catch(e){}
+    micRecorder = null;
+  }
+  micChunks = [];
+  releaseMicStream();
+  updateMicButton();
+}
+async function finishMicRecording(session, mimeType){
+  releaseMicStream();
+  stopMicTimer();
+  micRecording = false;
+  micRecorder = null;
+  const chunks = micChunks.slice();
+  micChunks = [];
+  if(session !== micSessionToken){
+    micDecoding = false;
+    updateMicButton();
+    return;
+  }
+  if(chunks.length === 0){
+    micDecoding = false;
+    updateMicButton();
+    showToast('没有录到声音，请检查麦克风权限', true);
+    return;
+  }
+  micDecoding = true;
+  updateMicButton();
+  try{
+    const blob = new Blob(chunks, {type: mimeType || 'audio/webm'});
+    const ab = await blob.arrayBuffer();
+    const ctx = ensureCtx();
+    const buf = await ctx.decodeAudioData(ab.slice(0));
+    if(session !== micSessionToken) return;
+    if(!buf || buf.duration < 0.05) throw new Error('录音太短');
+    const d = new Date();
+    const stamp = String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0') + '-' + String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0');
+    const name = 'MIC ' + stamp;
+    const beforeLen = playlist.length;
+    addToPlaylist(name, buf, '麦克风录音');
+    let idx = playlist.length - 1;
+    if(playlist.length === beforeLen) idx = currentPlaylistIndex;
+    currentPlaylistIndex = -1;
+    switchPlaylistItem(idx);
+    showWorkspace();
+    showToast('麦克风录音已载入：' + fmtTime(buf.duration));
+  }catch(err){
+    console.error(err);
+    showToast('麦克风录音解码失败：' + (err.message || '未知错误'), true);
+  }finally{
+    micDecoding = false;
+    updateMicButton();
+  }
+}
+async function startMicRecording(){
+  if(micRecording || micDecoding) return;
+  if(!window.isSecureContext){
+    showToast('麦克风录音需要 HTTPS 或 localhost 环境', true);
+    return;
+  }
+  if(!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function'){
+    showToast('当前浏览器不支持麦克风录音', true);
+    return;
+  }
+  if(typeof MediaRecorder === 'undefined'){
+    showToast('当前浏览器不支持录音编码', true);
+    return;
+  }
+  let stream = null;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: {channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false}
+    });
+    micStream = stream;
+    const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
+    let mimeType = '';
+    for(const t of candidates){
+      try{ if(MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)){ mimeType = t; break; } }catch(e){}
+    }
+    micRecorder = mimeType ? new MediaRecorder(stream, {mimeType}) : new MediaRecorder(stream);
+    micChunks = [];
+    micStartedAt = performance.now();
+    micElapsed = 0;
+    micRecording = true;
+    micDecoding = false;
+    updateMicButton();
+    stop();
+    const session = micSessionToken;
+    micRecorder.ondataavailable = e => { if(e.data && e.data.size) micChunks.push(e.data); };
+    micRecorder.onstop = () => finishMicRecording(session, mimeType || micRecorder.mimeType || 'audio/webm');
+    micRecorder.start(250);
+    micTimer = setInterval(() => {
+      if(!micRecording) return;
+      micElapsed = (performance.now() - micStartedAt) / 1000;
+      if(micElapsed >= MIC_MAX_SECONDS){
+        micElapsed = MIC_MAX_SECONDS;
+        stopMicRecording();
+        showToast('已达到 10 分钟录音上限，录音自动结束', true);
+        return;
+      }
+      updateMicButton();
+    }, 500);
+    showToast('麦克风录音开始，再次点击 MIC 结束');
+  }catch(err){
+    if(stream){ stream.getTracks().forEach(track => { try{ track.stop(); }catch(e){} }); }
+    micStream = null;
+    micRecorder = null;
+    micRecording = false;
+    micDecoding = false;
+    stopMicTimer();
+    updateMicButton();
+    const msg = err && err.name === 'NotAllowedError'
+      ? '麦克风权限被拒绝，请在浏览器里允许麦克风'
+      : (err && err.name === 'NotFoundError' ? '没有找到可用的麦克风' : (err.message || '未知错误'));
+    showToast('无法开始麦克风录音：' + msg, true);
+  }
+}
+function stopMicRecording(){
+  if(!micRecording || !micRecorder) return;
+  micRecording = false;
+  micDecoding = true;
+  micElapsed = (performance.now() - micStartedAt) / 1000;
+  stopMicTimer();
+  updateMicButton();
+  try{
+    if(micRecorder.state !== 'inactive') micRecorder.stop();
+    else finishMicRecording(micSessionToken, micRecorder.mimeType || 'audio/webm');
+  }catch(err){
+    console.error(err);
+    micDecoding = false;
+    updateMicButton();
+    showToast('结束录音失败：' + (err.message || '未知错误'), true);
+  }
+}
+[micRecBtn, micDropBtn].filter(Boolean).forEach(btn => {
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    if(micDecoding) return;
+    if(micRecording) stopMicRecording();
+    else startMicRecording();
+  });
+});
+updateMicButton();
 
 /* ============ DEMO LOAD ============ */
 /* 代码生成随机示例音乐：6乐器 + 28调式 + 丰富编曲 */
@@ -4051,6 +4244,38 @@ function snapSelectionToZero(){
   showToast('选区已吸附到零交叉');
 }
 
+/* STABLE 1.53：选区吸附到节拍网格 */
+function nearestBeatTime(t){
+  if(!beatPositions || beatPositions.length === 0) return null;
+  let best = null, bestDist = 0.3; // 只吸附 300ms 内有节拍的边界
+  for(const bt of beatPositions){
+    const d = Math.abs(bt - t);
+    if(d < bestDist){ bestDist = d; best = bt; }
+  }
+  return best;
+}
+function snapSelectionToBeat(){
+  if(!originalBuffer || selStart < 0 || selEnd < 0) return;
+  if(!beatPositions || beatPositions.length === 0){
+    showToast('还没有节拍网格，请先在 BEAT 菜单检测节拍', true);
+    return;
+  }
+  const dur = originalBuffer.duration;
+  let s = Math.min(selStart, selEnd), e = Math.max(selStart, selEnd);
+  const ns = (s <= 0.001 || s >= dur - 0.001) ? s : nearestBeatTime(s);
+  const ne = (e <= 0.001 || e >= dur - 0.001) ? e : nearestBeatTime(e);
+  if(ns === null && ne === null){
+    showToast('选区边界附近没有节拍，可以换一段或手动微调', true);
+    return;
+  }
+  const newS = ns === null ? s : ns;
+  const newE = ne === null ? e : ne;
+  if(newE - newS < 0.02){ showToast('节拍太近，选区会短于 20ms', true); return; }
+  selStart = newS; selEnd = newE;
+  updateSelectionUI();
+  showToast('选区已吸附到节拍');
+}
+
 /* ============ STABLE 1.51：选区峰值 / RMS 统计 ============ */
 function clearSelectionStats(){
   selStatsToken++;
@@ -4299,6 +4524,7 @@ if(cropAdjust){
     else if(action === 'end-down') nudgeSelection('end', -0.01);
     else if(action === 'end-up') nudgeSelection('end', 0.01);
     else if(action === 'snap') snapSelectionToZero();
+    else if(action === 'beat') snapSelectionToBeat();
   });
 }
 if(undoBtn) undoBtn.addEventListener('click', undoLastEdit);

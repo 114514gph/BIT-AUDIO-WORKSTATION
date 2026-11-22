@@ -31,6 +31,7 @@
           <button class="btn" id="urlLoadBtn">&#9654; LOAD</button>
         </div>
         <button class="btn demo-btn" id="demoBtn" style="margin-top:12px">&#9835; GEN. DEMO</button>
+        <button class="btn mic-btn" id="micDropBtn" style="margin-top:10px" title="录制麦克风，结束后作为新曲目载入">&#9679; MIC 录音</button>
       </div>
       <input type="file" id="fileInput" accept="audio/*" hidden>
     </section>
@@ -215,6 +216,7 @@
           <span class="adj-label">OUT</span>
           <button class="nudge-btn" data-nudge="end-down" title="选区终点提前 10ms">−10ms</button>
           <button class="nudge-btn" data-nudge="end-up" title="选区终点延后 10ms">+10ms</button>
+          <button class="nudge-btn beat" data-nudge="beat" title="选区起止吸附到最近的节拍（先检测节拍）">BEAT 吸附</button>
           <button class="nudge-btn snap" data-nudge="snap" title="选区起止吸附到最近的零交叉">ZERO 吸附</button>
         </div>
       </div>
@@ -228,6 +230,7 @@
           <button id="nextBtn" class="btn nav-btn" title="下一曲">&#9193; NEXT</button>
           <button id="reloadBtn" class="btn reload-btn">&#8635; RELOAD</button>
           <button id="reverseBtn" class="btn">&#8646; REV</button>
+          <button id="micRecBtn" class="btn mic-btn" title="录制麦克风，再次点击结束">&#9679; MIC</button>
           <button id="undoBtn" class="btn" disabled title="撤销上一次裁剪或去除静音">&#8630; UNDO</button>
           <button id="redoBtn" class="btn" disabled title="重做被撤销的编辑">&#8631; REDO</button>
           <button id="insSilBtn" class="btn" title="在播放头处插入静音段">&#9201; INS SIL</button>
@@ -535,7 +538,7 @@
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.52 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.53 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -578,7 +581,6 @@
 </div>
 
 
-  <!-- 内置编码库与主程序已合并到 script.js -->
   <script src="script.js"></script>
 </body>
 </html>
