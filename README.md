@@ -14,7 +14,7 @@
 <!-- 徽章区域 -->
 <p align="center">
   <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases"><img src="https://img.shields.io/github/v/release/114514gph/BIT-AUDIO-WORKSTATION?style=flat-square&logo=github" alt="Release"></a>
-  <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases/tag/v1.53"><img src="https://img.shields.io/badge/STABLE-1.53-00ff88?style=flat-square" alt="Version STABLE 1.53"></a>
+  <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases/tag/v1.54"><img src="https://img.shields.io/badge/STABLE-1.54-00ff88?style=flat-square" alt="Version STABLE 1.54"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-ff0066?style=flat-square" alt="License"></a>
   <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome"></a>
   <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API"><img src="https://img.shields.io/badge/Web%20Audio%20API-00aaff?style=flat-square&logo=webaudio" alt="Web Audio API"></a>
@@ -61,7 +61,7 @@ python3 -m http.server 8080
 
 ### 基本使用
 
-1. 拖拽音频文件到页面，或点击上传区域选择文件；也可以直接点 MIC 录一段人声或乐器
+1. 拖拽音频文件到页面，或点击上传区域选择文件；一次选多个文件会批量进播放列表。也可以直接点 MIC 录一段人声或乐器
 2. 调整 bit depth / downsample / EQ / 效果器参数
 3. 点击 PLAY 实时试听效果
 4. 满意后点击 EXPORT 选择格式导出
@@ -90,9 +90,11 @@ python3 -m http.server 8080
 |:----:|------|
 | 音频裁剪 | 波形拖拽选区，支持多段反复裁剪，选区也可直接另存为片段 |
 | 选区分析 | 拖选后在裁剪栏显示选区长度、峰值与 RMS 电平，按当前显示的波形计算 |
+| 音高检测 | PITCH 会对选区或播放头附近的一段音频做基频检测，显示频率、音名、音分偏差与置信度，调音时不用再开别的软件 |
 | 时间刻度 | 波形下方自适应时间刻度尺，缩放时自动换档；点击或拖动刻度尺可直接定位播放头 |
 | 选区精调 | 选区起止可按 10ms 微调，ZERO 按钮把边界吸附到最近的零交叉，切点更干净 |
 | 节拍吸附 | 先检测节拍，再把选区起止吸附到最近的节拍点，按拍裁切和做循环时不用靠耳朵找位置 |
+| 节拍器 | 40~240 BPM，拍号 2/4~6/8；TAP 连点测速，可设 1~16 小节自动停止，菜单里直接启停 |
 | 反向播放 | 一键反转音频方向 |
 | 倍速播放 | 0.25~5x 实时变速不变调 |
 | 音量归一化 | 自动最大化音量而不削波 |
@@ -110,7 +112,7 @@ python3 -m http.server 8080
 | AB 循环 | 选定区域内循环播放 |
 | 波形缩放 | 1x~8x，滚轮缩放 + Shift 拖拽平移 |
 | 播放跟随 | 放大波形播放时视口自动跟着播放头走，到边缘自动翻屏；手动拖动视图后暂停跟随，重新播放时恢复 |
-| 播放列表 | 多文件队列，上一曲/下一曲，自动连播 |
+| 播放列表 | 多文件队列，支持一次拖入或选择多个音频批量导入，上一曲/下一曲，自动连播 |
 
 ### 录制与导出
 
@@ -210,7 +212,18 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details open>
-<summary><b>STABLE 1.53</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.54</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.54
+- 新增批量导入：文件选择框和拖拽都支持一次放多个音频，解码后按顺序进播放列表，第一首直接打开，不用来回点单文件
+- 新增 PITCH 音高检测：对选区或播放头附近的一段音频分析基频，显示频率、音名、音分偏差和置信度；单音调音、找 sample 的根音都能用
+- 节拍器加了 TAP 连点测速和 1~16 小节自动停止，METRO 菜单里可以直接开始/停止，录固定长度时不用再手动掐停
+- 重复选择同一个文件现在也能正常重新载入；批量导入上限 20 首，失败的文件会跳过并提示
+
+</details>
+
+<details>
+<summary><b>STABLE 1.53</b></summary>
 
 ### STABLE 1.53
 - 新增麦克风录音：上传区的 MIC 录音按钮不用先加载文件，播放控制栏里也有一个；录完会自动解码成新曲目放进播放列表，最长 10 分钟

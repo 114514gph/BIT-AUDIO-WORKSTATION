@@ -640,6 +640,12 @@ const formatMenu = $('formatMenu');
 const recBtn = $('recBtn');
 const micRecBtn = $('micRecBtn');
 const micDropBtn = $('micDropBtn');
+const pitchBtn = $('pitchBtn');
+const pitchMenu = $('pitchMenu');
+const pitchHzVal = $('pitchHzVal');
+const pitchNoteVal = $('pitchNoteVal');
+const pitchCentsVal = $('pitchCentsVal');
+const pitchConfVal = $('pitchConfVal');
 const cancelLoadBtn = $('cancelLoadBtn');
 const exportModal = $('exportModal');
 const exportOriginalBtn = $('exportOriginalBtn');
@@ -1003,7 +1009,12 @@ dropzone.addEventListener('click', e=>{
   if(e.target.closest('button, input, .url-bar')) return;
   fileInput.click();
 });
-fileInput.addEventListener('change', e => { if(e.target.files[0]) loadFile(e.target.files[0]); });
+fileInput.addEventListener('change', e => {
+  const files = Array.from(e.target.files || []);
+  fileInput.value = '';
+  if(files.length === 1) loadFile(files[0]);
+  else if(files.length > 1) loadFiles(files);
+});
 ['dragover','dragenter'].forEach(ev=> dropzone.addEventListener(ev, e=>{
   e.preventDefault(); dropzone.classList.add('drag');
 }));
@@ -1011,7 +1022,9 @@ fileInput.addEventListener('change', e => { if(e.target.files[0]) loadFile(e.tar
   e.preventDefault(); dropzone.classList.remove('drag');
 }));
 dropzone.addEventListener('drop', e=>{
-  if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+  const files = Array.from(e.dataTransfer.files || []);
+  if(files.length === 1) loadFile(files[0]);
+  else if(files.length > 1) loadFiles(files);
 });
 
 function showWorkspace(){
@@ -1052,6 +1065,7 @@ function addToPlaylist(name, buffer, meta){
   playlist.push({name, buffer, meta: meta || ''});
   currentPlaylistIndex = playlist.length - 1;
   renderPlaylist();
+  return currentPlaylistIndex;
 }
 
 function renderPlaylist(){
@@ -1248,6 +1262,61 @@ async function loadFile(file){
     hideProgress();
     showToast('解码失败：' + (err.message||'未知错误'), true);
   }
+}
+
+/* STABLE 1.54：一次选择或拖入多个文件，解码后依次放入播放列表 */
+async function loadFiles(files){
+  const supported = Array.from(files || []).filter(f =>
+    f && (f.type.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|flac|aac|webm)$/i.test(f.name))
+  );
+  if(supported.length === 0){ showToast('没有可导入的音频文件', true); return; }
+  if(supported.length === 1){ loadFile(supported[0]); return; }
+  let list = supported;
+  if(list.length > PLAYLIST_MAX){
+    list = list.slice(0, PLAYLIST_MAX);
+    showToast('一次最多导入 ' + PLAYLIST_MAX + ' 首，已取前 ' + PLAYLIST_MAX + ' 首', true);
+  }
+  stop();
+  loadCancelled = false;
+  const ctx = ensureCtx();
+  let firstBuffer = null, loaded = 0;
+  const failed = [];
+  try{
+    for(let i = 0; i < list.length; i++){
+      if(loadCancelled) break;
+      const f = list[i];
+      startFakeProgress('批量解码 ' + (i+1) + '/' + list.length + '…', true);
+      try{
+        const ab = await f.arrayBuffer();
+        if(loadCancelled) break;
+        updateProgress(92);
+        const buf = await ctx.decodeAudioData(ab.slice(0));
+        if(!buf || buf.duration < 0.02) throw new Error('音频太短');
+        addToPlaylist(f.name, buf, '批量导入');
+        if(!firstBuffer) firstBuffer = buf;
+        loaded++;
+        updateProgress(100);
+      }catch(err){
+        console.error('batch decode failed:', f.name, err);
+        failed.push(f.name);
+      }
+    }
+  }finally{
+    hideProgress();
+  }
+  if(loaded === 0){
+    showToast(loadCancelled ? '已取消批量导入' : '批量导入失败，请检查音频文件', true);
+    return;
+  }
+  showWorkspace();
+  const firstIdx = playlist.findIndex(p => p.buffer === firstBuffer);
+  currentPlaylistIndex = -1;
+  if(firstIdx >= 0) switchPlaylistItem(firstIdx);
+  else if(playlist.length > 0) switchPlaylistItem(playlist.length - 1);
+  let msg = '已批量导入 ' + loaded + ' 首';
+  if(failed.length) msg += '，' + failed.length + ' 个失败';
+  if(loadCancelled) msg += '（已取消剩余文件）';
+  showToast(msg, failed.length > 0);
 }
 
 reloadBtn.addEventListener('click', hideWorkspace);
@@ -3218,15 +3287,52 @@ if(infoBtn && infoMenu){
   });
 }
 
-/* STABLE 1.33: 节拍器 */
+/* STABLE 1.54：音高检测菜单 */
+if(pitchBtn && pitchMenu){
+  pitchBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if(noiseMenu) noiseMenu.classList.add('hidden');
+    if(silenceMenu) silenceMenu.classList.add('hidden');
+    if(channelMenu) channelMenu.classList.add('hidden');
+    if(beatMenu) beatMenu.classList.add('hidden');
+    if(markerMenu) markerMenu.classList.add('hidden');
+    if(dcMenu) dcMenu.classList.add('hidden');
+    if(infoMenu) infoMenu.classList.add('hidden');
+    if(metroMenu) metroMenu.classList.add('hidden');
+    pitchMenu.classList.toggle('hidden');
+  });
+  pitchMenu.addEventListener('click', (e)=>{
+    e.stopPropagation();
+  });
+  const detectItem = pitchMenu.querySelector('[data-pitch="detect"]');
+  if(detectItem){
+    detectItem.addEventListener('click', ()=>{
+      pitchMenu.classList.add('hidden');
+      detectPitch();
+    });
+  }
+  document.addEventListener('click', (e)=>{
+    if(pitchMenu && !pitchMenu.contains(e.target) && !pitchBtn.contains(e.target)){
+      pitchMenu.classList.add('hidden');
+    }
+  }, true);
+}
+
+/* STABLE 1.33: 节拍器；STABLE 1.54 增加 TAP 测速、小节计数与菜单内启停 */
 const metroBtn = $('metroBtn');
 const metroMenu = $('metroMenu');
 const metroBpm = $('metroBpm');
 const metroBpmVal = $('metroBpmVal');
 const metroBeats = $('metroBeats');
+const metroBars = $('metroBars');
+const metroBarsVal = $('metroBarsVal');
+const metroToggleItem = $('metroToggleItem');
+const metroTapItem = $('metroTapItem');
+const metroPosVal = $('metroPosVal');
 let metroTimer = null;
 let metroBeatCount = 0;
 let metroOn = false;
+let metroTapTimes = [];
 
 if(metroBtn && metroMenu){
   metroBtn.addEventListener('click', (e)=>{
@@ -3238,6 +3344,7 @@ if(metroBtn && metroMenu){
     if(markerMenu) markerMenu.classList.add('hidden');
     if(dcMenu) dcMenu.classList.add('hidden');
     if(infoMenu) infoMenu.classList.add('hidden');
+    if(pitchMenu) pitchMenu.classList.add('hidden');
     metroMenu.classList.toggle('hidden');
   });
   metroMenu.addEventListener('click', (e)=>{
@@ -3252,7 +3359,26 @@ if(metroBpm){
   });
 }
 
+if(metroBars){
+  metroBars.addEventListener('input', ()=>{
+    const bars = parseInt(metroBars.value, 10) || 0;
+    metroBarsVal.textContent = bars > 0 ? bars + ' 小节' : '∞';
+    if(metroOn) restartMetro();
+  });
+}
+if(metroBeats){
+  metroBeats.addEventListener('change', ()=>{
+    if(metroOn) restartMetro();
+  });
+}
+
+function updateMetroToggleLabel(){
+  if(metroToggleItem) metroToggleItem.textContent = metroOn ? '■ 停止节拍器' : '▶ 开始节拍器';
+  if(metroBtn) metroBtn.classList.toggle('active', metroOn);
+}
+
 function playMetroClick(isDownbeat){
+  if(!audioCtx) ensureCtx();
   if(!audioCtx) return;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
@@ -3269,14 +3395,23 @@ function metroTick(){
   const beats = parseInt(metroBeats.value) || 4;
   const isDownbeat = (metroBeatCount % beats === 0);
   playMetroClick(isDownbeat);
+  if(metroPosVal){
+    const bar = Math.floor(metroBeatCount / beats) + 1;
+    const beat = (metroBeatCount % beats) + 1;
+    metroPosVal.textContent = '第 ' + bar + ' 小节 · 第 ' + beat + '/' + beats + ' 拍';
+  }
   metroBeatCount++;
+  const bars = parseInt(metroBars.value, 10) || 0;
+  if(bars > 0 && metroBeatCount >= bars * beats){
+    setTimeout(()=>{ if(metroOn) stopMetro(); }, 0);
+  }
 }
 
 function startMetro(){
   if(metroOn) return;
   metroOn = true;
   metroBeatCount = 0;
-  metroBtn.classList.add('active');
+  updateMetroToggleLabel();
   metroTick();
   const interval = 60000 / (parseInt(metroBpm.value) || 120);
   metroTimer = setInterval(metroTick, interval);
@@ -3287,15 +3422,56 @@ function stopMetro(){
   if(!metroOn) return;
   metroOn = false;
   if(metroTimer){ clearInterval(metroTimer); metroTimer = null; }
-  metroBtn.classList.remove('active');
+  metroBeatCount = 0;
+  if(metroPosVal) metroPosVal.textContent = '--';
+  updateMetroToggleLabel();
   showToast('节拍器停止');
 }
 
 function restartMetro(){
   if(!metroOn) return;
   if(metroTimer) clearInterval(metroTimer);
+  metroBeatCount = 0;
   const interval = 60000 / (parseInt(metroBpm.value) || 120);
   metroTimer = setInterval(metroTick, interval);
+}
+
+function tapTempo(){
+  const now = performance.now();
+  if(metroTapTimes.length && now - metroTapTimes[metroTapTimes.length - 1] > 2000){
+    metroTapTimes = [];
+  }
+  metroTapTimes.push(now);
+  if(metroTapTimes.length > 5) metroTapTimes.shift();
+  if(metroTapTimes.length < 2){
+    showToast('继续点 TAP，至少两下');
+    return;
+  }
+  let total = 0;
+  for(let i = 1; i < metroTapTimes.length; i++) total += metroTapTimes[i] - metroTapTimes[i-1];
+  const avg = total / (metroTapTimes.length - 1);
+  let bpm = Math.round(60000 / avg);
+  if(bpm < 40 || bpm > 240){
+    showToast('TAP 速度超出 40~240 BPM 范围', true);
+    return;
+  }
+  metroBpm.value = bpm;
+  if(metroBpmVal) metroBpmVal.textContent = bpm;
+  if(metroOn) restartMetro();
+  showToast('TAP: ' + bpm + ' BPM');
+}
+
+if(metroToggleItem){
+  metroToggleItem.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if(metroOn) stopMetro(); else startMetro();
+  });
+}
+if(metroTapItem){
+  metroTapItem.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    tapTempo();
+  });
 }
 
 metroBtn.addEventListener('dblclick', ()=>{
@@ -3306,6 +3482,7 @@ metroBtn.addEventListener('dblclick', ()=>{
 document.addEventListener('click', ()=>{
   if(dcMenu) dcMenu.classList.add('hidden');
   if(infoMenu) infoMenu.classList.add('hidden');
+  if(pitchMenu) pitchMenu.classList.add('hidden');
 });
 
 urlLoadBtn.addEventListener('click', (e)=>{
@@ -4151,6 +4328,7 @@ function clearSelection(){
   selectionEl.style.width = '0';
   cropInfo.textContent = '拖拽波形选择区域';
   clearSelectionStats();
+  clearPitchInfo();
   cropKeepBtn.disabled = true;
   cropPartBtn.disabled = true;
   cropDeleteBtn.disabled = true;
@@ -4167,6 +4345,7 @@ function updateSelectionUI(){
     clearSelection();
     return;
   }
+  clearPitchInfo();
   const dur = originalBuffer.duration;
   const s = Math.min(selStart, selEnd);
   const e = Math.max(selStart, selEnd);
@@ -4274,6 +4453,126 @@ function snapSelectionToBeat(){
   selStart = newS; selEnd = newE;
   updateSelectionUI();
   showToast('选区已吸附到节拍');
+}
+
+/* ============ STABLE 1.54：音高检测 ============ */
+function clearPitchInfo(){
+  if(pitchHzVal) pitchHzVal.textContent = '--';
+  if(pitchNoteVal) pitchNoteVal.textContent = '--';
+  if(pitchCentsVal) pitchCentsVal.textContent = '--';
+  if(pitchConfVal) pitchConfVal.textContent = '--';
+}
+
+function detectPitchYin(samples, sampleRate){
+  const len = samples.length;
+  const windowSize = Math.min(2048, len - 16);
+  if(windowSize < 256) return null;
+  const maxTau = Math.min(Math.floor(sampleRate / 50), len - windowSize - 1);
+  if(maxTau < 3) return null;
+  const diff = new Float32Array(maxTau + 1);
+  for(let tau = 1; tau <= maxTau; tau++){
+    let sum = 0;
+    for(let i = 0; i < windowSize; i++){
+      const d = samples[i] - samples[i + tau];
+      sum += d * d;
+    }
+    diff[tau] = sum;
+  }
+  const cmnd = new Float32Array(maxTau + 1);
+  cmnd[0] = 1;
+  let running = 0;
+  for(let tau = 1; tau <= maxTau; tau++){
+    running += diff[tau];
+    cmnd[tau] = running > 1e-12 ? diff[tau] * tau / running : 1;
+  }
+  let tauEst = -1;
+  for(let tau = 2; tau <= maxTau; tau++){
+    if(cmnd[tau] < 0.18){
+      let t = tau;
+      while(t + 1 <= maxTau && cmnd[t + 1] < cmnd[t]) t++;
+      tauEst = t;
+      break;
+    }
+  }
+  if(tauEst < 0){
+    let best = 2;
+    for(let tau = 3; tau <= maxTau; tau++){
+      if(cmnd[tau] < cmnd[best]) best = tau;
+    }
+    if(cmnd[best] < 0.35) tauEst = best;
+  }
+  if(tauEst < 1) return null;
+  let refined = tauEst;
+  if(tauEst > 1 && tauEst < maxTau){
+    const a = cmnd[tauEst - 1], b = cmnd[tauEst], c = cmnd[tauEst + 1];
+    const denom = a + c - 2 * b;
+    if(Math.abs(denom) > 1e-12){
+      const offset = (a - c) / (2 * denom);
+      if(Math.abs(offset) < 0.5) refined = tauEst + offset;
+    }
+  }
+  const freq = sampleRate / refined;
+  const confidence = Math.max(0, Math.min(1, 1 - cmnd[tauEst]));
+  return { freq, confidence };
+}
+
+function detectPitch(){
+  if(!originalBuffer){ showToast('请先加载音频', true); return; }
+  const dur = originalBuffer.duration;
+  let s, e;
+  if(selStart >= 0 && selEnd >= 0){
+    s = Math.min(selStart, selEnd);
+    e = Math.max(selStart, selEnd);
+    if(e - s < 0.12){ showToast('请选择至少 0.12 秒的稳定音', true); return; }
+  }else{
+    if(dur < 0.12){ showToast('音频太短，无法检测音高', true); return; }
+    const anchor = Math.max(0, Math.min(dur - 0.12, pausedAt));
+    s = Math.max(0, Math.min(dur - 0.12, anchor - 0.25));
+    e = Math.min(dur, s + 1.0);
+  }
+  const sr = originalBuffer.sampleRate;
+  const start = Math.max(0, Math.floor(s * sr));
+  const end = Math.min(originalBuffer.length, Math.ceil(e * sr));
+  const take = Math.min(4096, end - start);
+  if(take < 256){ showToast('选区太短，无法检测音高', true); return; }
+  const from = start + Math.floor((end - start - take) / 2);
+  const mono = new Float32Array(take);
+  const channels = originalBuffer.numberOfChannels;
+  for(let c = 0; c < channels; c++){
+    const data = originalBuffer.getChannelData(c);
+    for(let i = 0; i < take; i++) mono[i] += data[from + i] / channels;
+  }
+  let mean = 0;
+  for(let i = 0; i < take; i++) mean += mono[i];
+  mean /= take;
+  let sumSq = 0;
+  for(let i = 0; i < take; i++){
+    mono[i] -= mean;
+    sumSq += mono[i] * mono[i];
+  }
+  const rms = Math.sqrt(sumSq / take);
+  if(rms < 0.005){
+    clearPitchInfo();
+    showToast('音量太低，听不清音高', true);
+    return;
+  }
+  const result = detectPitchYin(mono, sr);
+  if(!result || !isFinite(result.freq) || result.freq < 50 || result.freq > 1200){
+    clearPitchInfo();
+    showToast('没有检测到稳定的音高，换一段清晰的单音试试', true);
+    return;
+  }
+  const midi = 69 + 12 * Math.log2(result.freq / 440);
+  const nearest = Math.round(midi);
+  const noteNames = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  const note = noteNames[((nearest % 12) + 12) % 12] + (Math.floor(nearest / 12) - 1);
+  const cents = Math.round((midi - nearest) * 100);
+  const centsText = (cents > 0 ? '+' : '') + cents + ' cents';
+  if(pitchHzVal) pitchHzVal.textContent = result.freq.toFixed(1) + ' Hz';
+  if(pitchNoteVal) pitchNoteVal.textContent = note;
+  if(pitchCentsVal) pitchCentsVal.textContent = centsText;
+  if(pitchConfVal) pitchConfVal.textContent = Math.round(result.confidence * 100) + '%';
+  showToast('音高: ' + note + ' · ' + result.freq.toFixed(1) + ' Hz · ' + centsText);
 }
 
 /* ============ STABLE 1.51：选区峰值 / RMS 统计 ============ */
