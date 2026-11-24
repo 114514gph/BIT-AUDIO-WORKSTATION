@@ -66,6 +66,10 @@
             <span class="playlist-count" id="playlistCount">0</span>
           </div>
         </div>
+        <div class="playlist-subbar">
+          <span class="playlist-total" id="playlistTotal">--</span>
+          <button class="pl-ctrl-btn" id="playlistZipBtn" title="批量导出播放列表原音频为 WAV，打包成 ZIP">WAV ZIP</button>
+        </div>
         <div class="playlist-items" id="playlistItems"></div>
       </div>
 
@@ -82,6 +86,7 @@
         <button class="btn demo-btn" id="silenceBtn">&#128263; SILENCE</button>
         <div class="dropdown-menu hidden" id="silenceMenu">
           <div class="dropdown-item" data-silence="detect">检测静音</div>
+          <div class="dropdown-item" data-silence="trimedges">只裁首尾静音</div>
           <div class="dropdown-item" data-silence="remove">去除静音</div>
           <div class="dropdown-item" data-silence="clear">清除标记</div>
           <div class="dropdown-divider"></div>
@@ -119,6 +124,12 @@
             <span class="df-hint">节拍数</span>
             <span id="beatCountVal">--</span>
           </div>
+          <div class="beat-info-row">
+            <span class="df-hint">置信度</span>
+            <span id="beatConfVal">--</span>
+          </div>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-item" id="beatApplyItem">应用到节拍器</div>
         </div>
         <button class="btn demo-btn" id="markerBtn">&#128205; MARKER</button>
         <div class="dropdown-menu hidden" id="markerMenu">
@@ -560,7 +571,7 @@
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.54 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.55 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -601,7 +612,6 @@
     <div class="export-hint" id="exportModalHint"></div>
   </div>
 </div>
-
 
   <script src="script.js"></script>
 </body>

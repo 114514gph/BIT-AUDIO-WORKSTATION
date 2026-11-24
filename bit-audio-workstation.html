@@ -179,7 +179,7 @@ header .blink{
 /* 播放列表 */
 .playlist-panel{background:var(--panel);border:1px solid var(--border);padding:10px 14px;margin-bottom:8px;animation:slideDown 0.2s ease}
 .playlist-panel.hidden{display:none}
-.playlist-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.playlist-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
 .playlist-controls{display:flex;align-items:center;gap:6px}
 .pl-ctrl-btn{
   padding:3px 8px;font-size:10px;font-family:'VT323',monospace;
@@ -189,6 +189,11 @@ header .blink{
 .pl-ctrl-btn:hover{border-color:var(--green);color:var(--green)}
 .pl-ctrl-btn.active{border-color:var(--green);color:var(--green);background:rgba(0,255,136,0.08)}
 .playlist-title{font-size:12px;color:var(--muted);font-family:'VT323',monospace;letter-spacing:1px}
+.playlist-subbar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:-2px 0 8px}
+.playlist-total{font-size:11px;color:var(--muted);font-family:'VT323',monospace;letter-spacing:1px}
+.playlist-item .pl-move{color:var(--muted);cursor:pointer;padding:0 2px;font-size:10px;opacity:0.55;transition:all 0.15s;user-select:none}
+.playlist-item .pl-move:hover{color:var(--green);opacity:1}
+.playlist-item .pl-move.off{opacity:0.18;pointer-events:none}
 .playlist-count{font-size:12px;color:var(--green);font-family:'VT323',monospace;background:var(--bg);padding:2px 8px;border:1px solid var(--border)}
 .playlist-items{display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto}
 .playlist-item{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg);border:1px solid var(--border);cursor:pointer;transition:all 0.15s;font-size:12px;font-family:'VT323',monospace}
@@ -369,6 +374,7 @@ header .blink{
 #noiseBtn{border-color:var(--cyan);color:var(--cyan);background:linear-gradient(rgba(0,229,255,0.16),rgba(0,229,255,0.16)),var(--panel2)}
 #noiseBtn:hover{background:linear-gradient(rgba(0,229,255,0.30),rgba(0,229,255,0.30)),var(--panel2)}
 .demo-bar{position:relative}
+.demo-bar .dropdown-menu{top:100%;bottom:auto;left:50%;right:auto;transform:translateX(-50%);margin-top:8px}
 #noiseMenu{top:100%;left:50%;transform:translateX(-50%);margin-top:8px;min-width:160px;z-index:100}
 #silenceBtn{border-color:var(--orange);color:var(--orange);background:linear-gradient(rgba(255,165,0,0.16),rgba(255,165,0,0.16)),var(--panel2)}
 #silenceBtn:hover{background:linear-gradient(rgba(255,165,0,0.30),rgba(255,165,0,0.30)),var(--panel2)}
@@ -699,7 +705,7 @@ input[type=range]::-moz-range-thumb{
 .fx-item label{display:block;font-size:10px;color:var(--muted);margin-bottom:4px;font-family:var(--pixel);letter-spacing:1px}
 .fx-item label span{color:var(--pink)}
 .fx-item input[type=range]{width:100%}
-.fade-curves{display:flex;justify-content:space-between;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.fade-curves{display:flex;justify-content:space-between;flex-wrap:wrap;row-gap:8px;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
 .fade-curve-group{display:flex;align-items:center;gap:4px}
 .fade-curve-label{font-family:var(--pixel);font-size:8px;color:var(--muted);letter-spacing:1px;min-width:24px}
 .fade-curve-btn{font-family:var(--pixel);font-size:8px;color:var(--muted);background:var(--panel2);border:1px solid var(--border);padding:3px 5px;cursor:pointer;letter-spacing:1px;transition:all 0.15s}
@@ -850,6 +856,7 @@ footer .footer-info{margin-top:6px;font-size:12px;opacity:0.7}
   .url-bar input{font-size:16px}
   .eq-col input[type=range]{height:110px}
   .demo-bar{justify-content:center}
+  .demo-bar .dropdown-menu{top:auto!important;bottom:calc(100% + 8px);left:50%;right:auto;transform:translateX(-50%);margin-top:0;margin-bottom:8px;max-height:320px;overflow-y:auto}
   .crop-bar{flex-direction:column;align-items:stretch}
   .crop-btns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%}
   .crop-btn{padding:9px 6px}
@@ -1294,6 +1301,10 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
             <span class="playlist-count" id="playlistCount">0</span>
           </div>
         </div>
+        <div class="playlist-subbar">
+          <span class="playlist-total" id="playlistTotal">--</span>
+          <button class="pl-ctrl-btn" id="playlistZipBtn" title="批量导出播放列表原音频为 WAV，打包成 ZIP">WAV ZIP</button>
+        </div>
         <div class="playlist-items" id="playlistItems"></div>
       </div>
 
@@ -1310,6 +1321,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
         <button class="btn demo-btn" id="silenceBtn">&#128263; SILENCE</button>
         <div class="dropdown-menu hidden" id="silenceMenu">
           <div class="dropdown-item" data-silence="detect">检测静音</div>
+          <div class="dropdown-item" data-silence="trimedges">只裁首尾静音</div>
           <div class="dropdown-item" data-silence="remove">去除静音</div>
           <div class="dropdown-item" data-silence="clear">清除标记</div>
           <div class="dropdown-divider"></div>
@@ -1347,6 +1359,12 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
             <span class="df-hint">节拍数</span>
             <span id="beatCountVal">--</span>
           </div>
+          <div class="beat-info-row">
+            <span class="df-hint">置信度</span>
+            <span id="beatConfVal">--</span>
+          </div>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-item" id="beatApplyItem">应用到节拍器</div>
         </div>
         <button class="btn demo-btn" id="markerBtn">&#128205; MARKER</button>
         <div class="dropdown-menu hidden" id="markerMenu">
@@ -1788,7 +1806,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.54 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.55 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -2050,6 +2068,8 @@ const fileMetaEl = $('fileMeta');
 const playlistPanel = $('playlistPanel');
 const playlistItems = $('playlistItems');
 const playlistCount = $('playlistCount');
+const playlistTotal = $('playlistTotal');
+const playlistZipBtn = $('playlistZipBtn');
 const bitSlider = $('bitSlider');
 const downSlider = $('downSlider');
 const noiseSlider = $('noiseSlider');
@@ -2538,9 +2558,13 @@ function renderPlaylist(){
   if(!playlistItems) return;
   if(playlistCount) playlistCount.textContent = playlist.length;
   if(playlist.length === 0){
+    if(playlistTotal) playlistTotal.textContent = '--';
     playlistPanel.classList.add('hidden');
     return;
   }
+  let totalDur = 0;
+  playlist.forEach(p => { totalDur += p.buffer.duration; });
+  if(playlistTotal) playlistTotal.textContent = '总时长 ' + fmtTime(totalDur);
   playlistPanel.classList.remove('hidden');
   playlistItems.innerHTML = '';
   playlist.forEach((item, idx) => {
@@ -2550,10 +2574,18 @@ function renderPlaylist(){
       '<span class="pl-index">' + (idx + 1) + '</span>' +
       '<span class="pl-name">' + escapeHtml(item.name) + '</span>' +
       '<span class="pl-dur">' + fmtTime(item.buffer.duration) + '</span>' +
+      '<span class="pl-move pl-up' + (idx === 0 ? ' off' : '') + '" data-dir="-1" title="上移">&#9650;</span>' +
+      '<span class="pl-move pl-down' + (idx === playlist.length - 1 ? ' off' : '') + '" data-dir="1" title="下移">&#9660;</span>' +
       '<span class="pl-remove" data-idx="' + idx + '" title="移除">&#10005;</span>';
     div.addEventListener('click', e => {
-      if(e.target.classList.contains('pl-remove')) return;
+      if(e.target.classList.contains('pl-remove') || e.target.classList.contains('pl-move')) return;
       switchPlaylistItem(idx);
+    });
+    div.querySelectorAll('.pl-move').forEach(el => {
+      el.addEventListener('click', e => {
+        e.stopPropagation();
+        movePlaylistItem(idx, parseInt(el.dataset.dir, 10));
+      });
     });
     div.querySelector('.pl-remove').addEventListener('click', e => {
       e.stopPropagation();
@@ -2562,6 +2594,60 @@ function renderPlaylist(){
     playlistItems.appendChild(div);
   });
 }
+
+function movePlaylistItem(idx, dir){
+  const target = idx + dir;
+  if(target < 0 || target >= playlist.length) return;
+  const item = playlist.splice(idx, 1)[0];
+  playlist.splice(target, 0, item);
+  if(currentPlaylistIndex === idx) currentPlaylistIndex = target;
+  else if(currentPlaylistIndex === target) currentPlaylistIndex = idx;
+  renderPlaylist();
+  showToast((dir < 0 ? '已上移：' : '已下移：') + item.name);
+}
+
+async function exportPlaylistWavZip(){
+  if(playlist.length === 0){ showToast('播放列表为空', true); return; }
+  const estimatedBytes = playlist.reduce((sum, p) =>
+    sum + 44 + p.buffer.length * Math.max(1, p.buffer.numberOfChannels) * 2, 0);
+  const maxBytes = 80 * 1024 * 1024;
+  if(estimatedBytes > maxBytes){
+    showToast('列表原档约 ' + (estimatedBytes / 1024 / 1024).toFixed(0) + 'MB，超过 80MB 上限，请分批导出', true);
+    return;
+  }
+  showProgress('打包播放列表…', 0);
+  try{
+    const files = [];
+    const total = playlist.length;
+    for(let i = 0; i < total; i++){
+      const item = playlist[i];
+      updateProgress((i / total) * 100);
+      const base = (item.name || 'track').replace(/\.[^.]+$/, '');
+      const blob = encodeWav(item.buffer);
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      const idx = String(i + 1).padStart(2, '0');
+      files.push({name: idx + '_' + sanitizeFilename(base) + '.wav', data: bytes});
+      await new Promise(r => setTimeout(r, 0));
+    }
+    updateProgress(100);
+    const zipBlob = buildStoreZip(files);
+    const d = new Date();
+    const stamp = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(zipBlob);
+    a.download = 'BIT-AUDIO-PLAYLIST_' + stamp + '.zip';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    hideProgress();
+    showToast('已打包 ' + files.length + ' 首原档，' + (zipBlob.size / 1024 / 1024).toFixed(1) + 'MB');
+  }catch(e){
+    console.error('playlist zip error:', e);
+    hideProgress();
+    showToast('打包失败: ' + (e.message || '未知错误'), true);
+  }
+}
+
+if(playlistZipBtn) playlistZipBtn.addEventListener('click', exportPlaylistWavZip);
 
 function switchPlaylistItem(idx){
   if(idx < 0 || idx >= playlist.length) return;
@@ -2573,8 +2659,7 @@ function switchPlaylistItem(idx){
   clearEditHistory();
   originalBuffer = item.buffer;
   originalChannelBuffer = null;
-  beatPositions = [];
-  beatBpm = 0;
+  resetBeatInfo();
   currentFileName = item.name.replace(/\.[^.]+$/, '');
   fileNameEl.textContent = item.name;
   fileMetaEl.textContent =
@@ -2701,8 +2786,7 @@ async function loadFile(file){
     clearEditHistory();
     originalBuffer = await ctx.decodeAudioData(ab.slice(0));
     originalChannelBuffer = null;
-    beatPositions = [];
-    beatBpm = 0;
+        resetBeatInfo();
     clearMarkers();
     if(loadCancelled) return;
     currentFileName = file.name.replace(/\.[^.]+$/, '');
@@ -2827,8 +2911,7 @@ async function loadFromUrl(url){
       clearEditHistory();
       originalBuffer = await ctx.decodeAudioData(ab.buffer);
       originalChannelBuffer = null;
-      beatPositions = [];
-      beatBpm = 0;
+            resetBeatInfo();
       clearMarkers();
       if(loadCancelled) return;
       const name = url.split('/').pop().split('?')[0] || 'stream';
@@ -3425,8 +3508,7 @@ demoBtn.addEventListener('click', ()=>{
       clearEditHistory();
       originalBuffer = await generateDemoAudio();
       originalChannelBuffer = null;
-      beatPositions = [];
-      beatBpm = 0;
+            resetBeatInfo();
       clearMarkers();
       if(loadCancelled) return;
       updateProgress(90);
@@ -3517,8 +3599,7 @@ document.querySelectorAll('.dropdown-item[data-noise]').forEach(item=>{
         clearEditHistory();
         originalBuffer = generateNoise(type, dur);
         originalChannelBuffer = null;
-        beatPositions = [];
-        beatBpm = 0;
+                resetBeatInfo();
         clearMarkers();
         currentFileName = type + '-' + dur + 's';
         fileNameEl.textContent = type + '-' + dur + 's.wav';
@@ -3634,6 +3715,25 @@ function removeSilence(buffer, regions){
   return newBuf;
 }
 
+function trimEdgeSilence(buffer, thresholdDb, minDurationMs){
+  const stats = detectSilence(buffer, thresholdDb, minDurationMs);
+  let trimStart = 0;
+  let trimEnd = buffer.duration;
+  if(stats.regions.length > 0){
+    const first = stats.regions[0];
+    const last = stats.regions[stats.regions.length - 1];
+    if(first.start < 0.02) trimStart = first.end;
+    if(buffer.duration - last.end < 0.02) trimEnd = last.start;
+  }
+  if(trimEnd - trimStart < 0.05 || (trimStart === 0 && trimEnd === buffer.duration)) return null;
+  return {
+    buffer: sliceBuffer(buffer, trimStart, trimEnd),
+    trimStart: trimStart,
+    trimEnd: trimEnd,
+    regions: stats.regions
+  };
+}
+
 const silenceBtn = $('silenceBtn');
 const silenceMenu = $('silenceMenu');
 const silenceThreshold = $('silenceThreshold');
@@ -3684,6 +3784,48 @@ document.querySelectorAll('.dropdown-item[data-silence]').forEach(item=>{
           showToast('静音检测失败', true);
         }
       }, 100);
+    }else if(action === 'trimedges'){
+      startFakeProgress('裁剪首尾静音…', true);
+      setTimeout(()=>{
+        try{
+          const th = parseInt(silenceThreshold.value);
+          const md = parseInt(silenceMinDur.value);
+          const res = trimEdgeSilence(originalBuffer, th, md);
+          if(!res){
+            hideProgress();
+            showToast('首尾没有可裁的静音', true);
+            return;
+          }
+          stop();
+          pushEditHistory('裁剪首尾静音');
+          const oldDur = originalBuffer.duration;
+          markers = markers
+            .filter(m => m.time >= res.trimStart && m.time <= res.trimEnd)
+            .map(m => ({...m, time: m.time - res.trimStart}));
+          originalBuffer = res.buffer;
+          originalChannelBuffer = null;
+          silenceRegions = [];
+          silenceStats = null;
+          resetBeatInfo();
+          invalidateWaveformCache();
+          fileMetaEl.textContent =
+            originalBuffer.numberOfChannels + 'ch · ' +
+            originalBuffer.sampleRate + 'Hz · ' +
+            fmtTime(originalBuffer.duration) + ' · 首尾静音已裁';
+          computeAudioStats(originalBuffer);
+          clearSelection();
+          processAudio().then(()=>{
+            drawWaveform();
+            updateProgress(100);
+            hideProgress();
+            showToast(`首尾静音已裁：${oldDur.toFixed(1)}s → ${originalBuffer.duration.toFixed(1)}s`);
+          });
+        }catch(e){
+          console.error('silence trim error:', e);
+          hideProgress();
+          showToast('裁剪首尾静音失败', true);
+        }
+      }, 100);
     }else if(action === 'remove'){
       if(!silenceRegions || silenceRegions.length === 0){
         // 先检测再去除
@@ -3706,8 +3848,7 @@ document.querySelectorAll('.dropdown-item[data-silence]').forEach(item=>{
           originalBuffer = newBuf;
           silenceRegions = [];
           silenceStats = null;
-          beatPositions = [];
-          beatBpm = 0;
+                    resetBeatInfo();
           clearMarkers();
           invalidateWaveformCache();
           fileMetaEl.textContent =
@@ -3815,8 +3956,7 @@ document.querySelectorAll('.dropdown-item[data-channel]').forEach(item=>{
         clearEditHistory();
         originalBuffer = originalChannelBuffer;
         originalChannelBuffer = null;
-        beatPositions = [];
-        beatBpm = 0;
+                resetBeatInfo();
         invalidateWaveformCache();
         fileMetaEl.textContent =
           originalBuffer.numberOfChannels + 'ch · ' +
@@ -3844,8 +3984,7 @@ document.querySelectorAll('.dropdown-item[data-channel]').forEach(item=>{
         }
         const newBuf = processChannels(originalBuffer, mode);
         originalBuffer = newBuf;
-        beatPositions = [];
-        beatBpm = 0;
+                resetBeatInfo();
         invalidateWaveformCache();
         fileMetaEl.textContent =
           originalBuffer.numberOfChannels + 'ch · ' +
@@ -3868,9 +4007,10 @@ document.querySelectorAll('.dropdown-item[data-channel]').forEach(item=>{
   });
 });
 
-// STABLE 1.20 新增：音频节拍检测
+// STABLE 1.20 新增：音频节拍检测；STABLE 1.55 增加置信度与节拍器联动
 let beatPositions = [];  // 节拍位置（秒）
 let beatBpm = 0;
+let beatConfidence = 0;
 
 function detectBeats(buffer){
   const sr = buffer.sampleRate;
@@ -3914,26 +4054,42 @@ function detectBeats(buffer){
     }
   }
   
-  // 计算 BPM：节拍间隔的中位数
+  // 计算 BPM：节拍间隔的中位数；用中位绝对偏差估算稳定度
+  let confidence = 0;
   if(beatTimes.length > 1){
     const intervals = [];
     for(let i = 1; i < beatTimes.length; i++){
       intervals.push(beatTimes[i] - beatTimes[i-1]);
     }
-    intervals.sort((a, b) => a - b);
-    const medianInterval = intervals[Math.floor(intervals.length / 2)];
+    const sorted = intervals.slice().sort((a, b) => a - b);
+    const medianInterval = sorted[Math.floor(sorted.length / 2)];
     beatBpm = Math.round(60 / medianInterval);
+    if(intervals.length >= 3 && medianInterval > 0){
+      const deviations = intervals.map(v => Math.abs(v - medianInterval)).sort((a,b) => a-b);
+      const mad = deviations[Math.floor(deviations.length / 2)];
+      confidence = Math.max(0, Math.min(1, 1 - (mad / medianInterval) * 2.5));
+    }
   }else{
     beatBpm = 0;
   }
-  
-  return {beats: beatTimes, bpm: beatBpm};
+  beatConfidence = confidence;
+  return {beats: beatTimes, bpm: beatBpm, confidence: confidence};
 }
 
 const beatBtn = $('beatBtn');
 const beatMenu = $('beatMenu');
 const beatBpmVal = $('beatBpmVal');
 const beatCountVal = $('beatCountVal');
+const beatConfVal = $('beatConfVal');
+const beatApplyItem = $('beatApplyItem');
+function resetBeatInfo(){
+  beatPositions = [];
+  beatBpm = 0;
+  beatConfidence = 0;
+  if(beatBpmVal) beatBpmVal.textContent = '--';
+  if(beatCountVal) beatCountVal.textContent = '--';
+  if(beatConfVal) beatConfVal.textContent = '--';
+}
 if(beatBtn){
   beatBtn.addEventListener('click', e=>{
     e.stopPropagation();
@@ -3950,10 +4106,7 @@ document.querySelectorAll('.dropdown-item[data-beat]').forEach(item=>{
     if(!originalBuffer){ showToast('请先加载音频', true); return; }
 
     if(action === 'clear'){
-      beatPositions = [];
-      beatBpm = 0;
-      if(beatBpmVal) beatBpmVal.textContent = '--';
-      if(beatCountVal) beatCountVal.textContent = '--';
+      resetBeatInfo();
       drawWaveform();
       showToast('节拍标记已清除');
       return;
@@ -3965,8 +4118,10 @@ document.querySelectorAll('.dropdown-item[data-beat]').forEach(item=>{
         const result = detectBeats(originalBuffer);
         beatPositions = result.beats;
         beatBpm = result.bpm;
+        beatConfidence = result.confidence || 0;
         if(beatBpmVal) beatBpmVal.textContent = beatBpm > 0 ? beatBpm + ' BPM' : '--';
         if(beatCountVal) beatCountVal.textContent = beatPositions.length;
+        if(beatConfVal) beatConfVal.textContent = beatBpm > 0 ? Math.round(beatConfidence * 100) + '%' : '--';
         drawWaveform();
         updateProgress(100);
         hideProgress();
@@ -4681,8 +4836,7 @@ if(dcBtn && dcMenu){
         }
       }
       originalBuffer = newBuffer;
-      beatPositions = [];
-      beatBpm = 0;
+            resetBeatInfo();
       dcOffsetValue = 0;
       dcOffsetVal.textContent = '--';
       await afterCrop();
@@ -4937,6 +5091,21 @@ if(metroTapItem){
   metroTapItem.addEventListener('click', (e)=>{
     e.stopPropagation();
     tapTempo();
+  });
+}
+if(beatApplyItem){
+  beatApplyItem.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if(beatMenu) beatMenu.classList.add('hidden');
+    if(beatBpm < 40 || beatBpm > 240){
+      showToast('先检测节拍，或 BPM 超出节拍器范围', true);
+      return;
+    }
+    metroBpm.value = beatBpm;
+    if(metroBpmVal) metroBpmVal.textContent = beatBpm;
+    if(metroOn) restartMetro();
+    if(metroMenu) metroMenu.classList.add('hidden');
+    showToast('节拍器已设为 ' + beatBpm + ' BPM');
   });
 }
 
@@ -5459,8 +5628,7 @@ applyGainBtn.addEventListener('click', async ()=>{
     }
   }
   originalBuffer = nb;
-  beatPositions = [];
-  beatBpm = 0;
+    resetBeatInfo();
   // 电平已写入缓冲，播放增益回到 0
   gainSlider.value = 0;
   gainSlider.dispatchEvent(new Event('input'));
@@ -5744,8 +5912,7 @@ async function restoreSnapshot(snap, metaTail){
   stop();
   originalBuffer = snap.buffer;
   markers = snap.markers;
-  beatPositions = [];
-  beatBpm = 0;
+    resetBeatInfo();
   clearSelection();
   invalidateWaveformCache();
   if(isReversed){
@@ -6255,8 +6422,7 @@ cropKeepBtn.addEventListener('click', async ()=>{
   const e = Math.max(selStart, selEnd);
   pushEditHistory('裁剪保留');
   originalBuffer = sliceBuffer(originalBuffer, s, e);
-  beatPositions = [];
-  beatBpm = 0;
+    resetBeatInfo();
   await afterCrop();
 });
 
@@ -6273,8 +6439,7 @@ cropDeleteBtn.addEventListener('click', async ()=>{
   else if(e >= dur - 0.001) nb = sliceBuffer(originalBuffer, 0, s);
   else nb = concatBuffers(sliceBuffer(originalBuffer, 0, s), sliceBuffer(originalBuffer, e, dur));
   originalBuffer = nb;
-  beatPositions = [];
-  beatBpm = 0;
+    resetBeatInfo();
   await afterCrop();
 });
 
@@ -6316,8 +6481,7 @@ cropDupBtn.addEventListener('click', async ()=>{
   nb = concatBuffers(nb, region);
   if(e < dur - 0.001) nb = concatBuffers(nb, sliceBuffer(originalBuffer, e, dur));
   originalBuffer = nb;
-  beatPositions = [];
-  beatBpm = 0;
+    resetBeatInfo();
   await afterCrop();
   showToast('已在选区后复制一份');
 });
@@ -6340,8 +6504,7 @@ cropMuteBtn.addEventListener('click', async ()=>{
     d.fill(0, a, b);
   }
   originalBuffer = nb;
-  beatPositions = [];
-  beatBpm = 0;
+    resetBeatInfo();
   await afterCrop();
   showToast('已将选区静音');
 });
@@ -6365,8 +6528,7 @@ cropRevBtn.addEventListener('click', async ()=>{
     for(let i = a; i < b; i++) d[i] = src[a + b - 1 - i];
   }
   originalBuffer = nb;
-  beatPositions = [];
-  beatBpm = 0;
+    resetBeatInfo();
   await afterCrop();
   showToast('已反向选区');
 });
@@ -6399,8 +6561,7 @@ cropGainBtn.addEventListener('click', async ()=>{
     }
   }
   originalBuffer = nb;
-  beatPositions = [];
-  beatBpm = 0;
+    resetBeatInfo();
   // 电平已写入缓冲，播放增益回到 0，避免播放与导出重复叠加
   gainSlider.value = 0;
   gainSlider.dispatchEvent(new Event('input'));
@@ -6480,8 +6641,7 @@ insSilBtn.addEventListener('click', async ()=>{
   else nb = concatBuffers(concatBuffers(sliceBuffer(originalBuffer, 0, pos), sil),
                           sliceBuffer(originalBuffer, pos, originalBuffer.duration));
   originalBuffer = nb;
-  beatPositions = [];
-  beatBpm = 0;
+    resetBeatInfo();
   await afterCrop();
   showToast('已在 ' + fmtTime(pos) + ' 插入 ' + clamped.toFixed(1) + 's 静音');
 });
@@ -6507,8 +6667,7 @@ appendFileInput.addEventListener('change', async e=>{
                                   originalBuffer.numberOfChannels);
     pushEditHistory('追加 ' + (file.name.replace(/\.[^.]+$/, '') || '音频'));
     originalBuffer = concatBuffers(originalBuffer, matched);
-    beatPositions = [];
-    beatBpm = 0;
+        resetBeatInfo();
     await afterCrop();
     showToast('已追加到末尾：' + file.name);
   }catch(err){
@@ -6566,8 +6725,7 @@ mixFileInput.addEventListener('change', async e=>{
     const pos = Math.min(currentPlayPos(), originalBuffer.duration);
     pushEditHistory('叠加 ' + (file.name.replace(/\.[^.]+$/, '') || '音频'));
     originalBuffer = mixOverlay(originalBuffer, matched, pos, level);
-    beatPositions = [];
-    beatBpm = 0;
+        resetBeatInfo();
     await afterCrop();
     showToast('已在 ' + fmtTime(pos) + ' 叠加 ' + file.name);
   }catch(err){

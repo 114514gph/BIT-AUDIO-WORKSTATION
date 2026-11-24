@@ -14,7 +14,7 @@
 <!-- 徽章区域 -->
 <p align="center">
   <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases"><img src="https://img.shields.io/github/v/release/114514gph/BIT-AUDIO-WORKSTATION?style=flat-square&logo=github" alt="Release"></a>
-  <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases/tag/v1.54"><img src="https://img.shields.io/badge/STABLE-1.54-00ff88?style=flat-square" alt="Version STABLE 1.54"></a>
+  <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases/tag/v1.55"><img src="https://img.shields.io/badge/STABLE-1.55-00ff88?style=flat-square" alt="Version STABLE 1.55"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-ff0066?style=flat-square" alt="License"></a>
   <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome"></a>
   <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API"><img src="https://img.shields.io/badge/Web%20Audio%20API-00aaff?style=flat-square&logo=webaudio" alt="Web Audio API"></a>
@@ -93,6 +93,7 @@ python3 -m http.server 8080
 | 音高检测 | PITCH 会对选区或播放头附近的一段音频做基频检测，显示频率、音名、音分偏差与置信度，调音时不用再开别的软件 |
 | 时间刻度 | 波形下方自适应时间刻度尺，缩放时自动换档；点击或拖动刻度尺可直接定位播放头 |
 | 选区精调 | 选区起止可按 10ms 微调，ZERO 按钮把边界吸附到最近的零交叉，切点更干净 |
+| 节拍检测 | BEAT 会分析当前音频的 BPM、节拍数和结果置信度；检测完可以直接把 BPM 应用到节拍器，节拍器正在运行时会按新速度重启 |
 | 节拍吸附 | 先检测节拍，再把选区起止吸附到最近的节拍点，按拍裁切和做循环时不用靠耳朵找位置 |
 | 节拍器 | 40~240 BPM，拍号 2/4~6/8；TAP 连点测速，可设 1~16 小节自动停止，菜单里直接启停 |
 | 反向播放 | 一键反转音频方向 |
@@ -101,6 +102,8 @@ python3 -m http.server 8080
 | 削波指示 | 实时削波检测与警告 LED |
 | 标记点 | 双击添加、双击重命名、拖动调整位置、点击跳转、右键删除，播放头处也能一键打点，MARKER 菜单里有完整的标记列表 |
 | 切段导出 | 按标记点把音频切成多段 WAV，一次打包成 ZIP 下载；自定义命名的标记会出现在文件名里 |
+| 列表原档导出 | 把播放列表里的音频逐首转成 16-bit WAV，再打包成一个 ZIP；不套用当前效果链，保留各自的采样率和声道，超过 80MB 会提示分批 |
+| 只裁首尾静音 | 只去掉开头和结尾的静音，中间停顿原样保留；裁切前会记入撤销栈，裁错了可以退回来 |
 | 插入静音 | 在播放头位置插入指定时长的静音段，可撤销 |
 | 追加音频 | 把另一段音频接到末尾，自动对齐采样率与声道 |
 | 叠加混音 | 把另一段音频按播放头位置叠到当前音频上，可调叠加音量 |
@@ -112,7 +115,7 @@ python3 -m http.server 8080
 | AB 循环 | 选定区域内循环播放 |
 | 波形缩放 | 1x~8x，滚轮缩放 + Shift 拖拽平移 |
 | 播放跟随 | 放大波形播放时视口自动跟着播放头走，到边缘自动翻屏；手动拖动视图后暂停跟随，重新播放时恢复 |
-| 播放列表 | 多文件队列，支持一次拖入或选择多个音频批量导入，上一曲/下一曲，自动连播 |
+| 播放列表 | 多文件队列，支持一次拖入或选择多个音频批量导入；每个条目可上移/下移排序，正在播放的曲目会跟着位置走；头部显示列表总时长，上一曲/下一曲与自动连播保持原样 |
 
 ### 录制与导出
 
@@ -212,7 +215,20 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details open>
-<summary><b>STABLE 1.54</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.55</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.55
+- 播放列表支持上移/下移曲目，正在播放的那首会跟着新位置走；列表头部加上了总时长
+- 新增列表原档导出：把队列里的音频逐首转成 16-bit WAV 打包成 ZIP，保留各自的采样率和声道，不经过当前效果链；超过 80MB 会提示分批处理
+- BEAT 菜单增加 BPM 置信度，检测结果可以一键应用到节拍器；节拍器正在跑时会按新 BPM 重启
+- 新建或切换音频后，BPM、节拍数和置信度会一起清空，不再显示上一首留下的旧数值
+- SILENCE 菜单新增“只裁首尾静音”：只处理开头和结尾的静音，中间停顿保留，可撤销
+- 修复窄屏下 FADE 曲线组横向溢出，两个 IN / OUT 曲线组会在窄屏里换行
+- 修复演示栏下拉菜单在窄屏下高度塌陷、内容溢出和宽度被拉满的问题，BEAT、MARKER 这类长菜单现在会限制高度并在菜单内滚动
+</details>
+
+<details>
+<summary><b>STABLE 1.54</b></summary>
 
 ### STABLE 1.54
 - 新增批量导入：文件选择框和拖拽都支持一次放多个音频，解码后按顺序进播放列表，第一首直接打开，不用来回点单文件
