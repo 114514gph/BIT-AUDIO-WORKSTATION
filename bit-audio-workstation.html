@@ -323,10 +323,26 @@ header .blink{
   padding:4px 7px;cursor:pointer;letter-spacing:0.5px;transition:all 0.15s;
 }
 .nudge-btn:hover{border-color:var(--cyan);color:var(--text);background:rgba(0,229,255,0.18)}
+.nudge-btn:disabled{opacity:0.3;cursor:not-allowed}
 .nudge-btn.snap{color:var(--amber);border-color:rgba(255,170,0,0.55)}
 .nudge-btn.snap:hover{border-color:var(--amber);color:var(--text);background:rgba(255,170,0,0.18)}
 .nudge-btn.beat{color:var(--green);border-color:rgba(0,255,136,0.5)}
 .nudge-btn.beat:hover{border-color:var(--green);color:var(--text);background:rgba(0,255,136,0.16)}
+/* STABLE 1.56：选区时间输入 */
+.sel-time-wrap{display:flex;align-items:center;gap:4px}
+.sel-time-label{font-family:var(--pixel);font-size:8px;color:var(--muted);letter-spacing:1px}
+.sel-time-input{
+  width:82px;background:var(--bg);border:1px solid rgba(0,229,255,0.45);
+  color:var(--text);font-family:var(--mono);font-size:12px;padding:3px 6px;
+  border-radius:2px;
+}
+.sel-time-input:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 1px rgba(0,229,255,0.18)}
+.sel-time-input:disabled{opacity:0.35;cursor:not-allowed}
+.sel-time-unit{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.nudge-btn.loop{color:var(--pink);border-color:rgba(255,45,149,0.5)}
+.nudge-btn.loop:hover{border-color:var(--pink);color:var(--text);background:rgba(255,45,149,0.18)}
+.nudge-btn.mark{color:var(--amber);border-color:rgba(255,170,0,0.5)}
+.nudge-btn.mark:hover{border-color:var(--amber);color:var(--text);background:rgba(255,170,0,0.16)}
 
 /* ============ MARKER LIST ============ */
 #markerListModal{z-index:900}   /* 低于 toast，改名/删除的提示不会被遮罩挡住 */
@@ -726,6 +742,11 @@ input[type=range]::-moz-range-thumb{
 .sr-label{font-size:10px;color:var(--muted);font-family:var(--pixel);letter-spacing:1px}
 .sr-btn{padding:6px 10px;font-size:10px;min-width:100px}
 .sample-rate-select .dropdown-menu{top:100%;right:0;left:auto;margin-top:4px;min-width:120px}
+.normalize-mode{
+  background:var(--bg);border:1px solid var(--border);color:var(--text);
+  font-family:var(--pixel);font-size:10px;padding:5px 7px;border-radius:3px;
+}
+.normalize-mode:focus{outline:none;border-color:var(--green)}
 /* STABLE 1.36：MP3 ID3 标签 */
 .id3-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .id3-input{
@@ -751,6 +772,10 @@ input[type=range]::-moz-range-thumb{
   border-color:var(--text);
   box-shadow:0 0 8px var(--theme-color), inset 0 0 4px rgba(255,255,255,0.3);
   transform:scale(1.1);
+}
+
+@media (min-width:601px) and (max-height:1000px){
+  .demo-bar .dropdown-menu{max-height:calc(100vh - 510px);overflow-y:auto}
 }
 
 @media(max-width:600px){
@@ -1371,6 +1396,8 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
           <div class="dropdown-item" data-marker="export">导出标记点 (CSV)</div>
           <div class="dropdown-item" data-marker="import">导入标记点 (CSV)</div>
           <div class="dropdown-item" data-marker="splitzip">按标记切段导出 (ZIP)</div>
+          <div class="dropdown-item" data-marker="snapzero">标记吸附零交叉</div>
+          <div class="dropdown-item" data-marker="cue">导出 CUE 表</div>
           <div class="dropdown-item" data-marker="addhere">在播放头打标记</div>
           <div class="dropdown-item" data-marker="list">标记列表</div>
           <div class="dropdown-item" data-marker="prevmarker">跳到上一标记</div>
@@ -1486,6 +1513,19 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
           <button class="nudge-btn" data-nudge="end-up" title="选区终点延后 10ms">+10ms</button>
           <button class="nudge-btn beat" data-nudge="beat" title="选区起止吸附到最近的节拍（先检测节拍）">BEAT 吸附</button>
           <button class="nudge-btn snap" data-nudge="snap" title="选区起止吸附到最近的零交叉">ZERO 吸附</button>
+          <button class="nudge-btn mark" data-nudge="marker" title="选区起止吸附到最近的标记点">MARK 吸附</button>
+          <span class="sel-time-wrap">
+            <span class="sel-time-label">IN</span>
+            <input type="number" class="sel-time-input" id="selStartInput" min="0" step="0.001" placeholder="0.000" aria-label="选区起点，单位秒">
+            <span class="sel-time-unit">s</span>
+          </span>
+          <span class="sel-time-wrap">
+            <span class="sel-time-label">OUT</span>
+            <input type="number" class="sel-time-input" id="selEndInput" min="0" step="0.001" placeholder="0.000" aria-label="选区终点，单位秒">
+            <span class="sel-time-unit">s</span>
+          </span>
+          <button class="nudge-btn" id="selApplyBtn" title="按输入的秒数设置选区">应用</button>
+          <button class="nudge-btn loop" id="selLoopBtn" title="把选区设为 AB 循环并开始播放">LOOP 选区</button>
         </div>
       </div>
 
@@ -1767,6 +1807,12 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
           <input type="checkbox" id="normalizeToggle" checked>
           <span>音量归一化（防止削波）</span>
         </label>
+        <select id="normalizeMode" class="normalize-mode" title="归一化目标">
+          <option value="peak">峰值 -0.1dB</option>
+          <option value="rms18">RMS -18dB</option>
+          <option value="rms20">RMS -20dB</option>
+          <option value="rms23">RMS -23dB</option>
+        </select>
         <label class="toggle">
           <input type="checkbox" id="trimSilenceToggle">
           <span>导出时去首尾静音</span>
@@ -1806,7 +1852,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.55 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.56 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -2117,6 +2163,11 @@ const cropMuteBtn = $('cropMuteBtn');
 const cropRevBtn = $('cropRevBtn');
 const cropGainBtn = $('cropGainBtn');
 const cropClearBtn = $('cropClearBtn');
+const selStartInput = $('selStartInput');
+const selEndInput = $('selEndInput');
+const selApplyBtn = $('selApplyBtn');
+const selLoopBtn = $('selLoopBtn');
+const normalizeModeSelect = $('normalizeMode');
 const progressModal = $('progressModal');
 const progressTitle = $('progressTitle');
 const progressBar = $('progressBar');
@@ -4409,6 +4460,12 @@ if(markerBtn && markerMenu){
     else if(action === 'splitzip'){
       exportSegmentsByMarkers();
     }
+    else if(action === 'snapzero'){
+      snapMarkersToZero();
+    }
+    else if(action === 'cue'){
+      exportCueSheet();
+    }
     else if(action === 'list'){
       openMarkerList();
     }
@@ -4658,6 +4715,77 @@ async function exportSegmentsByMarkers(){
   link.click();
   setTimeout(()=>URL.revokeObjectURL(link.href), 2000);
   showToast('已切成 ' + files.length + ' 段，打包为 ZIP');
+}
+
+/* STABLE 1.56：标记吸附零交叉 / CUE 表导出 */
+function snapMarkersToZero(){
+  if(!originalBuffer){ showToast('请先载入音频', true); return; }
+  if(!markers || markers.length === 0){ showToast('没有标记点', true); return; }
+  const dur = originalBuffer.duration;
+  let changed = 0, failed = 0;
+  for(const m of markers){
+    if(m.time <= 0.001 || m.time >= dur - 0.001) continue;
+    const snapped = nearestZeroCrossingTime(m.time);
+    if(snapped === null){ failed++; continue; }
+    if(Math.abs(snapped - m.time) > 1e-6) changed++;
+    m.time = snapped;
+  }
+  markers.sort((a,b)=>a.time - b.time);
+  renderMarkers();
+  if(markerListModal && !markerListModal.classList.contains('hidden')) renderMarkerList();
+  updateMarkerCount();
+  if(changed === 0){
+    showToast(failed > 0 ? '标记附近没有零交叉，保持原位' : '标记已经在零交叉上', true);
+  }else{
+    showToast('已吸附 ' + changed + ' 个标记点' + (failed ? '，' + failed + ' 个保持原位' : ''));
+  }
+}
+
+function cueTime(t){
+  const framesTotal = Math.max(0, Math.round(t * 75));
+  const frames = framesTotal % 75;
+  const totalSec = Math.floor(framesTotal / 75);
+  const sec = totalSec % 60;
+  const min = Math.floor(totalSec / 60);
+  return String(min).padStart(2,'0') + ':' + String(sec).padStart(2,'0') + ':' + String(frames).padStart(2,'0');
+}
+
+function cueEscape(text){
+  return String(text || '').replace(/[\r\n]+/g, ' ').replace(/"/g, "'").slice(0, 120);
+}
+
+function exportCueSheet(){
+  if(!originalBuffer){ showToast('请先载入音频', true); return; }
+  if(!markers || markers.length === 0){ showToast('没有标记点，无法生成分轨 CUE', true); return; }
+  const dur = originalBuffer.duration;
+  const base = (currentFileName || 'audio').replace(/\.[^.]+$/, '');
+  const sorted = markers.slice().sort((a,b)=>a.time - b.time);
+  const tracks = [];
+  if(sorted[0].time > 0.1) tracks.push({time: 0, title: base});
+  for(const m of sorted){
+    const t = Math.max(0, Math.min(dur, m.time));
+    if(tracks.length > 0 && t - tracks[tracks.length - 1].time < 0.1) continue;
+    const rawTitle = m.customName ? m.name : (m.name && !/^M\d+$/.test(m.name) ? m.name : '');
+    tracks.push({time: t, title: rawTitle || (tracks.length === 0 ? base : 'Track ' + String(tracks.length + 1).padStart(2, '0'))});
+  }
+  if(tracks.length === 0){ showToast('标记点都挤在同一个位置，无法生成轨道', true); return; }
+  let cue = '\uFEFFREM Generated by BIT AUDIO WORKSTATION\n';
+  cue += 'TITLE "' + cueEscape(base) + '"\n';
+  cue += 'PERFORMER "Unknown"\n';
+  cue += 'FILE "' + cueEscape(base + '.wav') + '" WAVE\n';
+  tracks.forEach((tr, i)=>{
+    const num = String(i + 1).padStart(2, '0');
+    cue += '  TRACK ' + num + ' AUDIO\n';
+    cue += '    TITLE "' + cueEscape(tr.title || base) + '"\n';
+    cue += '    INDEX 01 ' + cueTime(tr.time) + '\n';
+  });
+  const blob = new Blob([cue], {type: 'text/plain;charset=utf-8'});
+  const link = document.createElement('a');
+  link.download = sanitizeFilename(base) + '.cue';
+  link.href = URL.createObjectURL(blob);
+  link.click();
+  setTimeout(()=>URL.revokeObjectURL(link.href), 1000);
+  showToast('已导出 CUE：' + tracks.length + ' 个轨道');
 }
 
 // 点击页面其他地方关闭菜单
@@ -5962,6 +6090,7 @@ function clearSelection(){
   cropInfo.textContent = '拖拽波形选择区域';
   clearSelectionStats();
   clearPitchInfo();
+  syncSelectionInputs(null, null);
   cropKeepBtn.disabled = true;
   cropPartBtn.disabled = true;
   cropDeleteBtn.disabled = true;
@@ -5971,6 +6100,72 @@ function clearSelection(){
   cropGainBtn.disabled = true;
   cropClearBtn.disabled = true;
   cropBar.classList.add('hidden');
+}
+
+/* STABLE 1.56：选区时间输入与精确循环 */
+function syncSelectionInputs(s, e){
+  if(!selStartInput || !selEndInput) return;
+  if(s === null || e === null){
+    if(document.activeElement !== selStartInput) selStartInput.value = '';
+    if(document.activeElement !== selEndInput) selEndInput.value = '';
+    selStartInput.disabled = true;
+    selEndInput.disabled = true;
+    if(selApplyBtn) selApplyBtn.disabled = true;
+    if(selLoopBtn) selLoopBtn.disabled = true;
+    return;
+  }
+  selStartInput.disabled = false;
+  selEndInput.disabled = false;
+  selStartInput.max = originalBuffer ? originalBuffer.duration.toFixed(3) : '';
+  selEndInput.max = originalBuffer ? originalBuffer.duration.toFixed(3) : '';
+  if(document.activeElement !== selStartInput) selStartInput.value = s.toFixed(3);
+  if(document.activeElement !== selEndInput) selEndInput.value = e.toFixed(3);
+  if(selApplyBtn) selApplyBtn.disabled = false;
+  if(selLoopBtn) selLoopBtn.disabled = false;
+}
+
+function applySelectionInputs(){
+  if(!originalBuffer || !selStartInput || !selEndInput) return;
+  const rawS = parseFloat(selStartInput.value);
+  const rawE = parseFloat(selEndInput.value);
+  if(!isFinite(rawS) || !isFinite(rawE)){
+    showToast('请输入有效的选区秒数', true);
+    syncSelectionInputs(selStart >= 0 ? Math.min(selStart, selEnd) : null, selEnd >= 0 ? Math.max(selStart, selEnd) : null);
+    return;
+  }
+  const dur = originalBuffer.duration;
+  const s = Math.max(0, Math.min(dur, rawS));
+  const e = Math.max(0, Math.min(dur, rawE));
+  if(e - s < 0.02){
+    showToast('OUT 至少要比 IN 大 0.02 秒', true);
+    syncSelectionInputs(Math.min(s, e), Math.max(s, e));
+    return;
+  }
+  selStart = s;
+  selEnd = e;
+  updateSelectionUI();
+  selStartInput.value = s.toFixed(3);
+  selEndInput.value = e.toFixed(3);
+  showToast('选区已设为 ' + fmtTimePrecise(s) + ' → ' + fmtTimePrecise(e));
+}
+
+function loopSelection(){
+  if(!originalBuffer || selStart < 0 || selEnd < 0){
+    showToast('请先设置选区', true);
+    return;
+  }
+  const s = Math.min(selStart, selEnd);
+  const e = Math.max(selStart, selEnd);
+  if(e - s < 0.02){ showToast('选区太短，无法循环', true); return; }
+  if(abLoopToggle){
+    abLoopToggle.checked = true;
+    abLoopMode = true;
+  }
+  pausedAt = s;
+  if(isPlaying) stop(true);
+  jumpToTime(s);
+  play();
+  showToast('AB 循环已开启：' + fmtTimePrecise(s) + ' → ' + fmtTimePrecise(e));
 }
 
 function updateSelectionUI(){
@@ -5993,6 +6188,7 @@ function updateSelectionUI(){
   selectionEl.style.left = leftPct + '%';
   selectionEl.style.width = widthPct + '%';
   cropInfo.textContent = '选区: ' + fmtTimePrecise(s) + ' → ' + fmtTimePrecise(e) + '  (' + fmtTimePrecise(e - s) + ')';
+  syncSelectionInputs(s, e);
   scheduleSelectionStats(s, e);
   cropKeepBtn.disabled = false;
   cropPartBtn.disabled = false;
@@ -6086,6 +6282,44 @@ function snapSelectionToBeat(){
   selStart = newS; selEnd = newE;
   updateSelectionUI();
   showToast('选区已吸附到节拍');
+}
+
+/* STABLE 1.56：选区吸附到标记点 */
+function nearestMarkerTime(t){
+  if(!markers || markers.length === 0) return null;
+  let best = null, bestDist = 0.3;
+  for(const m of markers){
+    const d = Math.abs(m.time - t);
+    if(d < bestDist){ bestDist = d; best = m.time; }
+  }
+  return best;
+}
+function snapSelectionToMarker(){
+  if(!originalBuffer || selStart < 0 || selEnd < 0){
+    showToast('请先设置选区', true);
+    return;
+  }
+  if(!markers || markers.length === 0){
+    showToast('还没有标记点，双击波形或在 MARKER 菜单打点', true);
+    return;
+  }
+  const dur = originalBuffer.duration;
+  let s = Math.min(selStart, selEnd), e = Math.max(selStart, selEnd);
+  const ns = (s <= 0.001 || s >= dur - 0.001) ? s : nearestMarkerTime(s);
+  const ne = (e <= 0.001 || e >= dur - 0.001) ? e : nearestMarkerTime(e);
+  if(ns === null && ne === null){
+    showToast('选区边界附近没有标记点', true);
+    return;
+  }
+  const newS = ns === null ? s : ns;
+  const newE = ne === null ? e : ne;
+  if(newE - newS < 0.02){
+    showToast('标记点太近，选区会短于 20ms', true);
+    return;
+  }
+  selStart = newS; selEnd = newE;
+  updateSelectionUI();
+  showToast('选区已吸附到标记点');
 }
 
 /* ============ STABLE 1.54：音高检测 ============ */
@@ -6455,8 +6689,17 @@ if(cropAdjust){
     else if(action === 'end-up') nudgeSelection('end', 0.01);
     else if(action === 'snap') snapSelectionToZero();
     else if(action === 'beat') snapSelectionToBeat();
+    else if(action === 'marker') snapSelectionToMarker();
   });
 }
+if(selApplyBtn) selApplyBtn.addEventListener('click', applySelectionInputs);
+if(selLoopBtn) selLoopBtn.addEventListener('click', loopSelection);
+[selStartInput, selEndInput].filter(Boolean).forEach(input => {
+  input.addEventListener('change', applySelectionInputs);
+  input.addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ e.preventDefault(); applySelectionInputs(); input.blur(); }
+  });
+});
 if(undoBtn) undoBtn.addEventListener('click', undoLastEdit);
 if(redoBtn) redoBtn.addEventListener('click', redoLastEdit);
 
@@ -7571,6 +7814,23 @@ if(tagNameToggleEl){
     localStorage.setItem('bitTagNameExport', tagNameToggleEl.checked ? '1' : '0');
   });
 }
+/* STABLE 1.56：归一化目标持久化 */
+const NORMALIZE_MODE_KEY = 'bitNormalizeMode';
+function updateNormalizeModeState(){
+  if(!normalizeModeSelect) return;
+  normalizeModeSelect.disabled = !(normalizeToggleEl && normalizeToggleEl.checked);
+}
+if(normalizeModeSelect){
+  const saved = localStorage.getItem(NORMALIZE_MODE_KEY);
+  if(['peak','rms18','rms20','rms23'].includes(saved)) normalizeModeSelect.value = saved;
+  normalizeModeSelect.addEventListener('change', ()=>{
+    localStorage.setItem(NORMALIZE_MODE_KEY, normalizeModeSelect.value);
+  });
+}
+if(normalizeToggleEl){
+  normalizeToggleEl.addEventListener('change', updateNormalizeModeState);
+}
+updateNormalizeModeState();
 
 /* ============ 导出按钮 ============ */
 /* 离线导出原曲 */
@@ -7579,6 +7839,7 @@ async function doExportOriginal(range){
   const isPart = Array.isArray(range);
   let partInfo = '';
   let silenceTrimmed = false;
+  let normalizeInfo = '';
   try{
     showProgress(isPart ? '导出选区中…' : '导出中…', 0);
     const srcBuf = bypassToggle.checked ? originalBuffer : processedBuffer;
@@ -7615,7 +7876,10 @@ async function doExportOriginal(range){
     // 音量归一化
     if(normalizeToggleEl && normalizeToggleEl.checked){
       updateProgress(60);
-      finalBuf = normalizeBuffer(finalBuf);
+      const normMode = normalizeModeSelect ? normalizeModeSelect.value : 'peak';
+      finalBuf = normalizeBuffer(finalBuf, normMode);
+      const normLabels = {peak:'峰值 -0.1dB', rms18:'RMS -18dB', rms20:'RMS -20dB', rms23:'RMS -23dB'};
+      normalizeInfo = ' · 归一化 ' + (normLabels[normMode] || normLabels.peak);
     }
     updateProgress(70);
     const result = await encodeAudio(finalBuf, exportFormat);
@@ -7635,7 +7899,7 @@ async function doExportOriginal(range){
     a.download = baseName + suffix + (isPart ? '_part' : '') + '.' + result.ext;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(()=> URL.revokeObjectURL(url), 1000);
-    showToast((isPart ? '已导出选区' + partInfo + ' · ' : '已导出 ') + (result.blob.size/1024/1024).toFixed(2) + 'MB (' + result.ext.toUpperCase() + ')' + (silenceTrimmed ? ' · 已去静音' : ''));
+    showToast((isPart ? '已导出选区' + partInfo + ' · ' : '已导出 ') + (result.blob.size/1024/1024).toFixed(2) + 'MB (' + result.ext.toUpperCase() + ')' + normalizeInfo + (silenceTrimmed ? ' · 已去静音' : ''));
   }catch(e){
     console.error(e);
     hideProgress();
@@ -8283,16 +8547,33 @@ presetImportFile.addEventListener('change', (e)=>{
 
 refreshPresetList();
 
-/* --- 音量归一化 --- */
-function normalizeBuffer(buffer){
+/* --- 音量归一化（STABLE 1.56：峰值 / RMS 目标） --- */
+function normalizeBuffer(buffer, mode = 'peak'){
+  if(!buffer) return buffer;
   const ch = buffer.numberOfChannels;
-  let peak = 0;
+  let peak = 0, sumSq = 0, total = 0;
   for(let c=0;c<ch;c++){
     const d = buffer.getChannelData(c);
-    for(let i=0;i<d.length;i++){ if(Math.abs(d[i]) > peak) peak = Math.abs(d[i]); }
+    for(let i=0;i<d.length;i++){
+      const v = d[i];
+      const a = v < 0 ? -v : v;
+      if(a > peak) peak = a;
+      sumSq += v * v;
+    }
+    total += d.length;
   }
-  if(peak < 0.01 || peak >= 0.99) return buffer;
-  const gain = 0.99 / peak;
+  if(peak < 0.001) return buffer;
+  let gain = 0.991 / peak;
+  if(mode === 'rms18' || mode === 'rms20' || mode === 'rms23'){
+    const rms = total > 0 ? Math.sqrt(sumSq / total) : 0;
+    if(rms < 0.001) return buffer;
+    const targetDb = mode === 'rms18' ? -18 : (mode === 'rms20' ? -20 : -23);
+    gain = Math.pow(10, targetDb / 20) / rms;
+  }
+  if(!isFinite(gain) || gain <= 0) return buffer;
+  // 任何模式下都不把峰值推到 0dBFS 以上
+  if(peak * gain > 0.99) gain = 0.99 / peak;
+  if(Math.abs(gain - 1) < 1e-6) return buffer;
   const ctx = ensureCtx();
   const nb = ctx.createBuffer(ch, buffer.length, buffer.sampleRate);
   for(let c=0;c<ch;c++){

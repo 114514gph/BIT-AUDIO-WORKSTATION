@@ -6,8 +6,9 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
+| STABLE 1.56.x | :white_check_mark: |
 | STABLE 1.55.x | :white_check_mark: |
-| STABLE 1.54.x | :white_check_mark: |
+| STABLE 1.54.x | :x: |
 | STABLE 1.53.x | :x: |
 | STABLE 1.52.x | :x: |
 | STABLE 1.50.x | :x: |

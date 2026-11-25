@@ -136,6 +136,8 @@
           <div class="dropdown-item" data-marker="export">导出标记点 (CSV)</div>
           <div class="dropdown-item" data-marker="import">导入标记点 (CSV)</div>
           <div class="dropdown-item" data-marker="splitzip">按标记切段导出 (ZIP)</div>
+          <div class="dropdown-item" data-marker="snapzero">标记吸附零交叉</div>
+          <div class="dropdown-item" data-marker="cue">导出 CUE 表</div>
           <div class="dropdown-item" data-marker="addhere">在播放头打标记</div>
           <div class="dropdown-item" data-marker="list">标记列表</div>
           <div class="dropdown-item" data-marker="prevmarker">跳到上一标记</div>
@@ -251,6 +253,19 @@
           <button class="nudge-btn" data-nudge="end-up" title="选区终点延后 10ms">+10ms</button>
           <button class="nudge-btn beat" data-nudge="beat" title="选区起止吸附到最近的节拍（先检测节拍）">BEAT 吸附</button>
           <button class="nudge-btn snap" data-nudge="snap" title="选区起止吸附到最近的零交叉">ZERO 吸附</button>
+          <button class="nudge-btn mark" data-nudge="marker" title="选区起止吸附到最近的标记点">MARK 吸附</button>
+          <span class="sel-time-wrap">
+            <span class="sel-time-label">IN</span>
+            <input type="number" class="sel-time-input" id="selStartInput" min="0" step="0.001" placeholder="0.000" aria-label="选区起点，单位秒">
+            <span class="sel-time-unit">s</span>
+          </span>
+          <span class="sel-time-wrap">
+            <span class="sel-time-label">OUT</span>
+            <input type="number" class="sel-time-input" id="selEndInput" min="0" step="0.001" placeholder="0.000" aria-label="选区终点，单位秒">
+            <span class="sel-time-unit">s</span>
+          </span>
+          <button class="nudge-btn" id="selApplyBtn" title="按输入的秒数设置选区">应用</button>
+          <button class="nudge-btn loop" id="selLoopBtn" title="把选区设为 AB 循环并开始播放">LOOP 选区</button>
         </div>
       </div>
 
@@ -532,6 +547,12 @@
           <input type="checkbox" id="normalizeToggle" checked>
           <span>音量归一化（防止削波）</span>
         </label>
+        <select id="normalizeMode" class="normalize-mode" title="归一化目标">
+          <option value="peak">峰值 -0.1dB</option>
+          <option value="rms18">RMS -18dB</option>
+          <option value="rms20">RMS -20dB</option>
+          <option value="rms23">RMS -23dB</option>
+        </select>
         <label class="toggle">
           <input type="checkbox" id="trimSilenceToggle">
           <span>导出时去首尾静音</span>
@@ -571,7 +592,7 @@
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.55 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.56 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -612,6 +633,7 @@
     <div class="export-hint" id="exportModalHint"></div>
   </div>
 </div>
+
 
   <script src="script.js"></script>
 </body>

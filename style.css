@@ -316,10 +316,26 @@ header .blink{
   padding:4px 7px;cursor:pointer;letter-spacing:0.5px;transition:all 0.15s;
 }
 .nudge-btn:hover{border-color:var(--cyan);color:var(--text);background:rgba(0,229,255,0.18)}
+.nudge-btn:disabled{opacity:0.3;cursor:not-allowed}
 .nudge-btn.snap{color:var(--amber);border-color:rgba(255,170,0,0.55)}
 .nudge-btn.snap:hover{border-color:var(--amber);color:var(--text);background:rgba(255,170,0,0.18)}
 .nudge-btn.beat{color:var(--green);border-color:rgba(0,255,136,0.5)}
 .nudge-btn.beat:hover{border-color:var(--green);color:var(--text);background:rgba(0,255,136,0.16)}
+/* STABLE 1.56：选区时间输入 */
+.sel-time-wrap{display:flex;align-items:center;gap:4px}
+.sel-time-label{font-family:var(--pixel);font-size:8px;color:var(--muted);letter-spacing:1px}
+.sel-time-input{
+  width:82px;background:var(--bg);border:1px solid rgba(0,229,255,0.45);
+  color:var(--text);font-family:var(--mono);font-size:12px;padding:3px 6px;
+  border-radius:2px;
+}
+.sel-time-input:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 1px rgba(0,229,255,0.18)}
+.sel-time-input:disabled{opacity:0.35;cursor:not-allowed}
+.sel-time-unit{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.nudge-btn.loop{color:var(--pink);border-color:rgba(255,45,149,0.5)}
+.nudge-btn.loop:hover{border-color:var(--pink);color:var(--text);background:rgba(255,45,149,0.18)}
+.nudge-btn.mark{color:var(--amber);border-color:rgba(255,170,0,0.5)}
+.nudge-btn.mark:hover{border-color:var(--amber);color:var(--text);background:rgba(255,170,0,0.16)}
 
 /* ============ MARKER LIST ============ */
 #markerListModal{z-index:900}   /* 低于 toast，改名/删除的提示不会被遮罩挡住 */
@@ -719,6 +735,11 @@ input[type=range]::-moz-range-thumb{
 .sr-label{font-size:10px;color:var(--muted);font-family:var(--pixel);letter-spacing:1px}
 .sr-btn{padding:6px 10px;font-size:10px;min-width:100px}
 .sample-rate-select .dropdown-menu{top:100%;right:0;left:auto;margin-top:4px;min-width:120px}
+.normalize-mode{
+  background:var(--bg);border:1px solid var(--border);color:var(--text);
+  font-family:var(--pixel);font-size:10px;padding:5px 7px;border-radius:3px;
+}
+.normalize-mode:focus{outline:none;border-color:var(--green)}
 /* STABLE 1.36：MP3 ID3 标签 */
 .id3-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .id3-input{
@@ -744,6 +765,10 @@ input[type=range]::-moz-range-thumb{
   border-color:var(--text);
   box-shadow:0 0 8px var(--theme-color), inset 0 0 4px rgba(255,255,255,0.3);
   transform:scale(1.1);
+}
+
+@media (min-width:601px) and (max-height:1000px){
+  .demo-bar .dropdown-menu{max-height:calc(100vh - 510px);overflow-y:auto}
 }
 
 @media(max-width:600px){
