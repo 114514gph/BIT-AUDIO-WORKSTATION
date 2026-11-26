@@ -14,7 +14,7 @@
 <!-- 徽章区域 -->
 <p align="center">
   <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases"><img src="https://img.shields.io/github/v/release/114514gph/BIT-AUDIO-WORKSTATION?style=flat-square&logo=github" alt="Release"></a>
-  <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases/tag/v1.56"><img src="https://img.shields.io/badge/STABLE-1.56-00ff88?style=flat-square" alt="Version STABLE 1.56"></a>
+  <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases/tag/v1.57"><img src="https://img.shields.io/badge/STABLE-1.57-00ff88?style=flat-square" alt="Version STABLE 1.57"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-ff0066?style=flat-square" alt="License"></a>
   <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome"></a>
   <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API"><img src="https://img.shields.io/badge/Web%20Audio%20API-00aaff?style=flat-square&logo=webaudio" alt="Web Audio API"></a>
@@ -92,7 +92,7 @@ python3 -m http.server 8080
 | 选区分析 | 拖选后在裁剪栏显示选区长度、峰值与 RMS 电平，按当前显示的波形计算 |
 | 音高检测 | PITCH 会对选区或播放头附近的一段音频做基频检测，显示频率、音名、音分偏差与置信度，调音时不用再开别的软件 |
 | 时间刻度 | 波形下方自适应时间刻度尺，缩放时自动换档；点击或拖动刻度尺可直接定位播放头 |
-| 选区精调 | 起点和终点可直接输入秒数，也可按 10ms 微调；ZERO 和 MARK 按钮把边界吸附到最近的零交叉或标记点，LOOP 选区一键设为 AB 循环并开始播放 |
+| 选区精调 | 起点和终点可直接输入秒数，也可按 10ms 微调；ZERO 和 MARK 按钮把边界吸附到最近的零交叉或标记点，LOOP 选区一键设为 AB 循环并开始播放；FIT 把波形缩放到当前选区 |
 | 节拍检测 | BEAT 会分析当前音频的 BPM、节拍数和结果置信度；检测完可以直接把 BPM 应用到节拍器，节拍器正在运行时会按新速度重启 |
 | 节拍吸附 | 先检测节拍，再把选区起止吸附到最近的节拍点，按拍裁切和做循环时不用靠耳朵找位置 |
 | 节拍器 | 40~240 BPM，拍号 2/4~6/8；TAP 连点测速，可设 1~16 小节自动停止，菜单里直接启停 |
@@ -100,7 +100,8 @@ python3 -m http.server 8080
 | 倍速播放 | 0.25~5x 实时变速不变调 |
 | 音量归一化 | 导出时可选择峰值 -0.1dB 或 RMS -18/-20/-23dB，并自动限制峰值，避免归一化后削波 |
 | 削波指示 | 实时削波检测与警告 LED |
-| 标记点 | 双击添加、双击重命名、拖动调整位置、点击跳转、右键删除，播放头处也能一键打点，MARKER 菜单里有完整的标记列表；标记可以吸附到零交叉，切段更干净 |
+| 标记点 | 双击添加、双击重命名、拖动调整位置、点击跳转、右键删除，播放头处也能一键打点；标记可以吸附到零交叉，切段更干净 |
+| 标记列表 | 按时间排序，支持按名称或时间搜索；点一下跳转，行内可改名、删除，或把当前标记到下一标记设为选区 |
 | 切段导出 | 按标记点把音频切成多段 WAV，一次打包成 ZIP 下载；自定义命名的标记会出现在文件名里；也可导出 CUE 表供播放器分轨 |
 | 列表原档导出 | 把播放列表里的音频逐首转成 16-bit WAV，再打包成一个 ZIP；不套用当前效果链，保留各自的采样率和声道，超过 80MB 会提示分批 |
 | 只裁首尾静音 | 只去掉开头和结尾的静音，中间停顿原样保留；裁切前会记入撤销栈，裁错了可以退回来 |
@@ -113,7 +114,7 @@ python3 -m http.server 8080
 | 烘焙增益 | 把当前 GAIN 增益永久写入音频，超出峰值的样本自动削波保护 |
 | 选区增益 | 只对拖选的片段按当前 GAIN 电平永久调整，选区外保持不变 |
 | AB 循环 | 选定区域内循环播放；裁剪栏的 LOOP 选区按钮可以一键开播 |
-| 波形缩放 | 1x~8x，滚轮缩放 + Shift 拖拽平移 |
+| 波形缩放 | 1x~8x，滚轮缩放 + Shift 拖拽平移；FIT 一键缩放到当前选区 |
 | 播放跟随 | 放大波形播放时视口自动跟着播放头走，到边缘自动翻屏；手动拖动视图后暂停跟随，重新播放时恢复 |
 | 播放列表 | 多文件队列，支持一次拖入或选择多个音频批量导入；每个条目可上移/下移排序，正在播放的曲目会跟着位置走；头部显示列表总时长，上一曲/下一曲与自动连播保持原样 |
 
@@ -215,7 +216,19 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details open>
-<summary><b>STABLE 1.56</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.57</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.57
+- 标记列表支持按名称或时间搜索，标记多的时候不用一直滚；标题会显示匹配数量和总数
+- 列表每一行新增“选区”按钮，把当前标记到下一个标记之间的区间设为选区，最后一个标记会选到音频末尾；设好后会自动把波形缩放到该区间
+- 波形缩放栏新增 FIT，一键把当前选区铺满视图，精修短片段时不用再反复点加减号
+- 自动命名标记改为寻找第一个未占用的编号，删除中间标记后再新增不会和现有的 M1、M2 重名
+- 标记改名、拖动、右键删除或清空全部标记后，打开中的标记列表和标记数会同步刷新
+- 1.56 的 CUE 导出、选区另存和归一化目标保持原样
+</details>
+
+<details>
+<summary><b>STABLE 1.56</b></summary>
 
 ### STABLE 1.56
 - 选区起止现在可以直接输入秒数，保留原来的 10ms 微调；输入后按回车或点“应用”即可精确定位

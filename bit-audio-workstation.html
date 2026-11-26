@@ -232,6 +232,8 @@ header .blink{
 .waveform-zoom-controls .zoom-level{
   font-family:var(--pixel);font-size:9px;color:var(--muted);min-width:28px;text-align:center;
 }
+#fitSelBtn{width:32px;font-size:9px;border-color:rgba(0,229,255,0.5);color:var(--cyan)}
+#fitSelBtn:hover{border-color:var(--cyan);color:var(--text);background:rgba(0,229,255,0.18)}
 #exportWaveBtn{border-color:var(--amber);color:var(--amber)}
 #exportWaveBtn:hover{background:linear-gradient(rgba(255,170,0,0.28),rgba(255,170,0,0.28)),var(--bg)}
 /* STABLE 1.52：波形时间刻度 */
@@ -374,6 +376,13 @@ header .blink{
 }
 .marker-row-btn:hover{border-color:var(--amber);color:var(--amber)}
 .marker-row-btn.del:hover{border-color:var(--pink);color:var(--pink)}
+.marker-row-btn.sel:hover{border-color:var(--cyan);color:var(--cyan)}
+.marker-list-search{
+  width:100%;background:var(--bg);border:1px solid rgba(255,170,0,0.42);
+  color:var(--text);font-family:var(--mono);font-size:12px;padding:7px 9px;
+  border-radius:2px;
+}
+.marker-list-search:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 1px rgba(255,170,0,0.18)}
 .marker-empty{padding:20px 12px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.6}
 
 /* ============ DEMO BAR ============ */
@@ -1477,6 +1486,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
           <span class="zoom-level" id="zoomLevel">1x</span>
           <button class="zoom-btn" id="zoomInBtn" title="放大">+</button>
           <button class="zoom-btn" id="zoomResetBtn" title="重置">⟲</button>
+          <button class="zoom-btn fit" id="fitSelBtn" title="缩放到当前选区">FIT</button>
           <button class="zoom-btn" id="exportWaveBtn" title="导出波形图片">&#128247;</button>
         </div>
         <div class="waveform-wrap" id="waveformWrap">
@@ -1852,7 +1862,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.56 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.57 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -1877,6 +1887,7 @@ m[1]=kc;m[2]=Mc;m[3]=Lc;m[4]=Kc;m[5]=_d;m[6]=Zd;m[7]=mc;m[8]=lc;m[9]=Vc;m[10]=Jc
       <span class="marker-list-title" id="markerListTitle">标记列表</span>
       <button class="btn crop-btn" id="markerListClose">关闭</button>
     </div>
+    <input type="search" class="marker-list-search" id="markerListSearch" placeholder="搜索标记名称或时间…" autocomplete="off">
     <div class="marker-list-body" id="markerListBody"></div>
   </div>
 </div>
@@ -4323,6 +4334,7 @@ const markerCountVal = $('markerCountVal');
 const markerListModal = $('markerListModal');
 const markerListBody = $('markerListBody');
 const markerListTitle = $('markerListTitle');
+const markerListSearch = $('markerListSearch');
 const markerListClose = $('markerListClose');
 
 function updateMarkerCount(){
@@ -4336,6 +4348,7 @@ function closeMarkerList(){
 
 function openMarkerList(){
   if(!markerListModal) return;
+  if(markerListSearch) markerListSearch.value = '';
   renderMarkerList();
   markerListModal.classList.remove('hidden');
 }
@@ -4343,16 +4356,21 @@ function openMarkerList(){
 function renderMarkerList(){
   if(!markerListBody) return;
   const sorted = (markers || []).slice().sort((a,b)=>a.time - b.time);
-  if(markerListTitle) markerListTitle.textContent = '标记列表 (' + sorted.length + ')';
+  const query = markerListSearch ? markerListSearch.value.trim().toLowerCase() : '';
+  const visible = query
+    ? sorted.filter(m => (m.name || '').toLowerCase().includes(query) || fmtTime(m.time).toLowerCase().includes(query) || m.time.toFixed(2).includes(query))
+    : sorted;
+  if(markerListTitle) markerListTitle.textContent = '标记列表 (' + (query ? visible.length + '/' + sorted.length : sorted.length) + ')';
   markerListBody.innerHTML = '';
-  if(sorted.length === 0){
+  if(visible.length === 0){
     const empty = document.createElement('div');
     empty.className = 'marker-empty';
-    empty.textContent = '还没有标记点。双击波形，或在 MARKER 菜单里选择“在播放头打标记”。';
+    empty.textContent = query ? '没有匹配的标记。' : '还没有标记点。双击波形，或在 MARKER 菜单里选择“在播放头打标记”。';
     markerListBody.appendChild(empty);
     return;
   }
-  sorted.forEach((m, i)=>{
+  visible.forEach((m)=>{
+    const fullIndex = sorted.indexOf(m);
     const row = document.createElement('div');
     row.className = 'marker-row';
     const jump = ()=>{
@@ -4376,8 +4394,28 @@ function renderMarkerList(){
 
     const delta = document.createElement('span');
     delta.className = 'marker-delta';
-    delta.textContent = i > 0 ? '+' + (m.time - sorted[i-1].time).toFixed(1) + 's' : '';
+    delta.textContent = fullIndex > 0 ? '+' + (m.time - sorted[fullIndex-1].time).toFixed(1) + 's' : '';
     row.appendChild(delta);
+
+    const select = document.createElement('button');
+    select.className = 'marker-row-btn sel';
+    select.textContent = '选区';
+    select.title = '从当前标记选到下一个标记';
+    select.addEventListener('click', e=>{
+      e.stopPropagation();
+      if(!originalBuffer){ showToast('请先载入音频', true); return; }
+      const start = m.time;
+      const end = fullIndex + 1 < sorted.length ? sorted[fullIndex+1].time : originalBuffer.duration;
+      if(end - start < 0.02){ showToast('这个标记后面没有足够长的区间', true); return; }
+      selStart = Math.min(start, end);
+      selEnd = Math.max(start, end);
+      updateSelectionUI();
+      closeMarkerList();
+      jumpToTime(selStart);
+      fitWaveToSelection();
+      showToast('已按标记设选区：' + fmtTimePrecise(selStart) + ' → ' + fmtTimePrecise(selEnd));
+    });
+    row.appendChild(select);
 
     const rename = document.createElement('button');
     rename.className = 'marker-row-btn';
@@ -4417,6 +4455,7 @@ function renderMarkerList(){
 }
 
 if(markerListClose) markerListClose.addEventListener('click', closeMarkerList);
+if(markerListSearch) markerListSearch.addEventListener('input', renderMarkerList);
 if(markerListModal) markerListModal.addEventListener('click', e=>{
   if(e.target === markerListModal) closeMarkerList();
 });
@@ -4474,8 +4513,7 @@ if(markerBtn && markerMenu){
       const t = currentPlayPos();
       if(t >= originalBuffer.duration){ showToast('播放头已在末尾', true); return; }
       if(markers.some(m => Math.abs(m.time - t) < 0.01)){ showToast('这个位置已经有标记了', true); return; }
-      const m = addMarker(t, 'M' + (markers.length + 1));
-      updateMarkerCount();
+      const m = addMarker(t);
       showToast('已在 ' + fmtTime(t) + ' 打点：' + m.name);
     }
     else if(action === 'prevmarker' || action === 'nextmarker'){
@@ -4519,7 +4557,7 @@ if(markerFileInput){
           const time = parseFloat(parts[0]);
           if(!isNaN(time) && time >= 0){
             const rawName = parts[1] ? parts[1].trim() : '';
-            const name = rawName || ('M' + (markers.length + 1));
+            const name = rawName || nextMarkerName();
             addMarker(time, name, !!rawName && !/^M\d+$/.test(rawName));
             imported++;
           }
@@ -6081,6 +6119,8 @@ async function redoLastEdit(){
 function clearMarkers(){
   markers = [];
   if(markerContainer !== null && typeof markerContainer !== 'undefined') markerContainer.innerHTML = '';
+  updateMarkerCount();
+  if(markerListModal && !markerListModal.classList.contains('hidden')) renderMarkerList();
 }
 function clearSelection(){
   selStart = -1; selEnd = -1;
@@ -7137,6 +7177,7 @@ function renderMarkers(){
       m.name = trimmed;
       m.customName = true;
       renderMarkers();
+      if(markerListModal && !markerListModal.classList.contains('hidden')) renderMarkerList();
       showToast('标记已重命名: ' + trimmed);
     });
     el.addEventListener('mousedown', e=>{ e.stopPropagation(); });
@@ -7162,6 +7203,7 @@ function renderMarkers(){
           markerDragGuard = Date.now();
           markers.sort((a,b)=>a.time - b.time);
           renderMarkers();
+          if(markerListModal && !markerListModal.classList.contains('hidden')) renderMarkerList();
           showToast('标记已移动到 ' + fmtTime(m.time));
         }
       };
@@ -7175,6 +7217,8 @@ function renderMarkers(){
       if(confirm('删除标记 "' + m.name + '" ?')){
         markers.splice(idx, 1);
         renderMarkers();
+        updateMarkerCount();
+        if(markerListModal && !markerListModal.classList.contains('hidden')) renderMarkerList();
         showToast('标记已删除');
       }
     });
@@ -7205,18 +7249,26 @@ function parseCsvLine(line){
   out.push(cur);
   return out;
 }
+function nextMarkerName(){
+  const used = new Set((markers || []).map(m => String(m.name || '')));
+  let n = 1;
+  while(used.has('M' + n)) n++;
+  return 'M' + n;
+}
 function addMarker(time, name, customName){
-  const m = {time: time, name: name || ('M' + (markers.length + 1)), customName: !!customName};
+  const m = {time: time, name: name || nextMarkerName(), customName: !!customName};
   markers.push(m);
   markers.sort((a,b)=>a.time - b.time);
   renderMarkers();
+  updateMarkerCount();
+  if(markerListModal && !markerListModal.classList.contains('hidden')) renderMarkerList();
   return m;
 }
 // 双击波形添加标记
 waveformWrap.addEventListener('dblclick', e=>{
   if(!originalBuffer) return;
   const t = posToTime(e.clientX);
-  const autoName = 'M' + (markers.length + 1);
+  const autoName = nextMarkerName();
   const name = prompt('标记点名称（留空自动命名）:', autoName);
   if(name === null) return;
   const trimmed = (name || '').trim().slice(0, 24);
@@ -7980,10 +8032,30 @@ abLoopToggle.addEventListener('change', ()=>{
 const zoomInBtn = $('zoomInBtn');
 const zoomOutBtn = $('zoomOutBtn');
 const zoomResetBtn = $('zoomResetBtn');
+const fitSelBtn = $('fitSelBtn');
 const zoomLevelEl = $('zoomLevel');
 function updateZoom(){
   zoomLevelEl.textContent = waveZoom.toFixed(1) + 'x';
   if(originalBuffer) drawWaveform();
+}
+/* STABLE 1.57：把波形视图缩放到当前选区 */
+function fitWaveToSelection(){
+  if(!originalBuffer){ showToast('请先载入音频', true); return; }
+  if(selStart < 0 || selEnd < 0){ showToast('请先设置选区', true); return; }
+  const s = Math.min(selStart, selEnd);
+  const e = Math.max(selStart, selEnd);
+  const len = e - s;
+  if(len < 0.001){ showToast('选区太短，无法定位', true); return; }
+  const dur = originalBuffer.duration;
+  const pad = Math.max(0.02, len * 0.12);
+  const span = Math.min(dur, len + pad * 2);
+  const zoom = Math.min(8, Math.max(1, dur / span));
+  let start = Math.max(0, s - pad);
+  if(start + span > dur) start = Math.max(0, dur - span);
+  waveZoom = zoom;
+  waveOffset = Math.min(1 - 1 / zoom, Math.max(0, start / dur));
+  updateZoom();
+  showToast('已定位到选区 ' + fmtTimePrecise(s) + ' → ' + fmtTimePrecise(e));
 }
 zoomInBtn.addEventListener('click', ()=>{
   waveZoom = Math.min(8, waveZoom + 0.5);
@@ -8008,6 +8080,7 @@ zoomResetBtn.addEventListener('click', ()=>{
   waveZoom = 1; waveOffset = 0;
   updateZoom();
 });
+if(fitSelBtn) fitSelBtn.addEventListener('click', fitWaveToSelection);
 // 滚轮缩放
 waveformWrap.addEventListener('wheel', e=>{
   if(!originalBuffer) return;

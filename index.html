@@ -7,10 +7,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%2300ff88'/><text x='8' y='12' font-size='10' text-anchor='middle' fill='%23000' font-family='monospace'>8</text></svg>">
 <link rel="stylesheet" href="style.css">
 <!-- 内置 MP3/FLAC 编码库 -->
-
 <!-- STABLE 1.5 新增：Dither 抖动（替换快捷键功能）；STABLE 1.2 新增：声像调节（PAN）；STABLE 1.1 修复：内联 libflac .mem -->
-
-
 </head>
 <body>
 <div class="app">
@@ -217,6 +214,7 @@
           <span class="zoom-level" id="zoomLevel">1x</span>
           <button class="zoom-btn" id="zoomInBtn" title="放大">+</button>
           <button class="zoom-btn" id="zoomResetBtn" title="重置">⟲</button>
+          <button class="zoom-btn fit" id="fitSelBtn" title="缩放到当前选区">FIT</button>
           <button class="zoom-btn" id="exportWaveBtn" title="导出波形图片">&#128247;</button>
         </div>
         <div class="waveform-wrap" id="waveformWrap">
@@ -592,7 +590,7 @@
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.56 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.57 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
@@ -617,6 +615,7 @@
       <span class="marker-list-title" id="markerListTitle">标记列表</span>
       <button class="btn crop-btn" id="markerListClose">关闭</button>
     </div>
+    <input type="search" class="marker-list-search" id="markerListSearch" placeholder="搜索标记名称或时间…" autocomplete="off">
     <div class="marker-list-body" id="markerListBody"></div>
   </div>
 </div>
@@ -633,7 +632,6 @@
     <div class="export-hint" id="exportModalHint"></div>
   </div>
 </div>
-
 
   <script src="script.js"></script>
 </body>

@@ -225,6 +225,8 @@ header .blink{
 .waveform-zoom-controls .zoom-level{
   font-family:var(--pixel);font-size:9px;color:var(--muted);min-width:28px;text-align:center;
 }
+#fitSelBtn{width:32px;font-size:9px;border-color:rgba(0,229,255,0.5);color:var(--cyan)}
+#fitSelBtn:hover{border-color:var(--cyan);color:var(--text);background:rgba(0,229,255,0.18)}
 #exportWaveBtn{border-color:var(--amber);color:var(--amber)}
 #exportWaveBtn:hover{background:linear-gradient(rgba(255,170,0,0.28),rgba(255,170,0,0.28)),var(--bg)}
 /* STABLE 1.52：波形时间刻度 */
@@ -367,6 +369,13 @@ header .blink{
 }
 .marker-row-btn:hover{border-color:var(--amber);color:var(--amber)}
 .marker-row-btn.del:hover{border-color:var(--pink);color:var(--pink)}
+.marker-row-btn.sel:hover{border-color:var(--cyan);color:var(--cyan)}
+.marker-list-search{
+  width:100%;background:var(--bg);border:1px solid rgba(255,170,0,0.42);
+  color:var(--text);font-family:var(--mono);font-size:12px;padding:7px 9px;
+  border-radius:2px;
+}
+.marker-list-search:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 1px rgba(255,170,0,0.18)}
 .marker-empty{padding:20px 12px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.6}
 
 /* ============ DEMO BAR ============ */
