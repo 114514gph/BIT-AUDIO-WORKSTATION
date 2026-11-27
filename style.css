@@ -867,6 +867,13 @@ footer .footer-info{margin-top:6px;font-size:12px;opacity:0.7}
 .help-row .desc{font-family:var(--mono);font-size:13px;color:var(--fg);text-align:right}
 #helpCloseBtn{margin-top:4px}
 
+/* STABLE 1.58：选区剪贴板 + WAV 24-bit 导出 */
+.wav-depth-select{display:flex;align-items:center;gap:6px}
+.wav-depth-select.hidden{display:none}
+.wav-depth-select .br-btn:hover{border-color:var(--cyan,#00e5ff);color:var(--text)}
+.wav-depth-select .br-btn.active{border-color:var(--cyan,#00e5ff);color:var(--cyan,#00e5ff);background:linear-gradient(rgba(0,229,255,0.18),rgba(0,229,255,0.18)),var(--panel2);box-shadow:0 0 6px rgba(0,229,255,0.24)}
+.crop-btn.copy{color:var(--cyan,#00e5ff);border-color:rgba(0,229,255,0.55)}
+
 /* ============ RESPONSIVE ============ */
 @media(max-width:600px){
   .app{padding:16px 12px 32px}

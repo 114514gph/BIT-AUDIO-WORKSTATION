@@ -417,6 +417,8 @@ let dragMode = null;  // 'new' | 'move-start' | 'move-end'
 let progressTimer = null;
 // 导出设置
 let exportFormat = 'wav';
+let wavBitDepth = parseInt(localStorage.getItem('wavBitDepth')) || 16;
+if(![16, 24].includes(wavBitDepth)) wavBitDepth = 16;
 let recMode = false;
 let mediaRecorder = null;
 let recordedChunks = [];
@@ -429,6 +431,8 @@ let waveOffset = 0;
 let followPlayhead = true;   // 缩放播放时自动跟随播放头
 let markerDragGuard = 0;
 let markers = [];
+// STABLE 1.58：选区剪贴板
+let clipboardBuffer = null;
 // 播放列表
 let playlist = [];
 let currentPlaylistIndex = -1;
@@ -629,6 +633,8 @@ const cropKeepBtn = $('cropKeepBtn');
 const cropPartBtn = $('cropPartBtn');
 const cropDeleteBtn = $('cropDeleteBtn');
 const cropDupBtn = $('cropDupBtn');
+const cropCopyBtn = $('cropCopyBtn');
+const pasteClipBtn = $('pasteClipBtn');
 const cropMuteBtn = $('cropMuteBtn');
 const cropRevBtn = $('cropRevBtn');
 const cropGainBtn = $('cropGainBtn');
@@ -1130,7 +1136,7 @@ function movePlaylistItem(idx, dir){
 async function exportPlaylistWavZip(){
   if(playlist.length === 0){ showToast('播放列表为空', true); return; }
   const estimatedBytes = playlist.reduce((sum, p) =>
-    sum + 44 + p.buffer.length * Math.max(1, p.buffer.numberOfChannels) * 2, 0);
+    sum + 44 + p.buffer.length * Math.max(1, p.buffer.numberOfChannels) * (wavBitDepth / 8), 0);
   const maxBytes = 80 * 1024 * 1024;
   if(estimatedBytes > maxBytes){
     showToast('列表原档约 ' + (estimatedBytes / 1024 / 1024).toFixed(0) + 'MB，超过 80MB 上限，请分批导出', true);
@@ -1144,7 +1150,7 @@ async function exportPlaylistWavZip(){
       const item = playlist[i];
       updateProgress((i / total) * 100);
       const base = (item.name || 'track').replace(/\.[^.]+$/, '');
-      const blob = encodeWav(item.buffer);
+      const blob = encodeWav(item.buffer, wavBitDepth);
       const bytes = new Uint8Array(await blob.arrayBuffer());
       const idx = String(i + 1).padStart(2, '0');
       files.push({name: idx + '_' + sanitizeFilename(base) + '.wav', data: bytes});
@@ -1180,6 +1186,7 @@ function switchPlaylistItem(idx){
   clearEditHistory();
   originalBuffer = item.buffer;
   originalChannelBuffer = null;
+  updateClipboardButtons();
   resetBeatInfo();
   currentFileName = item.name.replace(/\.[^.]+$/, '');
   fileNameEl.textContent = item.name;
@@ -3193,7 +3200,7 @@ async function exportSegmentsByMarkers(){
     for(let i = 0; i < segs.length; i++){
       const seg = segs[i];
       const part = sliceBuffer(originalBuffer, seg.start, seg.end);
-      const blob = encodeWav(part);
+      const blob = encodeWav(part, wavBitDepth);
       const bytes = new Uint8Array(await blob.arrayBuffer());
       const idx = String(i + 1).padStart(2, '0');
       const label = (cutNames[i] || '').replace(/[\\/:*?"<>|]/g, '_').slice(0, 24);
@@ -4281,7 +4288,8 @@ const _mp3BrBtns = $('mp3BitrateBtns'); if(_mp3BrBtns){
 function updateExportHint(){
   if(!originalBuffer) return;
   let hint = Math.round(parseFloat(bitSlider.value)) + 'bit / ' + downSlider.value + 'x / 降噪' + noiseSlider.value + '%';
-  hint += ' / ' + exportFormat.toUpperCase();
+  if(exportFormat === 'wav') hint += ' / WAV ' + wavBitDepth + 'bit';
+  else hint += ' / ' + exportFormat.toUpperCase();
   if(recMode) hint += ' / 播放即录';
   exportHint.textContent = hint;
 }
@@ -4594,6 +4602,7 @@ function clearSelection(){
   cropPartBtn.disabled = true;
   cropDeleteBtn.disabled = true;
   cropDupBtn.disabled = true;
+  cropCopyBtn.disabled = true;
   cropMuteBtn.disabled = true;
   cropRevBtn.disabled = true;
   cropGainBtn.disabled = true;
@@ -4693,6 +4702,7 @@ function updateSelectionUI(){
   cropPartBtn.disabled = false;
   cropDeleteBtn.disabled = false;
   cropDupBtn.disabled = false;
+  cropCopyBtn.disabled = false;
   cropMuteBtn.disabled = false;
   cropRevBtn.disabled = false;
   cropGainBtn.disabled = false;
@@ -5364,6 +5374,82 @@ function matchChannels(buf, targetCh){
   return nb;
 }
 
+/* STABLE 1.58：结构编辑后的标记顺延，以及选区剪贴板 */
+function shiftMarkersForInsert(posSec, deltaSec){
+  if(!markers || markers.length === 0 || deltaSec <= 0) return 0;
+  const pos = Math.max(0, posSec);
+  let shifted = 0;
+  for(const m of markers){
+    if(m.time >= pos - 0.0005){
+      m.time += deltaSec;
+      shifted++;
+    }
+  }
+  if(shifted){
+    markers.sort((a, b) => a.time - b.time);
+    renderMarkers();
+    updateMarkerCount();
+    if(markerListModal && !markerListModal.classList.contains('hidden')) renderMarkerList();
+  }
+  return shifted;
+}
+
+function updateClipboardButtons(){
+  if(!pasteClipBtn) return;
+  const ready = !!(originalBuffer && clipboardBuffer);
+  pasteClipBtn.disabled = !ready;
+  pasteClipBtn.title = ready
+    ? '在播放头处插入已复制的片段 ' + fmtTimePrecise(clipboardBuffer.duration)
+    : '先用 COPY 复制一段选区';
+}
+
+function copySelectionToClipboard(){
+  if(!originalBuffer || selStart < 0 || selEnd < 0){ showToast('请先在波形上拖选一段', true); return; }
+  const s = Math.min(selStart, selEnd);
+  const e = Math.max(selStart, selEnd);
+  if(e - s < 0.001){ showToast('选区为空', true); return; }
+  clipboardBuffer = sliceBuffer(originalBuffer, s, e);
+  updateClipboardButtons();
+  showToast('已复制选区 ' + fmtTimePrecise(e - s) + '，PASTE 将插入到播放头');
+}
+
+async function pasteClipboardAtPlayhead(){
+  if(!originalBuffer){ showToast('请先载入音频', true); return; }
+  if(!clipboardBuffer){ showToast('剪贴板为空，请先 COPY 选区', true); return; }
+  stop();
+  const pos = Math.min(currentPlayPos(), originalBuffer.duration);
+  const fitted = matchChannels(resampleBuffer(clipboardBuffer, originalBuffer.sampleRate),
+                              originalBuffer.numberOfChannels);
+  const dur = fitted.duration;
+  if(dur < 0.001){ showToast('片段为空', true); return; }
+  pushEditHistory('粘贴片段 ' + fmtTime(dur));
+  let nb;
+  if(pos <= 0.001) nb = concatBuffers(fitted, originalBuffer);
+  else if(pos >= originalBuffer.duration - 0.001) nb = concatBuffers(originalBuffer, fitted);
+  else nb = concatBuffers(concatBuffers(sliceBuffer(originalBuffer, 0, pos), fitted),
+                          sliceBuffer(originalBuffer, pos, originalBuffer.duration));
+  originalBuffer = nb;
+  resetBeatInfo();
+  const shifted = shiftMarkersForInsert(pos, dur);
+  await afterCrop();
+  jumpToTime(Math.min(pos, originalBuffer.duration));
+  selStart = Math.min(pos, originalBuffer.duration);
+  selEnd = Math.min(originalBuffer.duration, selStart + dur);
+  updateSelectionUI();
+  if(selEnd - selStart >= 0.02) fitWaveToSelection();
+  showToast('已粘贴 ' + fmtTimePrecise(dur) + ' 到 ' + fmtTimePrecise(pos) + (shifted ? '，' + shifted + ' 个标记已顺延' : ''));
+}
+
+if(cropCopyBtn) cropCopyBtn.addEventListener('click', e=>{
+  e.stopPropagation();
+  copySelectionToClipboard();
+});
+if(pasteClipBtn) pasteClipBtn.addEventListener('click', e=>{
+  e.stopPropagation();
+  pasteClipboardAtPlayhead();
+});
+updateClipboardButtons();
+
 insSilBtn.addEventListener('click', async ()=>{
   if(!originalBuffer){ showToast('请先载入音频', true); return; }
   const raw = prompt('在播放头后插入几秒静音？', '1');
@@ -5384,8 +5470,9 @@ insSilBtn.addEventListener('click', async ()=>{
                           sliceBuffer(originalBuffer, pos, originalBuffer.duration));
   originalBuffer = nb;
     resetBeatInfo();
+  const shifted = shiftMarkersForInsert(pos, clamped);
   await afterCrop();
-  showToast('已在 ' + fmtTime(pos) + ' 插入 ' + clamped.toFixed(1) + 's 静音');
+  showToast('已在 ' + fmtTime(pos) + ' 插入 ' + clamped.toFixed(1) + 's 静音' + (shifted ? '，' + shifted + ' 个标记已顺延' : ''));
 });
 
 appendBtn.addEventListener('click', ()=>{
@@ -5785,11 +5872,11 @@ function writeStr(view, offset, str){
   for(let i = 0; i < str.length; i++) view.setUint8(offset+i, str.charCodeAt(i));
 }
 
-function encodeWav(buffer){
+function encodeWav(buffer, bitDepth = 16){
   const numCh = buffer.numberOfChannels;
   const sr = buffer.sampleRate;
   const len = buffer.length;
-  const bps = 16;
+  const bps = bitDepth === 24 ? 24 : 16;
   const blockAlign = numCh * bps / 8;
   const dataSize = len * blockAlign;
   const ab = new ArrayBuffer(44 + dataSize);
@@ -5809,18 +5896,36 @@ function encodeWav(buffer){
   writeStr(view, 36, 'data');
   view.setUint32(40, dataSize, true);
 
-  // 批量转换为 Int16，性能更好且取整正确
-  const i16 = new Int16Array(len * numCh);
   const channels = [];
   for(let c = 0; c < numCh; c++) channels.push(buffer.getChannelData(c));
-  for(let i = 0; i < len; i++){
-    for(let c = 0; c < numCh; c++){
-      let s = channels[c][i];
-      s = s > 1 ? 1 : s < -1 ? -1 : s;
-      i16[i * numCh + c] = Math.round(s * 32767);
+
+  if(bps === 16){
+    // Int16 批量写入，性能和取整都更稳
+    const i16 = new Int16Array(len * numCh);
+    for(let i = 0; i < len; i++){
+      for(let c = 0; c < numCh; c++){
+        let v = channels[c][i];
+        v = v > 1 ? 1 : v < -1 ? -1 : v;
+        i16[i * numCh + c] = Math.round(v * 32767);
+      }
+    }
+    new Int16Array(ab, 44).set(i16);
+  }else{
+    // 24-bit PCM 小端写入：每声道 3 字节
+    const bytes = new Uint8Array(ab, 44, dataSize);
+    let off = 0;
+    for(let i = 0; i < len; i++){
+      for(let c = 0; c < numCh; c++){
+        let v = channels[c][i];
+        v = v > 1 ? 1 : v < -1 ? -1 : v;
+        let q = Math.round(v * 8388607);
+        if(q < 0) q += 0x1000000;
+        bytes[off++] = q & 255;
+        bytes[off++] = (q >> 8) & 255;
+        bytes[off++] = (q >> 16) & 255;
+      }
     }
   }
-  new Int16Array(ab, 44).set(i16);
   return new Blob([ab], {type: 'audio/wav'});
 }
 
@@ -6167,11 +6272,11 @@ async function encodeFlac(buffer){
 
 /* ============ 统一编码 ============ */
 async function encodeAudio(buffer, format){
-  if(format === 'wav') return {blob: encodeWav(buffer), ext: 'wav'};
+  if(format === 'wav') return {blob: encodeWav(buffer, wavBitDepth), ext: 'wav'};
   if(format === 'mp3') return {blob: await encodeMp3(buffer), ext: 'mp3'};
   if(format === 'ogg') return await encodeOgg(buffer);
   if(format === 'flac') return {blob: await encodeFlac(buffer), ext: 'flac'};
-  return {blob: encodeWav(buffer), ext: 'wav'};
+  return {blob: encodeWav(buffer, wavBitDepth), ext: 'wav'};
 }
 
 /* ============ DJ 实时录制（播放即录，无弹窗） ============ */
@@ -6246,20 +6351,46 @@ function updateMp3BitrateVisibility(){
     sel.classList.add('hidden');
   }
 }
+/* STABLE 1.58：WAV 位深选择 */
+function updateWavDepthVisibility(){
+  const sel = $('wavDepthSelect');
+  if(!sel) return;
+  if(exportFormat === 'wav') sel.classList.remove('hidden');
+  else sel.classList.add('hidden');
+}
+function updateWavDepthHint(){
+  const hint = $('wavDepthHint');
+  if(hint) hint.textContent = wavBitDepth + '-bit';
+  document.querySelectorAll('[data-wav-bps]').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.wavBps, 10) === wavBitDepth);
+  });
+}
+document.querySelectorAll('[data-wav-bps]').forEach(btn => {
+  btn.addEventListener('click', e=>{
+    e.stopPropagation();
+    wavBitDepth = parseInt(btn.dataset.wavBps, 10) === 24 ? 24 : 16;
+    try{ localStorage.setItem('wavBitDepth', wavBitDepth); }catch(e){}
+    updateWavDepthHint();
+    updateExportHint();
+  });
+});
 document.querySelectorAll('.dropdown-item[data-format]').forEach(item=>{
   item.addEventListener('click', ()=>{
     exportFormat = item.dataset.format;
-    formatBtn.textContent = item.textContent.replace(/无损|128kbps|Opus|\d+kbps/g, '').trim() + ' \u25BE';
+    formatBtn.textContent = item.dataset.format.toUpperCase() + ' \u25BE';
     document.querySelectorAll('.dropdown-item[data-format]').forEach(i=> i.classList.remove('active'));
     item.classList.add('active');
     formatMenu.classList.add('hidden');
     updateMp3BitrateVisibility();
+    updateWavDepthVisibility();
     updateId3Availability();
     updateExportHint();
   });
 });
 // 初始化时调用一次
 updateMp3BitrateVisibility();
+updateWavDepthVisibility();
+updateWavDepthHint();
 updateId3Availability();
 document.addEventListener('click', ()=>{ formatMenu.classList.add('hidden'); sampleRateMenu.classList.add('hidden'); });
 

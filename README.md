@@ -14,7 +14,7 @@
 <!-- 徽章区域 -->
 <p align="center">
   <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases"><img src="https://img.shields.io/github/v/release/114514gph/BIT-AUDIO-WORKSTATION?style=flat-square&logo=github" alt="Release"></a>
-  <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases/tag/v1.57"><img src="https://img.shields.io/badge/STABLE-1.57-00ff88?style=flat-square" alt="Version STABLE 1.57"></a>
+  <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/releases/tag/v1.58"><img src="https://img.shields.io/badge/STABLE-1.58-00ff88?style=flat-square" alt="Version STABLE 1.58"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-ff0066?style=flat-square" alt="License"></a>
   <a href="https://github.com/114514gph/BIT-AUDIO-WORKSTATION/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome"></a>
   <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API"><img src="https://img.shields.io/badge/Web%20Audio%20API-00aaff?style=flat-square&logo=webaudio" alt="Web Audio API"></a>
@@ -30,7 +30,7 @@
 - **复古像素风** — CRT 扫描线效果 + 霓虹配色 + 像素字体，沉浸式复古体验
 - **实时音频链** — AudioWorklet 驱动，所有参数拖动即时生效，零延迟
 - **完整效果链** — bitcrush / noise gate / EQ / compressor / reverb / delay / pan / dither
-- **多格式导出** — WAV / MP3（可调比特率）/ OGG / FLAC，编码库内置
+- **多格式导出** — WAV（16/24-bit）/ MP3（可调比特率）/ OGG / FLAC，编码库内置
 - **响应式布局** — 电脑端多栏布局，移动端自动适配，手机也能流畅使用
 
 ---
@@ -103,12 +103,13 @@ python3 -m http.server 8080
 | 标记点 | 双击添加、双击重命名、拖动调整位置、点击跳转、右键删除，播放头处也能一键打点；标记可以吸附到零交叉，切段更干净 |
 | 标记列表 | 按时间排序，支持按名称或时间搜索；点一下跳转，行内可改名、删除，或把当前标记到下一标记设为选区 |
 | 切段导出 | 按标记点把音频切成多段 WAV，一次打包成 ZIP 下载；自定义命名的标记会出现在文件名里；也可导出 CUE 表供播放器分轨 |
-| 列表原档导出 | 把播放列表里的音频逐首转成 16-bit WAV，再打包成一个 ZIP；不套用当前效果链，保留各自的采样率和声道，超过 80MB 会提示分批 |
+| 列表原档导出 | 把播放列表里的音频逐首转成 WAV，再打包成一个 ZIP；位深跟随导出栏的 16/24-bit 设置，不套用当前效果链，保留各自的采样率和声道，超过 80MB 会提示分批 |
 | 只裁首尾静音 | 只去掉开头和结尾的静音，中间停顿原样保留；裁切前会记入撤销栈，裁错了可以退回来 |
 | 插入静音 | 在播放头位置插入指定时长的静音段，可撤销 |
 | 追加音频 | 把另一段音频接到末尾，自动对齐采样率与声道 |
 | 叠加混音 | 把另一段音频按播放头位置叠到当前音频上，可调叠加音量 |
 | 选区复制 | 把拖选的片段复制一份并接在选区之后，方便重复律动 |
+| 选区剪贴板 | COPY 选区把当前片段暂存到内存，PASTE 在播放头位置插入；跨采样率、声道的片段会自动对齐，插入后自动选中新片段，可撤销与重做 |
 | 选区静音 | 把拖选的片段原位静音，不改变整体时长 |
 | 选区反向 | 把拖选的片段原位逐声道反转，整体时长不变 |
 | 烘焙增益 | 把当前 GAIN 增益永久写入音频，超出峰值的样本自动削波保护 |
@@ -124,7 +125,7 @@ python3 -m http.server 8080
 |:----:|------|
 | 麦克风录音 | 上传区或播放控制栏的 MIC 按钮可直接录人声、乐器，结束后作为新曲目进入播放列表；最长 10 分钟，录音只在本地解码，不上传（浏览器需 HTTPS 或 localhost 授权） |
 | DJ 实时录制 | 播放时的调音一并录制，暂停可继续录制 |
-| 多格式导出 | WAV / MP3（64~320kbps 可调）/ OGG / FLAC |
+| 多格式导出 | WAV（16/24-bit）/ MP3（64~320kbps 可调）/ OGG / FLAC |
 | 导出选择 | 导出原曲或录制版；选区可单独导出为片段，不改动原音频 |
 | 导出整理 | 可选自动去掉头尾静音，也可用标签里的艺术家与标题拼文件名 |
 | 撤销与重做 | 裁剪、删除、去静音最多退三步，退多了还能 REDO 重做回来 |
@@ -216,7 +217,17 @@ BIT-AUDIO-WORKSTATION/
 ## 版本历史
 
 <details open>
-<summary><b>STABLE 1.57</b> — 最新版本（点击展开）</summary>
+<summary><b>STABLE 1.58</b> — 最新版本（点击展开）</summary>
+
+### STABLE 1.58
+- 新增选区剪贴板：COPY 选区把当前片段暂存到内存，PASTE 在播放头位置插入；跨采样率、声道数的片段会自动对齐，插入后自动选中新片段
+- 插入音频或静音后，插入点及其后的标记会一起顺延，切段位置不再和波形错位
+- WAV 导出新增 24-bit 选项，导出栏可在 16-bit 与 24-bit 之间切换；列表原档导出和按标记切段 ZIP 会跟随当前位深
+- 1.57 的标记列表、FIT 视图、CUE 导出与选区另存保持原样
+</details>
+
+<details>
+<summary><b>STABLE 1.57</b></summary>
 
 ### STABLE 1.57
 - 标记列表支持按名称或时间搜索，标记多的时候不用一直滚；标题会显示匹配数量和总数

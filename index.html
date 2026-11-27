@@ -7,7 +7,9 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%2300ff88'/><text x='8' y='12' font-size='10' text-anchor='middle' fill='%23000' font-family='monospace'>8</text></svg>">
 <link rel="stylesheet" href="style.css">
 <!-- 内置 MP3/FLAC 编码库 -->
+
 <!-- STABLE 1.5 新增：Dither 抖动（替换快捷键功能）；STABLE 1.2 新增：声像调节（PAN）；STABLE 1.1 修复：内联 libflac .mem -->
+
 </head>
 <body>
 <div class="app">
@@ -237,6 +239,7 @@
           <button class="btn crop-btn" id="cropPartBtn" disabled>&#8681; PART 导出选区</button>
           <button class="btn crop-btn" id="cropDeleteBtn" disabled>&#10005; DELETE 删除</button>
           <button class="btn crop-btn" id="cropDupBtn" disabled>&#8635; DUP 复制</button>
+          <button class="btn crop-btn copy" id="cropCopyBtn" disabled title="复制当前选区到剪贴板">&#128203; COPY 选区</button>
           <button class="btn crop-btn" id="cropMuteBtn" disabled>&#128263; MUTE 静音</button>
           <button class="btn crop-btn" id="cropRevBtn" disabled>&#8646; REV 选区反向</button>
           <button class="btn crop-btn" id="cropGainBtn" disabled>&#128266; GAIN 选区增益</button>
@@ -280,6 +283,7 @@
           <button id="undoBtn" class="btn" disabled title="撤销上一次裁剪或去除静音">&#8630; UNDO</button>
           <button id="redoBtn" class="btn" disabled title="重做被撤销的编辑">&#8631; REDO</button>
           <button id="insSilBtn" class="btn" title="在播放头处插入静音段">&#9201; INS SIL</button>
+          <button id="pasteClipBtn" class="btn" title="在播放头处插入已复制的选区" disabled>&#128203; PASTE</button>
           <button id="appendBtn" class="btn" title="把另一段音频追加到末尾">&#10133; APPEND</button>
           <input type="file" id="appendFileInput" accept="audio/*" hidden>
           <button id="mixBtn" class="btn" title="把另一段音频叠加到播放头位置">&#9835; MIX</button>
@@ -292,7 +296,7 @@
             <div class="format-dropdown">
               <button class="btn format-btn" id="formatBtn">WAV &#9662;</button>
               <div class="dropdown-menu hidden" id="formatMenu">
-                <div class="dropdown-item active" data-format="wav">WAV<span class="df-hint">无损</span></div>
+                <div class="dropdown-item active" data-format="wav">WAV<span class="df-hint" id="wavDepthHint">16-bit</span></div>
                 <div class="dropdown-item" data-format="mp3">MP3<span class="df-hint" id="mp3BitrateHint">128kbps</span></div>
                 <div class="dropdown-item" data-format="ogg">OGG<span class="df-hint">Opus</span></div>
                 <div class="dropdown-item" data-format="flac">FLAC<span class="df-hint">无损</span></div>
@@ -332,6 +336,13 @@
               <button class="br-btn" data-br="192">192</button>
               <button class="br-btn" data-br="256">256</button>
               <button class="br-btn" data-br="320">320</button>
+            </div>
+          </div>
+          <div class="mp3-bitrate-select wav-depth-select hidden" id="wavDepthSelect">
+            <span class="br-label">WAV BIT</span>
+            <div class="br-buttons" id="wavDepthBtns">
+              <button class="br-btn active" data-wav-bps="16">16</button>
+              <button class="br-btn" data-wav-bps="24">24</button>
             </div>
           </div>
         </div>
@@ -590,7 +601,7 @@
 
   <footer>
     <p>BIT CRUSH <span class="sep">|</span> NOISE GATE <span class="sep">|</span> 3-BAND EQ <span class="sep">|</span> REVERB <span class="sep">|</span> DELAY <span class="sep">|</span> RECORD <span class="sep">|</span> 纯前端无上传</p>
-    <p class="footer-info">STABLE 1.57 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
+    <p class="footer-info">STABLE 1.58 <span class="sep">|</span> MengYou&reg; Studio&trade; 2023~2026 <span class="sep">|</span> 离线应用无需备案</p>
   </footer>
 </div>
 
